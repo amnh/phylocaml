@@ -19,9 +19,9 @@ type general_delta =
     added_nodes : id list;
     added_edges : edge list; }
 
-type reroot_delta = general_delta
-type break_delta  = general_delta
-type join_delta   = general_delta
+type reroot_delta = unit
+type break_delta  = unit
+type join_delta   = unit
 
 type delta = unit (** TODO **)
 
@@ -55,7 +55,8 @@ module type S =
 
     val empty : t
     val random : id list -> t
-    val disjoint : id list -> t
+    val create : id list -> t
+    val disjoint : t -> t
 
     val is_edge : id -> id -> t -> bool
     val is_node : id -> t -> bool

@@ -53,6 +53,7 @@ let replace_code i t : t = match t.avail_codes with
 
 let random _ = failwith "TODO"
 let disjoint _ = failwith "TODO"
+let create _ = failwith "TODO"
 
 let is_edge _ _ = failwith "TODO"
 let is_node _ _ = failwith "TODO"

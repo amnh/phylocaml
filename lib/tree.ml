@@ -84,8 +84,9 @@ let get_leaves t : IDSet.t =
   IDMap.fold (fun k _ t -> IDSet.add k t) leaves IDSet.empty
 
 let get_edge a b t =
-  let () = ignore (EdgeSet.find (a,b) t.edges) in
-  (a,b)
+  if EdgeSet.mem (a,b) t.edges
+    then (a,b)
+    else raise Not_found
 
 let get_node a t =
   IDMap.find a t.nodes
@@ -95,12 +96,16 @@ let get_neighbors x t = match get_node x t with
   | Leaf (_,x) -> [x]
   | Interior (_,x,y,z) -> [x;y;z]
 
-let disjoint t =
+let create ids = (* TODO deal with handles *)
+  let nodes = List.fold_left (fun acc i -> IDMap.add i (Single i) acc) IDMap.empty ids in
+  {empty with
+    edges = EdgeSet.empty;
+    nodes = nodes; }
+
+
+let disjoint t = (* TODO deal with handles *)
   let nodes =
-    IDSet.fold
-      (fun i acc -> IDMap.add i (Single i) acc)
-      (get_leaves t)
-      IDMap.empty
+    IDSet.fold (fun i acc -> IDMap.add i (Single i) acc) (get_leaves t) IDMap.empty
   in
   {t with
     edges = EdgeSet.empty;
@@ -200,10 +205,15 @@ let post_order_edges f g (a, b) bt accum =
   a, b
 
 let get_edges h t = match get_node h t with
+  | Single _ -> EdgeSet.empty
   | Leaf (a,b)
   | Interior (a,b,_,_) ->
-    post_order_edges_root (EdgeSet.add) (EdgeSet.add) (a,b) t EdgeSet.empty
-  | Single -> EdgeSet.empty
+    pre_order_edges_root
+        (fun e acc -> EdgeSet.add e acc)
+        (fun e acc -> EdgeSet.add e acc)
+        (a,b)
+        t
+        EdgeSet.empty
 
 let partition_edge _ _ = failwith "TODO"
 
@@ -230,29 +240,29 @@ let break (x,y) t =
         |> EdgeSet.remove (x,c)
         |> EdgeSet.add (a,b)
     in
-    {t with nodes; edges; }, ()
+    {t with nodes; edges; }
   in
   assert( is_edge x y t );
   match get_node x t, get_node y t with
   | Single _, _
   | _, Single _ -> assert false
-  (* x -- y ---> x + y *)
-  | Leaf x, Leaf y ->
+  (* a -- x ---> a + x *)
+  | Leaf (a,b), Leaf (x,y) ->
+    assert( (a = y) && (b = x));
     let nodes =
       t.nodes
+        |> IDMap.add a (Single a)
         |> IDMap.add x (Single x)
-        |> IDMap.add y (Single y)
-    and edges =
-      EdgeSet.remove (x,y)
-    in
+    and edges = EdgeSet.remove (a,x) t.edges in
     {t with nodes; edges; }, ()
   (*       b           b
    *      /            |
    * x---a   --->  x + |
    *      \            |
    *       c           c *)
-  | Leaf x, Interior(a,b,c,d)
-  | Interior(a,b,c,d), Leaf x ->
+  | Leaf (x,y), Interior(a,b,c,d)
+  | Interior(a,b,c,d), Leaf (x,y) ->
+    assert( y = a );
     let b,c = get_other_two x b c d in
     let t   = clean_up_nodes b c x a t in
     {t with
@@ -265,8 +275,8 @@ let break (x,y) t =
   | Interior (a,b,c,d), Interior (w,x,y,z) ->
     let b,c = get_other_two w b c d
     and x,y = get_other_two a x y z in
-    let t = clean_up_nodes b c w a in
-    let t = clean_up_nodes x y a w in
+    let t = clean_up_nodes b c w a t in
+    let t = clean_up_nodes x y a w t in
     t,()
    
 
@@ -292,7 +302,7 @@ let join j1 j2 t = match j1, j2 with
   | `Edge (y,z), `Single x ->
     assert( is_single x t );
     assert( is_edge y z t );
-    let n_id,t = next_avail t in
+    let n_id,t = next_code t in
     let n = Interior (n_id, x, y, z) in
     let nodes =
       t.nodes
@@ -302,9 +312,9 @@ let join j1 j2 t = match j1, j2 with
     and edges =
       t.edges
         |> EdgeSet.remove (y,z)
-        |> EdgeSet.add (n,y)
-        |> EdgeSet.add (n,z)
-        |> EdgeSet.add (n,x)
+        |> EdgeSet.add (n_id,y)
+        |> EdgeSet.add (n_id,z)
+        |> EdgeSet.add (n_id,x)
     in
     {t with edges; nodes;}, ()
   (*  w   y    w       y
@@ -315,8 +325,8 @@ let join j1 j2 t = match j1, j2 with
   | `Edge (w,x), `Edge (y,z) ->
     assert( is_edge w x t );
     assert( is_edge y z t );
-    let n_id1,t = next_avail t in
-    let n_id2,t = next_avail t in
+    let n_id1,t = next_code t in
+    let n_id2,t = next_code t in
     let n1 = Interior (n_id1, n_id2, y, z)
     and n2 = Interior (n_id2, n_id1, w, x) in
     let nodes =
@@ -325,7 +335,7 @@ let join j1 j2 t = match j1, j2 with
         |> IDMap.add x (remove_replace (get_node x t) w n_id1)  
         |> IDMap.add y (remove_replace (get_node y t) z n_id2) 
         |> IDMap.add z (remove_replace (get_node z t) y n_id2)  
-    and edges
+    and edges =
       t.edges
         |> EdgeSet.remove (w,x)
         |> EdgeSet.remove (y,z)
@@ -335,7 +345,7 @@ let join j1 j2 t = match j1, j2 with
         |> EdgeSet.add (n_id2, z)
         |> EdgeSet.add (n_id1, n_id2)
     in
-    { remove_handle h_rem t with edges; nodes; }, ()
+    {t with edges; nodes; }, ()
 
 let reroot _ _ = failwith "TODO"
 
