@@ -1,7 +1,7 @@
 phylocaml
 =========
 
-A Phylogenetic Library based on a refactoring of POY.
+A Phylogenetic Library based on a refactoring of POY (code.google.com/p/poy).
 
 We've thought a lot about how to develop a library from what we have and the
 experience we have gathered from our work on POY3/4/5. The portion of the
@@ -17,7 +17,8 @@ Currently, in POY5, we encapsulate this pretty well. There is some leaking with
 modules that do things to very specific data, but they are few and far between.
 I think a functor approach of a diagnosis module will be effective. In this way
 we can implement a parallel diagnosis module that can plug into whatever the
-diagnosis module uses (the Search module for example).
+diagnosis module uses (the Search module for example) as well as deal with
+unforseen issues with networks or more complex topologies.
 
           +------------+----------+-------------+----------+-------+
           | Likelihood | Sequence | NonAdditive | Additive |  ...  |<--+
@@ -34,24 +35,23 @@ diagnosis module uses (the Search module for example).
            Figure 1. Basic Module dependency diagram of a Diagnosis
 
 
-In Figure 1, you can see that Diagnosis takes a node, edge, and topology to
-define a diagnosis.The topology designates a way to traverse the topology, and
-ptopology attaches data to the nodes. Topology additionally contains a compare
-module for traversing a topology in a consistent way[1]. The node/root module is
-a functor itself to apply a previously mentioned compare module and a data
-module that contains all the functions in the optimality criteria: Likelihood,
-Additive, Chromosome, Genome, Sankoff, ... all share a common module interface
-(NodeData). Very close to what we have now with some added components.
+In Figure 1, you can see that Diagnosis takes a node, root, and topology.The
+topology designates a way to traverse the topology, and ptopology attaches data
+to the nodes and roots, this allows separation between structure and a common
+and basic interface to attach data to a topology. Topology additionally contains
+a compare module for traversing a topology in a consistent way[1].
 
-Within the Diagnosis module a PTopology module is designed with the Topology
-module to attach data to the nodes, edges and to manage that information.
+The Node/Root module is a functor itself to apply a previously mentioned compare
+module and a data module that contains all the functions in the optimality
+criteria: Likelihood, Additive, Chromosome, Genome, Sankoff, ... all share a
+common module interface (NodeData). Very close to what we have now with some
+added components.
 
 Nodes can also be abstracted to contain further features --lazyness has been
 important, as well as a directional node for un-rooted trees in selecting the
 best downpass assignments to perform an uppass on (each internal node of a
 binary tree has three of these corresponding to each combination of 2 children).
-You can see these implementations in the Node module example. Roots are also
-Nodes as above. They define a downpass/heuristic rooting in un-rooted tree.
+You can see these implementations in the Node module example.
 
 Example code to diagnose a tree with known data taxon data and tree file,
 
@@ -66,6 +66,7 @@ Example code to diagnose a tree with known data taxon data and tree file,
         let tree = Diag.diagnose tree in
         Printf.printf "%s:[%d]" (PTree.to_string tree) (Diag.total_cost tree)
 
+-------------------------------------------------------------------------------
 
 [1] - Naturally, Traversing a topology in a consistent way is important for
 reproducibility but this particular issue has to do the ordering in which
