@@ -5,8 +5,13 @@ module type S =
 
         type b
 
-        type t
+        type r
 
+        type t
+        
+        (** Return the basic topological structure of the data-attached topology *)
+        val get_topology : t -> r
+            
         (** Remove the edge from the topology; this may not produce two disjoint
             sets, this is the case in network topologies. This can be determined
             from the break-delta also returned with the updated topology. *)
@@ -47,6 +52,9 @@ module type S =
         (** Perform a direct map of the elememts of the topology *)
         val map : (a -> a) -> (b -> b) -> t -> t
 
+        (** Apply a topology delta to the topology *)
+        val apply_delta : Topology.delta -> t -> t
+
         (** Perform a map of the elements in a diagnosis fashion, via downpass,
             then an uppass, with functions passed for each node *)
         val map_diagnosis :
@@ -79,7 +87,13 @@ module Make (PTopo : Ptopology.S) (Root: Node.R) (Node: Node.R) =
 
         type b = Root.n
 
+        type r = PTopo.topology
+
         type t = (a,b) PTopo.t
+
+        let get_topology t = t.PTopo.topology
+    
+        let apply_delta _ _ = failwith "TODO"
 
         let break_fn _ _ = failwith "TODO"
         let reroot_fn _ _ = failwith "TODO"

@@ -23,7 +23,8 @@ type reroot_delta = unit
 type break_delta  = unit
 type join_delta   = unit
 
-type delta = unit (** TODO **)
+type delta =
+  [ `Reroot of edge | `Join of jxn * jxn | `Break of edge ] list
 
 module type NodeComparator = 
   sig

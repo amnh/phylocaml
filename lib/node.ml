@@ -2,7 +2,7 @@ open Phylocaml_pervasives
 
 type collapse_type = [ `Single | `FinalMin | `FinalMax ]
 
-type dir = [ `Parent of Topology.id | `Children of Topology.id list ] option
+type dir = [ `Parent of Topology.id list | `Children of Topology.id list ] option
 
 module type R =
   sig
@@ -66,78 +66,78 @@ module Make1D (Ordering : Topology.NodeComparator) : S =
     type nd = NodeData.t
 
     type n  = {
-        prelim: nd IntMap.t;
-        final : nd IntMap.t option;
-        topot : Ordering.t;
-        height : int;
-        cost : float;
-        code : int; 
+      prelim: nd IntMap.t;
+      final : nd IntMap.t option;
+      topot : Ordering.t;
+      height : int;
+      cost : float;
+      code : int; 
     }
 
     let accum_over_map f a i t =
-        IntMap.fold (fun _ v acc -> a (f v) acc) t i
+      IntMap.fold (fun _ v acc -> a (f v) acc) t i
 
     let of_data id x =
-        let cost = accum_over_map NodeData.leaf_cost (+.) 0.0 x in
-        { prelim = x; 
-           final = None;
-           topot = Ordering.create id;
-           height = 0;
-           cost = cost;
-            code = id;
-        }
+      let cost = accum_over_map NodeData.leaf_cost (+.) 0.0 x in
+      { prelim = x; 
+        final = None;
+        topot = Ordering.create id;
+        height = 0;
+        cost = cost;
+        code = id;
+      }
 
     let height _ x = x.height
 
     let cardinal x = accum_over_map NodeData.cardinal (+) 0 x.prelim
 
     let filter_codes cs x =
-        let filter_char c =
-            IntMap.fold
-                (fun k v t -> match NodeData.filter_codes cs v with
-                    | Some x -> IntMap.add k x t
-                    | None   -> t)
-                IntMap.empty
-                c
-        in
-        { x with
-            prelim = filter_char x.prelim;
-            final  = match x.final with
-                | None -> None
-                | Some x -> Some (filter_char x); }
+      let filter_char c =
+        IntMap.fold
+          (fun k v t -> match NodeData.filter_codes cs v with
+            | Some x -> IntMap.add k x t
+            | None   -> t)
+          IntMap.empty
+          c
+      in
+      { x with
+        prelim = filter_char x.prelim;
+        final  = match x.final with
+               | None -> None
+               | Some x -> Some (filter_char x); }
 
     let map_map3 f a b c =
-        assert( (IntMap.cardinal a) = (IntMap.cardinal b));
-        assert( (IntMap.cardinal a) = (IntMap.cardinal c));
-        IntMap.mapi (fun k av -> f av (IntMap.find k b) (IntMap.find k c)) a
+      assert( (IntMap.cardinal a) = (IntMap.cardinal b));
+      assert( (IntMap.cardinal a) = (IntMap.cardinal c));
+      IntMap.mapi (fun k av -> f av (IntMap.find k b) (IntMap.find k c)) a
 
     let map_map2 f a b =
-        assert( (IntMap.cardinal a) = (IntMap.cardinal b));
-        IntMap.mapi (fun k av -> f av (IntMap.find k b)) a
+      assert( (IntMap.cardinal a) = (IntMap.cardinal b));
+      IntMap.mapi (fun k av -> f av (IntMap.find k b)) a
 
     let get_val prelim =
-        if prelim then
-            (fun k x -> IntMap.find k x.prelim)
-        else
-            (fun k x -> match x.final with
-                | None -> raise Not_found
-                | Some x -> IntMap.find k x)
+      if prelim then
+        (fun k x -> IntMap.find k x.prelim)
+      else
+        (fun k x -> match x.final with
+          | None -> raise Not_found
+          | Some x -> IntMap.find k x)
 
     let compare a b =
-        IntMap.compare NodeData.compare a.prelim b.prelim
+      IntMap.compare NodeData.compare a.prelim b.prelim
 
     let recode f x =
-        {x with
-            prelim = IntMap.map (NodeData.recode f) x.prelim;
-            final  = match x.final with
-                | None   -> None
-                | Some x -> Some (IntMap.map (NodeData.recode f) x); }
+      {x with
+        prelim = IntMap.map (NodeData.recode f) x.prelim;
+        final  = match x.final with
+               | None   -> None
+               | Some x -> Some (IntMap.map (NodeData.recode f) x); }
 
     let get_codes x =
-        accum_over_map NodeData.get_codes IntSet.union IntSet.empty x.prelim
+      accum_over_map NodeData.get_codes IntSet.union IntSet.empty x.prelim
 
     let is_collapsable _ _ _ = failwith "TODO"
-
+      
     let get_preliminary _ = get_val true
 
     let get_adjusted = get_val false
@@ -145,91 +145,91 @@ module Make1D (Ordering : Topology.NodeComparator) : S =
     let get_topot x = x.topot
 
     let distance_1 a b =
-        let a,b = Ordering.order get_topot a b in
-        IntMap.fold
-            (fun k av acc -> acc +. (NodeData.distance_1 av (IntMap.find k b.prelim)))
-            a.prelim
-            0.0
+      let a,b = Ordering.order get_topot a b in
+      IntMap.fold
+        (fun k av acc -> acc +. (NodeData.distance_1 av (IntMap.find k b.prelim)))
+        a.prelim
+        0.0
 
     let distance_2 a b c =
-        IntMap.fold
-            (fun k av acc ->
-                acc +. (NodeData.distance_2 av (IntMap.find k b.prelim) (IntMap.find k c.prelim)))
-            a.prelim
-            0.0
+      IntMap.fold
+        (fun k av acc ->
+          acc +. (NodeData.distance_2 av (IntMap.find k b.prelim) (IntMap.find k c.prelim)))
+        a.prelim
+        0.0
 
     let median_1 id o a =
-        let prelim = match o with
-            | None   -> IntMap.map (NodeData.median_1 None) a.prelim
-            | Some x ->
-                assert( x.code = id );    
-                map_map2 (fun o -> NodeData.median_1 (Some o)) x.prelim a.prelim
-        in
-        let cost = accum_over_map NodeData.cost (+.) 0.0 prelim in
-        {   prelim = prelim;
-            final = None;
-            height = a.height + 1;
-            topot = Ordering.ancestor_1 id a.topot;
-            cost = cost;
-            code = id;
-        }
+      let prelim = match o with
+        | None   -> IntMap.map (NodeData.median_1 None) a.prelim
+        | Some x ->
+          assert( x.code = id );    
+          map_map2 (fun o -> NodeData.median_1 (Some o)) x.prelim a.prelim
+      in
+      let cost = accum_over_map NodeData.cost (+.) 0.0 prelim in
+      { prelim = prelim;
+        final = None;
+        height = a.height + 1;
+        topot = Ordering.ancestor_1 id a.topot;
+        cost = cost;
+        code = id;
+      }
 
     let median_2 id o a b =
-        let a,b = Ordering.order get_topot a b in
-        let prelim = match o with
-            | None   -> map_map2 (NodeData.median_2 None) a.prelim b.prelim
-            | Some x ->
-                assert( x.code = id );    
-                map_map3 (fun o -> NodeData.median_2 (Some o)) x.prelim a.prelim b.prelim
-        in
-        let cost = accum_over_map NodeData.cost (+.) 0.0 prelim in
-        {   prelim = prelim;
-            final = None;
-            height = (max a.height b.height) + 1;
-            topot = Ordering.ancestor_2 id a.topot b.topot;
-            cost = cost;
-            code = id;
-        }
+      let a,b = Ordering.order get_topot a b in
+      let prelim = match o with
+        | None   -> map_map2 (NodeData.median_2 None) a.prelim b.prelim
+        | Some x ->
+          assert( x.code = id );    
+          map_map3 (fun o -> NodeData.median_2 (Some o)) x.prelim a.prelim b.prelim
+      in
+      let cost = accum_over_map NodeData.cost (+.) 0.0 prelim in
+      { prelim = prelim;
+        final = None;
+        height = (max a.height b.height) + 1;
+        topot = Ordering.ancestor_2 id a.topot b.topot;
+        cost = cost;
+        code = id;
+      }
 
     let median_n id o bs =
-        let bs = Ordering.sort get_topot bs in
-        let prelim = match o with
-            | None   -> failwith "TODO"
-            | Some _ -> failwith "TODO"
-        in
-        let cost = accum_over_map NodeData.cost (+.) 0.0 prelim in
-        {   prelim = prelim;
-            final = None;
-            height = (List.fold_left (fun acc a -> (max a.height acc)) 0 bs) + 1;
-            topot = Ordering.ancestor_n id (List.map get_topot bs);
-            cost = cost;
-            code = id;
-        }
+      let bs = Ordering.sort get_topot bs in
+      let prelim = match o with
+        | None   -> failwith "TODO"
+        | Some _ -> failwith "TODO"
+      in
+      let cost = accum_over_map NodeData.cost (+.) 0.0 prelim in
+      { prelim = prelim;
+        final = None;
+        height = (List.fold_left (fun acc a -> (max a.height acc)) 0 bs) + 1;
+        topot = Ordering.ancestor_n id (List.map get_topot bs);
+        cost = cost;
+        code = id;
+      }
 
     let readjust_3 ?(prelim=false) codes n a b c =
-        let get_val = get_val prelim in
-        let prelim,set =
-            assert( (IntMap.cardinal n.prelim) = (IntMap.cardinal b.prelim));
-            assert( (IntMap.cardinal a.prelim) = (IntMap.cardinal c.prelim));
-            assert( (IntMap.cardinal a.prelim) = (IntMap.cardinal n.prelim));
-            IntMap.fold
-                (fun k _ (t,s) ->
-                    let nv,ns =
-                        NodeData.adjust_3 codes (get_val k n) (get_val k a)
-                                                (get_val k b) (get_val k c) in
-                    IntMap.add k nv t, IntSet.union ns s)
-                n.prelim
-                (IntMap.empty, IntSet.empty)
-        in
-        { n with
-            prelim = prelim;
-            final  = Some prelim; }, set
+      let get_val = get_val prelim in
+      let prelim,set =
+        assert( (IntMap.cardinal n.prelim) = (IntMap.cardinal b.prelim));
+        assert( (IntMap.cardinal a.prelim) = (IntMap.cardinal c.prelim));
+        assert( (IntMap.cardinal a.prelim) = (IntMap.cardinal n.prelim));
+        IntMap.fold
+          (fun k _ (t,s) ->
+            let nv,ns =
+              NodeData.adjust_3 codes (get_val k n) (get_val k a)
+                                      (get_val k b) (get_val k c) in
+            IntMap.add k nv t, IntSet.union ns s)
+          n.prelim
+          (IntMap.empty, IntSet.empty)
+      in
+      {n with
+        prelim = prelim;
+        final  = Some prelim; }, set
 
     let readjust_n ?(prelim=false) _ n _ =
-        let prelim,set = failwith "TODO" in
-        {n with
-            prelim = prelim;
-            final = Some prelim; }, set
+      let prelim,set = failwith "TODO" in
+      {n with
+        prelim = prelim;
+        final = Some prelim; }, set
 
     let final_states _ _ _ _ = failwith "TODO"
 
@@ -356,8 +356,9 @@ struct
     code       : int;
   }
 
-  let not_with id (_,(d1,d2)) =
-    not ((id = d1) || (id = d2))
+  let not_with ids (_,(d1,d2)) = match ids with
+    | [x] -> not ((x = d1) || (x = d2))
+    |  _  -> assert false
 
   and yes_with ids (_,(d1,d2)) = match ids with
     | [x;y] -> ((d1 = x) && (d2 = y)) || ((d1 = y) && (d2 = x))
@@ -371,8 +372,8 @@ struct
   let get_dir dir n : Node.n =
     let res = match n.unadjusted,dir with
       | L x,_ -> [x]
-      | I xs, Some (`Parent id) ->
-        List.filter (not_with id) xs |> List.map fst
+      | I xs, Some (`Parent ids) ->
+        List.filter (not_with ids) xs |> List.map fst
       | I xs,Some (`Children ids) ->
         List.filter (yes_with ids) xs |> List.map fst
       | I _,None ->

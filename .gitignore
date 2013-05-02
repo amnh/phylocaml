@@ -7,3 +7,9 @@
 *.cmx
 *.cmxs
 *.cmxa
+*.native
+*.byte
+*.lib
+*.top
+lib/_build/*
+*.swp
