@@ -93,10 +93,10 @@ networks and other topologies.
 
 A robust framework can be made from building onto some basic functionality. In
 essence we need a a few primary objects for a search,
-    + Solution - A topology.
-    + Comparator - A method to choose between two or more topologies.
-    + Strategy - Adaptive plan to determine successive structural modifications.
-    + Convergence - A method to stop the search strategy (optional).
+  + Solution - A topology.
+  + Comparator - A method to choose between two or more topologies.
+  + Strategy - Adaptive plan to determine successive structural modifications.
+  + Convergence - A method to stop the search strategy (optional).
 
 This defines a local search. For an SPR search the strategy is the SPR
 neighborhood; a comparator is a utility or cost function of the diagnosis
@@ -131,9 +131,9 @@ Overview of Utility Modules
 These are a list of modules that can be composed and used to handle a wide range
 of data for different optimality criterion.
 
-    + cost\_matrix - handles median and cost assignments
-    + sequence - handles an ordered continuous set of characters in an alphabet
-    + align - algorithms to align sequences 
+  + cost\_matrix - handles median and cost assignments
+  + sequence - handles an ordered continuous set of characters in an alphabet
+  + align - algorithms to align sequences 
 
 
 Design Choices and Rationale
