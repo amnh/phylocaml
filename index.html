@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Phylocaml by nrlucaroni</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Phylocaml</h1>
+        <p>Phylogenetic Library based on a factoring of POY.</p>
+
+        <p class="view"><a href="https://github.com/nrlucaroni/phylocaml">View the Project on GitHub <small>nrlucaroni/phylocaml</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/nrlucaroni/phylocaml/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/nrlucaroni/phylocaml/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/nrlucaroni/phylocaml">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>phylocaml</h1>
+
+<p>A Phylogenetic Library based on a refactoring of POY (code.google.com/p/poy).</p>
+
+<p>We've thought a lot about how to develop a library from what we have and the
+experience we have gathered from our work on POY3/4/5. The portion of the
+code-base that can be easily translated over is the diagnosis subset --the
+section of code that can analyze a topology and assign optimal ancestral states
+to internal nodes under different optimality criterion. Anyone can develop a
+search heuristic mechanism around this. Of course, designing one that is
+expandable and encompasses 90% of users demands is another story. This document
+talks about the design decisions to diagnose a topology, obtaining a score,
+recovering states, modifying the topology (break, join, re-root, fuse, and
+dealing with a forest) and optimizing those states on the topology to reduce the
+overall score.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/nrlucaroni">nrlucaroni</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
