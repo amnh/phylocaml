@@ -1,0 +1,7 @@
+Phylocaml is a Phylogenetic Library for OCaml
+
+
+Phylocaml is a Phylogenetic Library for OCaml that allows phylogenetic inference
+under a number of criterias including (likelihood, parsimony, kolmogorov
+complexity), as well as a variaty of topologies (rooted binary trees,
+unrooted binary trees / free trees, and rooted time-dependent binary networks).

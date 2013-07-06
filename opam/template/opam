@@ -1,0 +1,38 @@
+opam-version: "1"
+
+name : "phylocaml
+
+version : "@version@"
+
+homepage : "http://research.amnh.org/Computational Science/Systematic Biology/phylocaml/"
+
+doc : "http://research.amnh.org/Compuational Sciences/Systematic Biology/phylocaml/docs/"
+
+authors : [ "Andres Varon" "Lin Hong" "Nicholas Lucaroni" "Ward Wheeler" ]
+
+license: "GNU Lesser General Public License version 3.0"
+
+tags: ["phylogeny" "statistics" "bioinformatics" "biology" "academic"]
+
+maintainer: "nlucaroni@amnh.org"
+
+build : [
+    ["./configure"]
+    [make "install"]
+]
+
+build-doc : [
+    ["./configure"]
+    [make "doc"]
+]
+
+remove : [
+    ["ocamlfind" "remove" "phylocaml"]
+]
+
+depopts : [ "parmap" "mpi" ]
+
+depends: [ "biocaml" "core" "ocamlfind" "camlzip" "sexplib" ]
+
+ocaml-version : [>= "4.00.0"]
+
