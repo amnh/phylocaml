@@ -6,9 +6,9 @@ type edge = id * id
 
 module IDSet = IntSet
 module HandleSet = IntSet
-module EdgeSet = PairSet
 module IDMap = IntMap
-module EdgeMap = PairMap
+module EdgeSet = UnorderedTupleSet
+module EdgeMap = UnorderedTupleMap
 
 type jxn = [ `Single of id | `Edge of id * id ]
 
@@ -72,25 +72,31 @@ module type S =
     val get_edge : id -> id -> t -> edge
     val get_node : id -> t -> node
     val get_neighbors : id -> t -> id list
-    val get_leaves : t -> IDSet.t
+    val get_leaves : t -> id list
+    val get_singles : t -> id list
+
+    val move_handle : id -> t -> t * id list
     val handle_of : id -> t -> handle
 
     val get_edges : handle -> t -> EdgeSet.t
 
-    val partition_edge : t -> edge -> IntSet.t * IntSet.t * bool
-    val path_of : t -> id -> id -> id list
-    val disjoint_edge : t -> edge -> bool
+    val partition_edge : edge -> t -> IntSet.t * IntSet.t * bool
+    val path_of : id -> id -> t -> id list
+    val disjoint_edge : edge -> t -> bool
 
     val break : edge -> t -> t * break_delta
     val join : jxn -> jxn -> t -> t * join_delta
     val reroot : edge -> t -> t * reroot_delta
  
     val pre_order_nodes :
-      (id option -> id -> 'a -> 'a) -> t -> 'a -> id -> 'a
+      (id option -> id -> 'a -> 'a) -> id -> t -> 'a -> 'a
+
     val pre_order_edges :
-      (edge -> 'a -> 'a) -> t -> 'a -> edge -> 'a
+      (edge -> 'a -> 'a) -> edge -> t -> 'a -> 'a
+
     val pre_order_edges_root :
       (edge -> 'a -> 'a) -> (edge -> 'a -> 'a) -> edge -> t -> 'a -> 'a
+
     val post_order_edges :
       (id -> id -> 'a -> 'a) -> (id -> id -> 'a -> 'a -> 'a) -> edge -> t -> 'a -> 'a * 'a
 

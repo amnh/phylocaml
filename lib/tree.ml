@@ -13,8 +13,7 @@ module NodeComparator : Topology.NodeComparator =
     let ancestor_n _ xs = List.fold_left min max_int xs
 
     let order f x y = if (f x) > (f y) then y,x else x,y
-    let sort f xs =
-      List.sort (fun x y -> Pervasives.compare (f x) (f y)) xs
+    let sort f xs = List.sort (fun x y -> Pervasives.compare (f x) (f y)) xs
   end
 
 type node =
@@ -51,6 +50,7 @@ let next_code t : int * t = match t.avail_codes with
 let add_code i t : t = match t.avail_codes with
   | y,x when i = (y-1) -> {t with avail_codes = y-1,x; }
   | y,x -> {t with avail_codes = y,i::x; }
+
 let is_edge x y t = EdgeSet.mem (x,y) t.edges
 
 let is_node x t = IDMap.mem x t.nodes
@@ -70,7 +70,7 @@ let remove_replace node o_id n_id = match node with
   | Interior _ | Single _ | Leaf _ -> assert false
 
 let is_leaf = function
-  | Single _   -> true
+  | Single _   -> true (* TODO is there utility in including this? *)
   | Leaf _     -> true
   | Interior _ -> false
 
@@ -80,7 +80,11 @@ and is_single = function
   | Interior _ -> false
 
 let get_leaves t : IDSet.t =
-  let leaves,_ = IDMap.partition (fun _ v -> (is_leaf v) || (is_single v)) t.nodes in
+  let leaves,_ = IDMap.partition (fun _ v -> (is_leaf v)) t.nodes in
+  IDMap.fold (fun k _ t -> IDSet.add k t) leaves IDSet.empty
+
+let get_singles t : IDSet.t =
+  let leaves,_ = IDMap.partition (fun _ v -> (is_single v)) t.nodes in
   IDMap.fold (fun k _ t -> IDSet.add k t) leaves IDSet.empty
 
 let get_edge a b t =
@@ -92,24 +96,40 @@ let get_node a t =
   IDMap.find a t.nodes
 
 let get_neighbors x t = match get_node x t with
-  | Single x
+  | Single _ -> []
   | Leaf (_,x) -> [x]
   | Interior (_,x,y,z) -> [x;y;z]
 
-let create ids = (* TODO deal with handles *)
-  let nodes = List.fold_left (fun acc i -> IDMap.add i (Single i) acc) IDMap.empty ids in
-  {empty with
-    edges = EdgeSet.empty;
-    nodes = nodes; }
+let compare a b = failwith "TODO"
 
-
-let disjoint t = (* TODO deal with handles *)
-  let nodes =
-    IDSet.fold (fun i acc -> IDMap.add i (Single i) acc) (get_leaves t) IDMap.empty
+let holes_and_max ids =
+  let rec holesmax holes max xxs = match xxs with
+    | [] -> max,holes
+    | x::xs when x = max -> holesmax holes (max+1) xs
+    | x::xs -> holesmax (max::holes) (max+1) xxs
   in
+  holesmax [] 0 (List.sort Pervasives.compare ids)
+
+let create ids =
+  let nodes,handles =
+    List.fold_left
+      (fun (map,set) i -> IDMap.add i (Single i) map, HandleSet.add i set)
+      (IDMap.empty,HandleSet.empty)
+      (ids)
+  and edges = EdgeSet.empty
+  and avail_codes = holes_and_max ids in
+  {empty with
+    edges; nodes; handles; avail_codes; }
+
+let disjoint t =
+  let leaves = get_leaves t in
+  let nodes =
+    IDSet.fold (fun i acc -> IDMap.add i (Single i) acc) leaves IDMap.empty
+  and edges = EdgeSet.empty
+  and handles = leaves
+  and avail_codes = holes_and_max leaves in
   {t with
-    edges = EdgeSet.empty;
-    nodes = nodes; }
+    edges; nodes; handles; avail_codes; }
 
 let random_elt_nodemap (type t) (m: t IDMap.t) : IDMap.key * t =
   let n = IDMap.cardinal m in
@@ -162,27 +182,40 @@ let is_leaf x t =
 let is_single x t =
   is_single (IDMap.find x t.nodes)
 
-let pre_order_nodes f t acc h =
-  let rec pre_order prev n acc =
-    match get_node n t with
-    | Single _   -> assert false
-    | Leaf (x,y) -> assert (prev = y); f (Some prev) x acc
-    | Interior (a,x,y,z) ->
-      let c,d = get_other_two prev x y z in
-      f (Some prev) a acc
-        |> pre_order a c
-        |> pre_order a d
+let pre_order_nodes f h t acc =
+  let rec processor prev curr acc =
+    match get_node curr with
+    | Single x, _ -> f prev curr acc
+    | Leaf (_,p), None -> processor (Some curr) p (f prev curr acc)
+    | Leaf (_,p), Some x -> assert (x=p); f prev curr acc
+    | Interior(_,a,b,c),None ->
+      f prev curr acc
+        |> processor (Some curr) a
+        |> processor (Some curr) b
+        |> processor (Some curr) c
+    | Interior(_,a,b,c),Some x ->
+      let a,b = get_other_two x a b c in
+      f prev curr acc
+        |> processor (Some curr) a
+        |> processor (Some curr) b
   in
-  match get_node h t with
-  | Single x   -> f None x acc
-  | Leaf (x,y) -> pre_order x y (f None x acc)
-  | Interior (a,x,y,z) ->
-    f None a acc
-      |> pre_order a x
-      |> pre_order a y
-      |> pre_order a z
+  processor None h acc
 
-let pre_order_edges _ _ _ _ = failwith "TODO"
+let pre_order_edges f ((a,b) as e) t acc =
+  let rec each_edge prev curr accum =
+    match get_node curr t with
+    | Single _ -> assert false
+    | Interior (_,a,b,c) ->
+      let a,b = get_other_two prev a b c in
+      f (curr,a) accum
+        |> each_edge curr a
+        |> f (curr,b)
+        |> each_edge curr b
+    | Leaf (a,b) -> accum
+  in
+  f e acc
+    |> each_edge a b acc
+    |> each_edge b a acc
 
 let pre_order_edges_root _ _ _ _ = failwith "TODO"
 
@@ -190,8 +223,8 @@ let post_order_edges f g (a, b) bt accum =
   let rec processor prev curr accum =
     match get_node curr bt with
     | Leaf (nd, nbr) ->
-      assert( prev = nbr );
-      assert( curr = nd );
+      assert(prev = nbr);
+      assert(curr = nd);
       f prev curr accum
     | Interior (nd, nbr1, nbr2, nbr3) ->
       let a, b = get_other_two prev nbr1 nbr2 nbr3 in
@@ -209,22 +242,63 @@ let get_edges h t = match get_node h t with
   | Leaf (a,b)
   | Interior (a,b,_,_) ->
     pre_order_edges_root
-        (fun e acc -> EdgeSet.add e acc)
-        (fun e acc -> EdgeSet.add e acc)
-        (a,b)
-        t
-        EdgeSet.empty
+      (fun e acc -> EdgeSet.add e acc)
+      (fun e acc -> EdgeSet.add e acc)
+      (a,b)
+      t
+      EdgeSet.empty
 
-let partition_edge _ _ = failwith "TODO"
+let partition_edge edge t =
+  let aset,bset =
+    post_order_edges
+      (fun _ x set -> IDSet.add x set)
+      (fun _ x s1 s2 -> IDSet.union (IDSet.add x s1) s2)
+      edge
+      t
+      IDSet.empty
+  in
+  aset,bset,true
 
-let handle_of _ _ = failwith "TODO"
+(* we can do better if we assume the second element in the interior tuple is
+ * pointing to the parent/handle. should we? this should be a traversal call. *)
+let handle_of n t =
+  let rec handle_of p n t =
+    if is_handle n t then
+      Some n
+    else
+      match get_node n t with
+      | Single _ -> assert false (* should be a handle *)
+      | Leaf (_,b) -> handle_of b t
+      | Interior (_,a,b,c) ->
+        let a,b = get_other_two n a b c in
+        begin match handle_of n a t, handle_of n a t with
+        | (Some _) as a, None
+        | None, (Some _) as a -> a
+        | None, None -> None
+        | _ , _ -> assert false (* only one handle valid *)
+        end
+  in
+  match get_node n t with
+  | Single x -> assert( is_handle x t ); n
+  | Leaf (_,b) ->
+    begin match handle_of n b t with
+    | Some x -> x
+    | None   -> assert false
+    end
+  | Interior (_,a,b,c) ->
+    begin match handle_of a t, handle_of b t, handle_of c t with
+    | Some x, None, None
+    | None, Some x, None
+    | None, None, Some x -> x
+    | _ , _, _ -> assert false
+    end
 
 let path_of _ _ _ = failwith "TODO"
 
 let disjoint_edge _ _ = true
 
 
- (* TODO: deal with DELTA and HANDLES *)
+(* TODO: deal with DELTA *)
 let break (x,y) t =
   (* Fix a and b with x; leave c up to call. *)
   let clean_up_nodes a b c x t =
@@ -244,8 +318,7 @@ let break (x,y) t =
   in
   assert( is_edge x y t );
   match get_node x t, get_node y t with
-  | Single _, _
-  | _, Single _ -> assert false
+  | (Single _, _ | _, Single _) -> assert false
   (* a -- x ---> a + x *)
   | Leaf (a,b), Leaf (x,y) ->
     assert( (a = y) && (b = x));
@@ -253,8 +326,13 @@ let break (x,y) t =
       t.nodes
         |> IDMap.add a (Single a)
         |> IDMap.add x (Single x)
-    and edges = EdgeSet.remove (a,x) t.edges in
-    {t with nodes; edges; }, ()
+    and edges = EdgeSet.remove (a,x) t.edges
+    and handles =
+      if a = (handle_of a t)
+        then HandleSet.add x t.handles
+        else HandleSet.add a t.handles
+    in
+    {t with nodes; edges; handles;}, ()
   (*       b           b
    *      /            |
    * x---a   --->  x + |
@@ -264,9 +342,16 @@ let break (x,y) t =
   | Interior(a,b,c,d), Leaf (x,y) ->
     assert( y = a );
     let b,c = get_other_two x b c d in
-    let t   = clean_up_nodes b c x a t in
-    {t with
-      nodes = IDMap.add x (Single x) t.nodes; }, ()
+    let h = handle_of a t in
+    let t = clean_up_nodes b c x a t in
+    let nodes = IDMap.add x (Single x) t.nodes
+    and handles =
+      t.handles
+        |> HandleSet.remove h
+        |> HandleSet.add x
+        |> HandleSet.add b (* or c *)
+    in
+    {t with nodes; handles; }, () 
   (* b       x     b   x
    *  \     /      |   |
    *   a---w  ---> | + |
@@ -275,12 +360,19 @@ let break (x,y) t =
   | Interior (a,b,c,d), Interior (w,x,y,z) ->
     let b,c = get_other_two w b c d
     and x,y = get_other_two a x y z in
+    let h = handle_of a t in
     let t = clean_up_nodes b c w a t in
     let t = clean_up_nodes x y a w t in
-    t,()
+    let handles =
+      t.handles
+        |> HandleSet.remove h
+        |> HandleSet.add b (* or c *)
+        |> HandleSet.add x (* or y *)
+    in
+    {t with handles; },()
    
 
- (* TODO: deal with DELTA and HANDLES *)
+(* TODO: deal with DELTA *)
 let join j1 j2 t = match j1, j2 with
   (* x + y ---> x -- y *)
   | `Single x, `Single y ->
@@ -291,8 +383,11 @@ let join j1 j2 t = match j1, j2 with
         |> IDMap.add x (Leaf (x,y))
         |> IDMap.add y (Leaf (y,x))
     and edges =
-      EdgeSet.add (x,y) t.edges in
-    {t with edges; nodes;}, ()
+      EdgeSet.add (x,y) t.edges
+    and handles =
+      HandleSet.remove x t.handles
+    in
+    {t with edges; nodes; handles;}, ()
   (*     y            y
    *     |           /
    * x + | ---> x---a
@@ -315,8 +410,10 @@ let join j1 j2 t = match j1, j2 with
         |> EdgeSet.add (n_id,y)
         |> EdgeSet.add (n_id,z)
         |> EdgeSet.add (n_id,x)
+    and handles =
+      HandleSet.remove x t.handles
     in
-    {t with edges; nodes;}, ()
+    {t with edges; nodes; handles;}, ()
   (*  w   y    w       y
    *  |   |     \     /
    *  | + | ---> a---b
@@ -327,14 +424,12 @@ let join j1 j2 t = match j1, j2 with
     assert( is_edge y z t );
     let n_id1,t = next_code t in
     let n_id2,t = next_code t in
-    let n1 = Interior (n_id1, n_id2, y, z)
-    and n2 = Interior (n_id2, n_id1, w, x) in
     let nodes =
       t.nodes
-        |> IDMap.add w (remove_replace (get_node w t) x n_id1) 
-        |> IDMap.add x (remove_replace (get_node x t) w n_id1)  
-        |> IDMap.add y (remove_replace (get_node y t) z n_id2) 
-        |> IDMap.add z (remove_replace (get_node z t) y n_id2)  
+        |> IDMap.add w (remove_replace (get_node w t) x n_id1)
+        |> IDMap.add x (remove_replace (get_node x t) w n_id1)
+        |> IDMap.add y (remove_replace (get_node y t) z n_id2)
+        |> IDMap.add z (remove_replace (get_node z t) y n_id2)
     and edges =
       t.edges
         |> EdgeSet.remove (w,x)
@@ -344,10 +439,23 @@ let join j1 j2 t = match j1, j2 with
         |> EdgeSet.add (n_id2, y)
         |> EdgeSet.add (n_id2, z)
         |> EdgeSet.add (n_id1, n_id2)
+    and handles =
+      let x = handle_of x t in
+      HandleSet.remove x t.handles
     in
-    {t with edges; nodes; }, ()
+    {t with edges; nodes; handles; }, ()
 
-let reroot _ _ = failwith "TODO"
+let move_handle n t =
+  let h = handle_of n t in
+  let p = path_of t h n in
+  let handles =
+    t.handles
+      |> HandleSet.remove h
+      |> HandleSet.add n
+  in
+  {t with handles;},p
+
+let reroot _ t = t
 
 let random lst =
   let add_node t x =

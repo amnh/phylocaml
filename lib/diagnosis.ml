@@ -30,10 +30,6 @@ module type S =
         (** Optimize the assignment of states at nodes *)
         val assign_fn : t -> t
     
-        (** Find an optimal assignment through exhaustive search *)
-        val exhaustive : t -> t 
-
-
         (** Optimize the model that defines the evolutionary aspects of the nodes *)
         val model_fn: t -> t
 
@@ -51,6 +47,9 @@ module type S =
 
         (** Perform a direct map of the elememts of the topology *)
         val map : (a -> a) -> (b -> b) -> t -> t
+
+        (** Apply a topology delta to the topology *)
+        val heuristic_delta : Topology.delta -> t -> float
 
         (** Apply a topology delta to the topology *)
         val apply_delta : Topology.delta -> t -> t
@@ -94,6 +93,7 @@ module Make (PTopo : Ptopology.S) (Root: Node.R) (Node: Node.R) =
         let get_topology t = t.PTopo.topology
     
         let apply_delta _ _ = failwith "TODO"
+        let heuristic_delta _ _ = failwith "TODO"
 
         let break_fn _ _ = failwith "TODO"
         let reroot_fn _ _ = failwith "TODO"
@@ -104,7 +104,6 @@ module Make (PTopo : Ptopology.S) (Root: Node.R) (Node: Node.R) =
         let downpass _ = failwith "TODO"
         let uppass _ = failwith "TODO"
         let diagnose _ = failwith "TODO"
-        let exhaustive _ = failwith "TODO"
         let map _ _ _ = failwith "TODO"
         let map_diagnosis _ _ _ = failwith "TODO"
         let fold_diagnosis _ _ _ = failwith "TODO"

@@ -35,7 +35,6 @@ module type S =
     (** Basic tree operations for creation *)
     val empty : ('a,'b) t
     val random : 'a list -> ('a,'b) t
-    val disjoint : 'a list -> ('a,'b) t
 
     (** Basic returns of nodes / ids / edges *)
     val get_node_data : Topology.id -> ('a,'b) t -> 'a
@@ -54,13 +53,7 @@ module type S =
     val break : ('a,'b) t -> Topology.edge -> ('a,'b) t * ('a,'b) break_delta
     val join : ('a,'b) t -> Topology.jxn -> Topology.jxn -> ('a,'b) t * ('a,'b) join_delta
     val reroot : ('a,'b) t -> Topology.edge -> ('a,'b) t * ('a,'b) reroot_delta
-    val disjoin : ('a,'b) t -> ('a,'b) t
-
-    val exhaustive : 
-      node_enum:('a option -> 'a -> 'a option) ->
-        root_enum:('b option -> 'b -> 'b option) ->
-          compare:(('a,'b) t -> ('a,'b) t -> bool) ->
-            ('a,'b) t -> ('a, 'b) t
+    val disjoint : ('a,'b) t -> ('a,'b) t
 
     (** I/O *)
     val to_string : ('a,'b) t -> string
@@ -70,7 +63,11 @@ module type S =
 
   end
 
-module Make (Topo : Topology.S) : S =
+module type R =
+    functor (Topo : Topology.S) -> S with type topology = Topo.t
+
+module Make : R = 
+    functor (Topo : Topology.S) ->
   struct
 
     module IDMap = Topology.IDMap
@@ -93,9 +90,25 @@ module Make (Topo : Topology.S) : S =
       comp_root : 'a root IDMap.t;
     }
 
-    let empty = failwith "TODO"
+    let empty =
+      { topology = Topo.empty;
+        node_data = IDMap.empty;
+        root_data = EdgeMap.empty;
+        comp_root = IDMap.empty; }
+
     let random _ = failwith "TODO"
-    let disjoint _ = failwith "TODO"
+
+    let disjoint t =
+      let topo  = Topo.disjoint t.topology in
+      let node_data =
+        List.fold_left
+          (fun map i -> IDMap.remove i map) t.node_data (Topo.get_leaves topo)
+      in
+      {  topology = topo;
+         node_data;
+         root_data = EdgeMap.empty;
+         comp_root = IDMap.empty; }
+         
 
     let get_node_data _ _ = failwith "TODO"
     let remove_node_data _ _ = failwith "TODO"
@@ -113,8 +126,6 @@ module Make (Topo : Topology.S) : S =
     let join _ _ = failwith "TODO"
     let reroot _ _ = failwith "TODO"
     let disjoin _ = failwith "TODO"
-
-    let exhaustive ~node_enum ~root_enum ~compare _ = failwith "TODO"
 
     let to_string _ = failwith "TODO"
     let print  _ = failwith "TODO"

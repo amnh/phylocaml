@@ -69,23 +69,15 @@ let get_edge _ _ _ = failwith "TODO"
 let get_node _ _ = failwith "TODO"
 let get_neighbors _ _ = failwith "TODO"
 let get_leaves _ = failwith "TODO"
+let get_single _ = failwith "TODO"
 let handle_of _ _ = failwith "TODO"
+
+let get_edges _ _ = failwith "TODO"
 
 let partition_edge _ _ = failwith "TODO"
 let path_of _ _ _ = failwith "TODO"
 let disjoint_edge _ _ = failwith "TODO"
 
-let break _ _ = failwith "TODO"
-let join _ _ _ = failwith "TODO"
-let reroot _ _ = failwith "TODO"
-
-type 'a fuse_location = id * t
-
-type 'a fuse_locations = 'a fuse_location list
-
-let fuse_locations _ _ = failwith "TODO"
-let fuse_all_locations _ = failwith "TODO"
-let fuse _ _ = failwith "TODO"
 
 let pre_order_nodes _ _ _ _ = failwith "TODO"
 let pre_order_edges _ _ _ _ = failwith "TODO"
@@ -100,23 +92,14 @@ let of_channel _ = failwith "TODO"
 let of_parsed _ = failwith "TODO"
 let to_parsed _ = failwith "TODO"
 
-type side_delta =
-    [ `Reroot of edge | `Join of jxn * jxn ]
+let break _ _ = failwith "TODO"
+let join _ _ _ = failwith "TODO"
+let reroot _ _ = failwith "TODO"
 
-type delta = {
-    left_delta  : side_delta option * handle;
-    right_delta : side_delta option * handle;
-}
+type 'a fuse_location = id * t
 
-let nni _ _ _ = failwith "TODO"
-let spr _ _ _ = failwith "TODO"
-let tbr _ _ _ = failwith "TODO"
-let diagnose_delta _ _ = failwith "TODO"
+type 'a fuse_locations = 'a fuse_location list
 
-type deferred_prev = int
-
-let deferred_nni _ _ _ _ = failwith "TODO"
-let deferred_spr _ _ _ _ = failwith "TODO"
-let deferred_tbr _ _ _ _ = failwith "TODO"
-
-let deferred_partition _ _ _ _ _ = failwith "TODO"
+let fuse_locations _ _ = failwith "TODO"
+let fuse_all_locations _ = failwith "TODO"
+let fuse _ _ = failwith "TODO"

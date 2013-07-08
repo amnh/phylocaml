@@ -7,9 +7,9 @@ open Phylocaml_pervasives
 
 type s
 
-external register : unit -> unit = "seq_CAML_register"
+type single = [ `Choose | `Max | `Min | `Random ]
 
-let () = register ()
+external register : unit -> unit = "seq_CAML_register"
 
 exception Invalid_Sequence of (string * string * int)
 
@@ -33,13 +33,12 @@ external set : (s -> int -> int -> unit) = "seq_CAML_set"
 
 external prepend : s -> int -> unit = "seq_CAML_prepend"
 
-let make_missing a =
+let () = register ()
+
+let missing a =
   let s = create 1 in
   prepend s (Alphabet.get_gap a);
   s
-
-let map_to_array f s = 
-  Array.init (length s) (fun x -> f (get s x)) 
 
 let mapi f s =
   let len = length s in
@@ -68,14 +67,14 @@ let fold f acc s =
 
 let foldi f acc s =
   let len = length s in
-  let rec folder acc pos = 
+  let rec folder acc pos =
     if pos < len
       then folder (f acc pos (get s pos)) (pos + 1)
       else acc
   in
   folder acc 0
 
-let foldi_2 f acc s1 s2 = 
+let foldi_2 f acc s1 s2 =
   assert( (length s1) = (length s2) );
   let len = length s1 in
   let rec folder acc pos =
@@ -103,21 +102,21 @@ let fold_righti f acc s =
   in
   folder acc (len - 1)
 
-let iter f s = 
+let iter f s =
   let len = length s in
-  for i = len - 1 downto 0 do 
+  for i = len - 1 downto 0 do
     f (get s i);
   done;
   ()
 
-let init f len = 
+let init f len =
   let seq = create len in
   for i = len - 1 downto 0 do
     prepend seq (f i);
   done;
   seq
 
-let resize n ns = 
+let resize n ns =
   let v = create ns in
   copy !n v;
   n := v;
@@ -129,12 +128,12 @@ let clone n =
   copy n res;
   res
 
-let reverse s1 = 
+let reverse s1 =
   let sp = create (length s1) in
   c_reverse s1 sp;
   sp
 
-let safe_reverse x = 
+let safe_reverse x =
   let gap = get x 0 in
   let y = create (length x) in
   for i = 1 to (length x) - 1 do
@@ -154,28 +153,30 @@ let of_list l =
   let seq = create length in
   aux_of_list seq l 0
 
-let remove_gaps ?(prependgap=true) s gapcode =
+let remove_base ?(prependbase=true) s gapcode =
   let remove_gap gap seq base =
     let () = if base <> gap then prepend seq base else () in
     seq
   in
   let res = fold_right (remove_gap gapcode) (create (length s)) s in
-  if prependgap then prepend res gapcode;
+  if prependbase then prepend res gapcode;
   res
 
-let is_missing seq gap =
+let is_missing seq alph =
+  let gap = Alphabet.get_gap alph in
   let len = length seq in
-  if len=0 then true 
-  else 
+  if len=0 then true
+  else
     let rec check p =
       if p = len
         then true
-        else 
+        else
           if gap <> get seq p
             then false
-            else check (p + 1) 
+            else check (p + 1)
     in
     check 0
+
 
 (** {2 Parsers to Sequence data-type} *)
 
@@ -190,31 +191,31 @@ let of_string str alph =
         else get_base new_str (loc-1)
   and aux_parse seq alph = function
     | -1 -> seq
-    | loc -> 
-      let base,loc = get_base "" loc in 
+    | loc ->
+      let base,loc = get_base "" loc in
       prepend seq base;
       aux_parse seq alph (loc-1)
-  in           
+  in
   let len = String.length str in
   let seq = create len in
   aux_parse seq alph (len - 1)
 
-let of_list str_ls alph = 
+let of_list str_ls alph =
   let rec aux_parse_ls seq = function
     | []     -> seq
-    | hd::tl -> 
+    | hd::tl ->
       prepend seq $ Alphabet.get_code hd alph;
       aux_parse_ls seq tl
   in
-  let len = List.length str_ls in 
+  let len = List.length str_ls in
   let seq = create len in
   aux_parse_ls seq str_ls
 
 let to_string seq alph =
   let len = length seq in
-  let seq,len = 
+  let seq,len =
     if len=0
-      then (make_missing alph),1    
+      then (missing alph),1
       else seq,len
     in
     let b = Buffer.create len in
@@ -243,24 +244,24 @@ let print chn seq alph =
 let print_codes seq =
   let len = length seq in
   Printf.printf "len=%d,[%!" len;
-  for i = 0 to (len-1) do  
-    Printf.printf "%d,%!" (get seq i) 
+  for i = 0 to (len-1) do
+    Printf.printf "%d," (get seq i)
   done;
   Printf.printf "]\n%!"
 
-let concat x = 
+let concat x =
   let copy_from_in x y z u =
     let to_copy = get x z in
     set y u to_copy
   in
   let len = List.fold_left (fun x y -> x + length y) 0 x in
-  let ns = init (fun _x -> 0) len in 
-  let pos = ref 0 in    
-  let copier x = 
+  let ns = init (fun _x -> 0) len in
+  let pos = ref 0 in
+  let copier x =
     let len = length x in
     for i = 0 to len - 1 do
       copy_from_in x ns i !pos;
-      Pervasives.incr pos;            
+      Pervasives.incr pos;
   done;
   in
   List.iter (copier) x;
@@ -269,14 +270,14 @@ let concat x =
 let to_array s =
   Array.init (length s) (fun x -> get s x)
 
-let of_array code_arr = 
-  let len = Array.length code_arr in 
-  init (fun idx -> code_arr.(idx)) len  
+let of_array code_arr =
+  let len = Array.length code_arr in
+  init (fun idx -> code_arr.(idx)) len
 
 let sub s st len =
   init (fun x -> get s (x + st)) len
 
-let sub_ignore_gap gap s st len = 
+let sub_ignore_base base s st len =
   let idx = ref st in
   let count = ref 0 in
   let slen = length s in
@@ -286,7 +287,7 @@ let sub_ignore_gap gap s st len =
     let add = get s !idx in
     acclst := !acclst @ [add];
     idx := !idx +1;
-    if add<>gap then 
+    if add<>base then
       count := !count + 1
   done;
   of_array (Array.of_list !acclst) , !idx
@@ -300,28 +301,28 @@ let length_without_gap gap s =
   done;
   !count
 
-let prepend_char seq element =  
+let prepend_char seq element =
   let len = length seq in
   let ext_seq =
     init
       (fun index -> match  index with
         | 0  -> element
         | _ -> get seq (index - 1))
-      (len + 1) 
+      (len + 1)
   in
   ext_seq
 
 let del_first_char seq =
-  let len = length seq in  
+  let len = length seq in
   sub seq 1 (len - 1)
 
-let compare a b = 
+let compare a b =
   let la = length a
   and lb = length b in
   let lc = min la lb in
   let rec comparator cnt =
     if cnt < lc then begin
-      let ca = get a cnt 
+      let ca = get a cnt
       and cb = get b cnt in
       match ca - cb with
         | 0 -> comparator (cnt + 1)
@@ -358,7 +359,7 @@ let split positions s alph =
     seq :: acc
   in
   let rec splitter acc = function
-    | (a, _) :: (((c, b) :: _) as t) -> 
+    | (a, _) :: (((c, b) :: _) as t) ->
       assert ( a <= b );
       splitter (do_one_pair a c acc) t
     | (a, _) :: [] ->
@@ -392,8 +393,8 @@ let of_code_arr code_arr gap =
   in
   seq
 
-let complement a s = 
-  let aux_complement start a s = 
+let complement a s =
+  let aux_complement start a s =
     let res =
       let acc = (create (length s)) in
       for i = start to (length s) - 1 do
@@ -410,26 +411,26 @@ let complement a s =
   prepend res gap;
   res
 
-let is_existed_code code seq = 
+let contains_code code seq =
   fold (fun existed c -> if c = code then true else existed) false seq
 
 let cmp_num_all seq alph =
-    let len = length seq in 
-    let gap = Alphabet.get_gap alph in
-    let num_nu = ref 0 in
-    for p = 0 to len - 1 do 
-        if (get seq p) land gap != gap then num_nu := !num_nu + 1;
-    done;
-    !num_nu
+  let len = length seq in
+  let gap = Alphabet.get_gap alph in
+  let num_nu = ref 0 in
+  for p = 0 to len - 1 do
+    if (get seq p) land gap != gap then num_nu := !num_nu + 1;
+  done;
+  !num_nu
 
 let cmp_num_not_gap seq alph =
-    let len = length seq in
-    let gap = Alphabet.get_gap alph in
-    let num_nu = ref 0 in
-    for p = 0 to len - 1 do
-        if (get seq p) != gap then num_nu := !num_nu + 1;
-    done;
-    !num_nu
+  let len = length seq in
+  let gap = Alphabet.get_gap alph in
+  let num_nu = ref 0 in
+  for p = 0 to len - 1 do
+    if (get seq p) != gap then num_nu := !num_nu + 1;
+  done;
+  !num_nu
 
 let gap_saturation seq alph =
   assert( Alphabet.is_bitset alph );
@@ -442,7 +443,7 @@ let gap_saturation seq alph =
 
 let poly_saturation sequence alph n =
   assert( Alphabet.is_bitset alph );
-  let len = length sequence 
+  let len = length sequence
   and poly =
     fold
       (fun acc base -> if n = count_bits base then acc + 1 else acc) 0 sequence

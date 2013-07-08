@@ -4,6 +4,9 @@ open Phylocaml_pervasives
 
 (** {6 Definition of an Alphabet} *)
 
+exception Illegal_Character of string
+exception Illegal_Code of int
+
 type kind =
   | Sequential (** Numbers define states. Should be 0 -- (n-1) *)
   | SimpleBitFlag (** Set bits in numbers define states. *)
@@ -11,21 +14,22 @@ type kind =
   | Continuous (** A continuous alphabet of values; the states define the alphabet. *)
   | CombinationLevels of int (** A sequential alphabet with additional states for polymorphisms. *)
 
-(** An alphabet stores the character codes, states, their compliments, the type * of alphabet and some other basic information. comb_list/list_comb are used in
+(** An alphabet stores the character codes, states, their compliments, the type * of alphabet and some other basic information. comb_set/set_comb are used in
  * sequential alphabets only, to be used to associate a sequential state to
  * a set of sequential state that cannot be transformed easily (unlike bitsets). *)
 type t =
-  { comb_list : IntSet.t IntMap.t;
-    list_comb : int IntSetMap.t;
-    code_name : int StringMap.t;
-    name_code : string IntMap.t;
-    comp_code : int option IntMap.t;
-    states    : IntSet.t;
-    alphabet_type : kind;
-    size : int;
-    gap : int option;
-    orientation : bool;
-    all : int option;
+  { comb_set : IntSet.t IntMap.t;  (* Combination Code -> States *)
+    set_comb : int IntSetMap.t;    (* States -> Combination Code *)
+    name_code : int StringMap.t;    (* Single Code -> Name *)
+    code_name : string IntMap.t;    (* Name -> Single Code *)
+    comp_code : int IntMap.t;       (* Code -> Compliment of Code *)
+    alphabet_type : kind;           (* Type of the alphbet *)
+    size : int;                     (* Size of the basic alphabet *)
+    full_size : int;                (* Size of associated matrix *)
+    orientation : bool;             (* If cost(~x,x) = cost(x,x) + O(n) *)
+    gap : int option;               (* Code for the gap-character; if present *)
+    missing: int option;            (* Code for the missing-character; if present *)
+    all : int option;               (* Code for the all-character; if present *)
   }
 
 
@@ -36,6 +40,7 @@ let default_gap = "-"
 
 (** default missing represenation *)
 let default_missing = "?"
+
 
 (** {6 Combination Functions} *)
 
@@ -50,56 +55,86 @@ let generate_combinational_elements ~level codes =
  * It must be dealt with differently in most situations. *)
 let continuous =
   { alphabet_type = Continuous;
-    comb_list = IntMap.empty;
-    list_comb = IntSetMap.empty;
-    code_name = StringMap.Singleton "-" ~-1;
-    name_code = IntMap.singleton ~-1 "-";
+    comb_set = IntMap.empty;
+    set_comb = IntSetMap.empty;
+    name_code = StringMap.empty;
+    code_name = IntMap.empty;
     comp_code = IntMap.empty;
     size      = max_int;
+    full_size = ~-1;
     gap       = None;
+    missing   = None;
+    all       = None;
     orientation = false;
-    all = None;
   }
 
 let count_states alphabet_type code_names =
-  let succ_atomic x = if 0 = (x land (x-1)) then succ else (fun x -> x) in
+  let succ_atomic _ x a = if 0 = (x land (x-1)) then a else succ a in
   match alphabet_type with
   | Sequential -> StringMap.cardinal code_names
   | SimpleBitFlag
-  | ExtendedBitFlag -> StringMap.fold succ_atomic 0 code_names
-  | CombinationLevels i ->
+  | ExtendedBitFlag -> StringMap.fold succ_atomic code_names 0
+  | CombinationLevels i -> failwith "TODO"
   | Continuous -> ~-1
 
+(** Tests any number of things to verify the integrity of an alphabet
+    1 - that sequential alphabets are 0 indexed.
+    2 - that the correct number of combinations exists.
+    3 - the sequential alphabets don't skip numbers *)
+let verify_alphabet a = match a.alphabet_type with
+  | Sequential ->
+    let rec verify i =
+      if i = a.size then
+        true
+      else if IntMap.mem i a.code_name then
+        (StringMap.mem (IntMap.find i a.code_name) a.name_code) && (verify (i+1))
+      else
+        false
+    in
+    ((IntMap.cardinal a.code_name) = a.size) && (verify 0)
+  | CombinationLevels _ -> true
+  | ExtendedBitFlag
+  | SimpleBitFlag
+  | Continuous -> true
 
 (** Generate an alphabet from a list of states (NAME,CODE,COMPLIMENT). *)
-let of_list lst gap all alphabet_type orientation =
+let of_list lst gap all missing alphabet_type orientation =
   let add_one (cname,ncode,ccode) (name,code,comp) =
     let name = String.uppercase name in
     let ccode = match comp with
       | None -> ccode
-      | Some x -> IntMap.add code comp ccode
+      | Some x -> IntMap.add code x ccode
     in
     StringMap.add name code cname, IntMap.add code name ncode, ccode
   in
-  let code_name,name_code,comp_code =
+  let name_code,code_name,comp_code =
     List.fold_left add_one (StringMap.empty,IntMap.empty,IntMap.empty) lst
   in
-  let comb_list,list_comb = match alphabet_type with
+  let comb_set,set_comb = match alphabet_type with
     | CombinationLevels level      -> generate_combinational_elements ~level code_name
     | Sequential | SimpleBitFlag
-    | Continuous | ExtendedBitFlag -> IntMap.empty, IntMap.empty
+    | Continuous | ExtendedBitFlag -> IntMap.empty, IntSetMap.empty
   in
-  {
-    size = IntMap.cardinal name_code;
-    gap = match gap with | None -> None | Some gap -> Some (StringMap.find gap code_name);
+  let () = match gap with
+    | None -> ()
+    | Some x -> assert( IntMap.mem x code_name );
+  in
+  let a = {
+    size = IntMap.cardinal code_name;
+    full_size = IntMap.cardinal comb_set;
     alphabet_type; orientation;
-    code_name; name_code; comp_code; all; comb_list; list_comb;
-  }
+    code_name; name_code;
+    comb_set; set_comb;
+    comp_code;
+    all; gap; missing;
+  } in
+  assert ( verify_alphabet a );
+  a
 
 (** A binary character for the absence and presence of a character *)
 let present_absent =
   let lst = [("present", 1, None); ("absent", 2, None) ] in
-  a_of_list lst (Some "absent") None Sequential false
+  of_list lst (Some 2) None None Sequential false
 
 (** Basic DNA alphabet; the simple bit flag annotation implies that
  * polymorphisms of characters are not defined in the alphabet *)
@@ -112,7 +147,7 @@ let dna =
     ("-", 0b10000, None);
     ("X", 0b11111, Some 0b11111); ]
   in
-  of_list lst (Some "-") (Some 0b11111) SimpleBitFlag false
+  of_list lst (Some 0b10000) (Some 0b11111) (Some 0b10000) SimpleBitFlag false
 
 (** Define an extended-bit-flag representation of DNA that carries with it
  * associations of polymorphisms to single characters. This also includes
@@ -153,100 +188,115 @@ let nucleotides =
     ("P", 0b11111, Some 0b11111);
     ("?", 0b11111, Some 0b11111);
   ] in
-  of_list lst (Some "-") (Some 0b11111) ExtendedBitFlag false
+  of_list lst (Some 0b10000) (Some 0b11111) (Some 0b11111) ExtendedBitFlag false
 
 (** Define a Sequential alphabet for the amino-acids *)
 let aminoacids_char_list =
   let lst = [
-    ("A",  1, None); (* alanine *)
-    ("R",  2, None); (* arginine *)
-    ("N",  3, None); (* asparagine *)
-    ("D",  4, None); (* aspartic *)
-    ("C",  5, None); (* cysteine *)
-    ("Q",  6, None); (* glutamine *)
-    ("E",  7, None); (* glutamic *)
-    ("G",  8, None); (* glycine *)
-    ("H",  9, None); (* histidine *)
-    ("I", 10, None); (* isoleucine *)
-    ("L", 11, None); (* leucine *)
-    ("K", 12, None); (* lysine *)
-    ("M", 13, None); (* methionine *)
-    ("F", 14, None); (* phenylalanine *)
-    ("P", 15, None); (* proline *)
-    ("S", 16, None); (* serine *)
-    ("T", 17, None); (* threonine *)
-    ("W", 18, None); (* tryptophan *)
-    ("Y", 19, None); (* tyrosine *)
-    ("V", 20, None); (* Valine *)
-    ("X", 21, None); (* all element *)
-    ("-", 22, None); (* gap *)
+    ("A",  0, None); (* alanine *)
+    ("R",  1, None); (* arginine *)
+    ("N",  2, None); (* asparagine *)
+    ("D",  3, None); (* aspartic *)
+    ("C",  4, None); (* cysteine *)
+    ("Q",  5, None); (* glutamine *)
+    ("E",  6, None); (* glutamic *)
+    ("G",  7, None); (* glycine *)
+    ("H",  8, None); (* histidine *)
+    ("I",  9, None); (* isoleucine *)
+    ("L", 10, None); (* leucine *)
+    ("K", 11, None); (* lysine *)
+    ("M", 12, None); (* methionine *)
+    ("F", 13, None); (* phenylalanine *)
+    ("P", 14, None); (* proline *)
+    ("S", 15, None); (* serine *)
+    ("T", 16, None); (* threonine *)
+    ("W", 17, None); (* tryptophan *)
+    ("Y", 18, None); (* tyrosine *)
+    ("V", 19, None); (* valine *)
+    ("X", 20, None); (* all element *)
+    ("-", 21, None); (* gap *)
   ] in
-  of_list lst (Some "-") (Some 21) Sequential false
+  of_list lst (Some 21) (Some 20) (Some 20) Sequential false
 
 
 (** {6 Basic Functions for querying alphabets *)
 
 (** return the gap character *)
-let get_gap_char t = IntMap.find t.gap t.name_code
+let get_gap t = match t.gap with
+  | Some x -> x
+  | None   -> raise Not_found
+
+let has_gap t = match t.gap with
+  | Some _ -> true
+  | None   -> false
 
 (** return the size of the alphabet *)
-let get_size t = t.size
+let size t = t.size
 
 (** return if orientation is used *)
-let get_orientation t = t.orientation
+let orientation t = t.orientation
 
 (** return the all element if it exists *)
-let get_all_state t = t.all
+let all_char t = t.all
 
 (** return the type of the alphabet *)
-let get_type t = t.alphabet_type
+let kind t = t.alphabet_type
+
+(** return if the alphabet is bit identified *)
+let is_bitset t =
+  match t.alphabet_type with
+  | CombinationLevels _
+  | Sequential
+  | Continuous -> false
+  | ExtendedBitFlag
+  | SimpleBitFlag -> true
 
 (** get the compliment of the character code *)
-let get_comp i t =
-  try IntMap.find i t.comp_code
-  with Not_found -> None
+let complement i t =
+  if IntMap.mem i t.comp_code
+    then Some (IntMap.find i t.comp_code)
+    else None
 
 (** return the list of states that represent a state *)
-let get_combination_states i t =
+let get_combination_set i t =
   match t.alphabet_type with
-  | CombinationLevels
-  | Sequential -> IntMap.find i t.comb_list
+  | CombinationLevels _
+  | Sequential -> IntMap.find i t.comb_set
   | Continuous -> IntSet.singleton i
   | ExtendedBitFlag
-  | SimpleBitFlag    -> bitset_of_int i
+  | SimpleBitFlag    -> bitset_of_int IntSet.empty 0 i
 
 (** Opposite of the above function *)
 let get_state_combination s t =
   match t.alphabet_type with
-  | CombinationLevels
-  | Sequential -> IntSetMap.find s t.list_comb
+  | CombinationLevels _
+  | Sequential -> IntSetMap.find s t.set_comb
   | Continuous ->
     assert( (IntSet.cardinal s) = 1 );
     IntSet.choose s
   | ExtendedBitFlag
-  | SimpleBitFlag    -> int_of_bitset i
+  | SimpleBitFlag    -> int_of_bitset s
 
 (** get the code associated with the name of the character *)
 let get_code n t =
-  match t.alphabet_type with
-  | Continuous -> int_of_string c
-  | SimpleBitFlag | ExtendedBitFlag
-  | CombinationLevels _ | Sequential ->
-    StringMap.find (String.uppercase n) t.code_name
+  try match t.alphabet_type with
+    | Continuous -> int_of_string n
+    | SimpleBitFlag | ExtendedBitFlag
+    | CombinationLevels _ | Sequential ->
+      StringMap.find (String.uppercase n) t.name_code
+  with Not_found -> raise (Illegal_Character n)
 
 (** Return the name of the character code *)
 let get_name c t =
-  match t.alphabet_type with
-  | Continuous -> string_of_int c
-  | SimpleBitFlag | ExtendedBitFlag
-  | CombinationLevels _ | Sequential -> IntMap.find c t.name_code
+  try match t.alphabet_type with
+    | Continuous -> string_of_int c
+    | SimpleBitFlag | ExtendedBitFlag
+    | CombinationLevels _ | Sequential -> IntMap.find c t.code_name
+  with Not_found -> raise (Illegal_Code c)
 
 (** Convert an alphabet to a list of the main properties *)
 let to_list t =
-  StringMap.fold
-    (fun k v lst -> (k,v,get_comp v t)::lst)
-    t.code_name
-    []
+  StringMap.fold (fun k v lst -> (k,v,complement v t)::lst) t.name_code []
 
 
 (** {6 Converting between types of alphabets *)
@@ -254,50 +304,61 @@ let to_list t =
 (** convert alphabet to a sequentially ordered alphabet; remove combination if
     they exist in the alphabet, continuous alphabets are unchanged. *)
 let rec to_sequential t =
-  match t.alphabet with
+  match t.alphabet_type with
   | Sequential
   | Continuous -> t
-  | ExtendedBitFlag -> to_sequential (to_simple t)
-  | SimpleBitFlag ->
-  | CombinationLevels _ -> 
+  | ExtendedBitFlag -> to_sequential (to_bitflag t)
+  | SimpleBitFlag -> failwith "TODO"
+  | CombinationLevels _ -> failwith "TODO"
 
 (** Convert the alphabet to a simple bit encoding format. This removes extra
-    polymorphic states; limited to transforming alphabets < 63bits *)
-and to_simple t =
-  match t.alphabet with
+    polymorphic states; limited to transforming alphabets < 63bits. *)
+and to_bitflag t =
+  match t.alphabet_type with
   | Continuous
   | SimpleBitFlag -> t
-  | CombinationLevels l ->
+  | CombinationLevels l -> failwith "TODO"
   | ExtendedBitFlag ->
     let is_atomic x = 0 = (x land (x-1)) in
     let lst =
       IntMap.fold
         (fun code name lst ->
-          if is_atomic code then (name,code,get_comp)::lst else lst)
-        (IntMap.empty,StringMap.empty)
+          if is_atomic code then (name,code,complement code t)::lst else lst)
+        t.code_name
+        []
     in
-    assert( is_atomic gap );
-    assert( t.size = (IntMap.cardinal names) );
-    of_list lst t.gap t.all SimpleBitFlag t.orientation
-  | Sequential ->
+    assert( match t.gap with Some x -> is_atomic x | None -> false );
+    assert( t.size = (IntMap.cardinal t.code_name) );
+    of_list lst t.gap t.all t.missing SimpleBitFlag t.orientation
+  | Sequential -> failwith "TODO"
+    (* how to deal with large alphabets? *)
           
- 
+(** Simplify turns the alphabet to one of the following based on it's current
+ * state: simplebitflag, sequential, or continuous *)
+and simplify t =
+  match t.alphabet_type with
+  | Sequential
+  | CombinationLevels _ -> to_sequential t
+  | SimpleBitFlag 
+  | ExtendedBitFlag -> to_bitflag t
+  | Continuous -> t
+
 (** Convert the alphabet to one with levels; this generates polymorphisms and
     codes under non-bitset situations. *)
 and to_level level t =
-  match t.alphabet with
-  | CombinationLevels l when l = level -> t
-  | Sequential when level = 1 -> t
+  assert( level > 0 );
+  match t.alphabet_type with
+  | CombinationLevels _ when level = 1 -> to_sequential t
+  | CombinationLevels l when level = l -> t
+  | Sequential          when level = 1 -> t
+  | CombinationLevels _                -> to_level level (to_sequential t)
   | Continuous
   | SimpleBitFlag
   | ExtendedBitFlag -> t
-  | CombinationLevels _ -> to_level level (to_sequential t)
   | Sequential ->
     let combs,lsts = generate_combinational_elements ~level t.code_name in
     { t with
-      comb_list = combs;
-      list_comb = lsts;
+      comb_set = combs;
+      set_comb = lsts;
       alphabet_type = CombinationLevels level; }
-    
 
-(** {6 Parsers for reading alphabets *)

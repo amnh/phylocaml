@@ -1,12 +1,14 @@
 (** {2 Type Definitions} *)
 
-(** Basic type to a sequence of data; abstracted by the interface. *)
 type s
+(** Basic type to a sequence of data; abstracted by the interface. *)
 
-(** Parse error raised; returns entire sequence, invalid base, and location *)
 exception Invalid_Sequence of (string * string * int)
+(** Parse error raised; returns entire sequence, invalid base, and location *)
 
 val compare : s -> s -> int
+(** Basic compare function for two sequences. *)
+
 
 (** {2 Basic Creation Functions} *)
 
@@ -38,10 +40,6 @@ val capacity : s -> int
 val length : s -> int
 (** [length] return the length of the sequence *)
 
-val count : int -> int -> s -> int
-val contains_code : int -> s -> bool
-val length_without_gap : int -> s -> int
-
 
 (** {2 Accessors / Setters} *)
 
@@ -55,6 +53,7 @@ val prepend : s -> int -> unit
 (** [prepend s v] prepend the sequence [s] with value [v]. *)
 
 val prepend_char : s -> int -> s
+(** functional version of prepend; returns a new sequence *)
 
 
 (** {2  Iterators} *)
@@ -71,13 +70,28 @@ val iter : (int -> 'a) -> s -> unit
 
 (** {2 Usefule Modifiers.} *)
 
-val remove_gaps : ?prependgap:bool -> s -> int -> s
+val remove_base : ?prependbase:bool -> s -> int -> s
+(** [remoce_base ?p s i] remove all instances of [i] in [s] and then optionally
+    prepend the sequence with [i]; [p] is false by default. *)
+
 val reverse_ip : s -> unit
+(** [reverse_ip s] reverse the sequence in place (do not complement. *)
+
 val reverse : s -> s
+(** [reverse s] reverse sequence and return new instance (do not complement) *)
+
 val concat : s list -> s
+(** [concat ss] concat a list of sequences; in-order. *)
+
 val sub : s -> int -> int -> s
-val sub_ignore_gap : int -> s -> int -> int -> s * int
+(** [sub s l h] return a new sequence of [s] from element [l] to [h]. *)
+
+val sub_ignore_base : int -> s -> int -> int -> s * int
+(** [sub_ignore_base i s l h] return a new sequence of [l] to [h] excluding any
+    elements of base [i] --this is usually the gap character in the alphabet. *)
+
 val del_first_char : s -> s
+(** [del_first_char s] remove the first element of the sequence. *)
 
 
 (** {2 Higher-Order Creation Functions / Parsers.} *)
@@ -85,15 +99,15 @@ val del_first_char : s -> s
 val copy : s -> s -> unit
 (** [copy s t], copies the contents of [s] into [t]. *)
 
-val split : (int * int) list -> s -> Alphabet.t -> s list
-
 val to_array : s -> int array
+(** [to_array s] convert a sequence to an array. *)
 
 val of_array : int array -> s
+(** [of_array s] convert an array to a sequence. *)
 
 val of_string : string -> Alphabet.t -> s
 (** convert a string of characters to a sequence by an alphabet. the alphabet
- * must be prefix free for the parsing of the string to be successful. *)
+    must be prefix free for the parsing of the string to be successful. *)
 
 val of_list : string list -> Alphabet.t -> s
 (** convert a list of characters to a sequence by an alphabet. *)
@@ -113,7 +127,7 @@ val print_codes : s -> unit
 
 (** {2 Data Oriented Functions} *)
 
-type single = [ `Choose | `Max | `Min | `Random ] 
+type single = [ `Choose | `Max | `Min | `Random ]
 (** define how to select elements for a single assignment *)
 
 val select_one : ?how:single -> s -> Alphabet.t -> s
@@ -132,8 +146,16 @@ val unique_elements : s -> Alphabet.t -> bool
 (** [unique_elements] return true if the states in [s] are unique. *)
 
 (*
-??? val of_code_arr : int array -> int -> s
-??? val cmp_num_all : s -> Alphabet.t -> int
-??? val cmp_num_not_gap : s -> Alphabet.t -> int
+
+this are not included in the interface until their utility is determined.
+
+val of_code_arr : int array -> int -> s
+val cmp_num_all : s -> Alphabet.t -> int
+val cmp_num_not_gap : s -> Alphabet.t -> int
+val count : int -> int -> s -> int
+val contains_code : int -> s -> bool
+val length_without_gap : int -> s -> int
+val split : (int * int) list -> s -> Alphabet.t -> s list
+
 *)
 
