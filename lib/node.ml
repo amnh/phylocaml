@@ -262,79 +262,71 @@ struct
 
   type n = Node.n Lazy.t
 
-  let force_opt x = match x with
-    | Some x -> Some (Lazy.force_val x)
+  let return a = Lazy.lazy_from_val a
+  
+  let return_f a = Lazy.lazy_from_fun a
+  
+  let (>>=) a f = match a with
     | None   -> None
+    | Some x -> Some (f x)
 
-  and force = Lazy.force_val
+  let of_data i x = return (Node.of_data i x)
 
-  and force_lst = List.map (Lazy.force_val)
+  let height d x = Node.height d $ Lazy.force x
+  let cardinal x = Node.cardinal $ Lazy.force x
+  let compare a b = Node.compare (!$ a) (!$ b)
+  let recode f x = return (Node.recode f (!$ x))
+  let is_collapsable t a b = Node.is_collapsable t (!$ a) (!$ b)
 
-  let force_apply x f = f (Lazy.force_val x)
+  let filter_codes cs x = return_f (fun () -> Node.filter_codes cs $ Lazy.force x)
 
-  let of_data i x = Lazy.lazy_from_val (Node.of_data i x)
+  let get_codes x = Node.get_codes $ Lazy.force x
 
-  let height d x = force_apply x (Node.height d)
-  let cardinal x = force_apply x Node.cardinal
-  let compare a b = Node.compare (force a) (force b)
-  let recode f x = Lazy.lazy_from_val (Node.recode f (force x))
-  let is_collapsable t a b = Node.is_collapsable t (force a) (force b)
+  let get_preliminary d k y = Node.get_preliminary d k $ Lazy.force y
 
-  let filter_codes cs x =
-    Lazy.lazy_from_fun (fun () -> force_apply x (Node.filter_codes cs))
-
-  let get_codes x = force_apply x Node.get_codes
-
-  let get_preliminary d k y =
-    force_apply y (Node.get_preliminary d k)
-
-  let get_adjusted k y = force_apply y (Node.get_adjusted k)
+  let get_adjusted k y = Node.get_adjusted k $ Lazy.force y
     
-  let distance_1 a b =
-    Node.distance_1 (force a) (force b)
-  let distance_2 a b c =
-    Node.distance_2 (force a) (force b) (force c)
+  let distance_1 a b = Node.distance_1 (!$ a) (!$ b)
+  let distance_2 a b c = Node.distance_2 (!$ a) (!$ b) (!$ c)
 
   let median_1 i a b =
-    Lazy.from_fun (fun () -> Node.median_1 i (force_opt a) (force b))
+    return_f (fun () -> Node.median_1 i (a >>= Lazy.force) (!$ b))
   let median_2 i a b c =
-    Lazy.from_fun (fun () -> Node.median_2 i (force_opt a) (force b) (force c))
+    return_f (fun () -> Node.median_2 i (a >>= Lazy.force) (!$ b) (!$ c))
   let median_n i a bs =
-    Lazy.from_fun (fun () -> Node.median_n i (force_opt a) (force_lst bs))
+    return_f (fun () -> Node.median_n i (a >>= Lazy.force) (!$$ bs))
     
   let readjust_3 ?prelim i a b c d =
-    let n,i = Node.readjust_3 ?prelim i (force a) (force b) (force c) (force d) in
-    Lazy.from_val n, i
+    let n,i = Node.readjust_3 ?prelim i (!$ a) (!$ b) (!$ c) (!$ d) in
+    return n, i
 
   let readjust_n ?prelim i n ns =
-    let n,i = Node.readjust_n ?prelim i (force n) (force_lst ns) in
-    Lazy.from_val n, i
+    let n,i = Node.readjust_n ?prelim i (!$ n) (!$$ ns) in
+    return n, i
 
   let uppass_heuristic_internal_3 a b c d =
-    Lazy.from_fun (fun () ->
-      Node.uppass_heuristic_internal_3 (force a) (force b) (force c) (force d))
+    return_f (fun () -> Node.uppass_heuristic_internal_3 (!$ a) (!$ b) (!$ c) (!$ d))
 
   let uppass_heuristic_internal_n a b =
-    Lazy.from_fun (fun () ->
-      Node.uppass_heuristic_internal_n (force a) (force_lst b))
+    return_f (fun () -> Node.uppass_heuristic_internal_n (!$ a) (!$$ b))
 
   let uppass_heuristic_leaf a b =
-    Lazy.from_fun (fun () -> Node.uppass_heuristic_leaf (force a) (force b))
+    return_f (fun () -> Node.uppass_heuristic_leaf (!$ a) (!$ b))
 
   let uppass_heuristic_root a b c =
-    Lazy.from_fun (fun () ->
-      Node.uppass_heuristic_root (force a) (force b) (force c))
+    return_f (fun () -> Node.uppass_heuristic_root (!$ a) (!$ b) (!$ c))
 
   let final_states a b c d =
-    Lazy.from_fun (fun () -> Node.final_states (force a) (force b) (force c) (force d))
+    return_f (fun () -> Node.final_states (!$ a) (!$ b) (!$ c) (!$ d))
+
   let to_single a b c d =
-    Lazy.from_fun (fun () -> Node.to_single (force_opt a) (force b) (force c) (force d))
+    return_f (fun () -> Node.to_single (a >>= Lazy.force) (!$ b) (!$ c) (!$ d))
 
-  let tree_cost d a = force_apply a (Node.tree_cost d)
-  let node_cost d a = force_apply a (Node.node_cost d)
+  let tree_cost d a = Node.tree_cost d $ Lazy.force a
+  let node_cost d a = Node.node_cost d $ Lazy.force a
 
-  let to_string a = force_apply a Node.to_string
-  let to_xml c a = force_apply a (Node.to_xml c)
+  let to_string a = Node.to_string $ Lazy.force a
+  let to_xml c a  = Node.to_xml c  $ Lazy.force a
 end
 
 
