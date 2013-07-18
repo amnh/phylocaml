@@ -1,4 +1,4 @@
-open Phylocaml_pervasives
+open Internal
 
 open Topology
 
@@ -55,6 +55,8 @@ let is_edge x y t = EdgeSet.mem (x,y) t.edges
 
 let is_node x t = IDMap.mem x t.nodes
 
+let is_handle x t = HandleSet.mem x t.handles
+
 let get_other_two p a b c =
   if p = a then b,c
   else if p = b then a,c
@@ -102,11 +104,11 @@ let get_neighbors x t = match get_node x t with
 
 let compare a b = failwith "TODO"
 
-let holes_and_max ids =
+let holes_and_max ids : int * int list =
   let rec holesmax holes max xxs = match xxs with
     | [] -> max,holes
     | x::xs when x = max -> holesmax holes (max+1) xs
-    | x::xs -> holesmax (max::holes) (max+1) xxs
+    | _ -> holesmax (max::holes) (max+1) xxs
   in
   holesmax [] 0 (List.sort Pervasives.compare ids)
 
@@ -127,7 +129,7 @@ let disjoint t =
     IDSet.fold (fun i acc -> IDMap.add i (Single i) acc) leaves IDMap.empty
   and edges = EdgeSet.empty
   and handles = leaves
-  and avail_codes = holes_and_max leaves in
+  and avail_codes = holes_and_max (IDSet.elements leaves) in
   {t with
     edges; nodes; handles; avail_codes; }
 
@@ -184,10 +186,15 @@ let is_single x t =
 
 let pre_order_nodes f h t acc =
   let rec processor prev curr acc =
-    match get_node curr with
-    | Single x, _ -> f prev curr acc
-    | Leaf (_,p), None -> processor (Some curr) p (f prev curr acc)
-    | Leaf (_,p), Some x -> assert (x=p); f prev curr acc
+    match get_node curr t, prev with
+    | Single x, _ ->
+      assert(x=curr);
+      f prev curr acc
+    | Leaf (_,p), None ->
+      processor (Some curr) p (f prev curr acc)
+    | Leaf (_,p), Some x ->
+      assert(x=p);
+      f prev curr acc
     | Interior(_,a,b,c),None ->
       f prev curr acc
         |> processor (Some curr) a
@@ -211,13 +218,13 @@ let pre_order_edges f ((a,b) as e) t acc =
         |> each_edge curr a
         |> f (curr,b)
         |> each_edge curr b
-    | Leaf (a,b) -> accum
+    | Leaf _ -> accum
   in
   f e acc
-    |> each_edge a b acc
-    |> each_edge b a acc
+    |> each_edge a b
+    |> each_edge b a
 
-let pre_order_edges_root _ _ _ _ = failwith "TODO"
+let pre_order_edges_root _ _ _ _ _ = failwith "TODO"
 
 let post_order_edges f g (a, b) bt accum =
   let rec processor prev curr accum =
@@ -268,14 +275,14 @@ let handle_of n t =
     else
       match get_node n t with
       | Single _ -> assert false (* should be a handle *)
-      | Leaf (_,b) -> handle_of b t
+      | Leaf (_,b) -> handle_of n b t
       | Interior (_,a,b,c) ->
-        let a,b = get_other_two n a b c in
-        begin match handle_of n a t, handle_of n a t with
-        | (Some _) as a, None
-        | None, (Some _) as a -> a
-        | None, None -> None
-        | _ , _ -> assert false (* only one handle valid *)
+        let a,b = get_other_two p a b c in
+        begin match handle_of n a t, handle_of n b t with
+          | ((Some _) as a, None)
+          | None, ((Some _) as a) -> a
+          | None, None -> None
+          | (Some _),(Some _) -> assert false (* only one handle valid *)
         end
   in
   match get_node n t with
@@ -286,7 +293,7 @@ let handle_of n t =
     | None   -> assert false
     end
   | Interior (_,a,b,c) ->
-    begin match handle_of a t, handle_of b t, handle_of c t with
+    begin match handle_of n a t, handle_of n b t, handle_of n c t with
     | Some x, None, None
     | None, Some x, None
     | None, None, Some x -> x

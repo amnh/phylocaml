@@ -15,17 +15,17 @@ module type S =
         (** Remove the edge from the topology; this may not produce two disjoint
             sets, this is the case in network topologies. This can be determined
             from the break-delta also returned with the updated topology. *)
-        val break_fn : Topology.edge -> t -> t * (a,b) Ptopology.break_delta
+        val break_fn : Topology.edge -> t -> t * (a,b) PTopology.break_delta
 
         (** Reroot the topology to the provided edge - used for printing and
             diagnosis of the topology. *)
-        val reroot_fn : Topology.edge -> t -> t * (a,b) Ptopology.reroot_delta
+        val reroot_fn : Topology.edge -> t -> t * (a,b) PTopology.reroot_delta
 
         (** Find the added cost of joining the two jxn points *)
         val cost_fn : Topology.jxn -> Topology.jxn -> t -> float
 
         (** Join the two jxn points in the topology *)
-        val join_fn : Topology.jxn -> Topology.jxn -> t -> t * (a,b) Ptopology.join_delta
+        val join_fn : Topology.jxn -> Topology.jxn -> t -> t * (a,b) PTopology.join_delta
 
         (** Optimize the assignment of states at nodes *)
         val assign_fn : t -> t
@@ -79,7 +79,7 @@ module type S =
     end
 
 
-module Make (PTopo : Ptopology.S) (Root: Node.R) (Node: Node.R) =
+module Make (PTopo : PTopology.S) (Root: Node.R) (Node: Node.R) =
     struct
 
         type a = Node.n

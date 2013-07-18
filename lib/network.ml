@@ -1,4 +1,4 @@
-open Phylocaml_pervasives
+open Internal
 
 open Topology
 
@@ -10,9 +10,9 @@ module NodeComparator =
 
         let create x = Leaf x
 
-        let ancestor_1 i x = x
-        let ancestor_2 i x y = Node (x,y)
-        let ancestor_n i xs = assert false
+        let ancestor_1 _ x = x
+        let ancestor_2 _ x y = Node (x,y)
+        let ancestor_n _ xs = assert false
 
         let order x y = failwith "TODO"
         let sort xs = failwith "TODO"

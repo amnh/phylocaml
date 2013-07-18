@@ -5,7 +5,7 @@
 
 #include "seq.h"
 
-//used for garbage collection
+/** used for garbage collection frequency */
 #define SEQ_UNUSED_MEMORY 1000000
 
 

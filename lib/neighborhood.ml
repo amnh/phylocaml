@@ -1,20 +1,20 @@
 module type S =
   sig
-    type deferred
 
     type t
 
-    val has_deferred : bool
+    type deferred
 
-    val neighborhood :
-      t -> Topology.handle -> Topology.handle -> Topology.delta list
+    val neighborhood : t -> Topology.delta list
 
-    val init :
-      t -> Topology.handle -> Topology.handle -> deferred option
- 
-    val next_delta :
-      t -> deferred -> Topology.delta * deferred option
+    val deferred_init : t -> deferred
 
-    val init_partition :
-      t -> Topology.handle -> Topology.handle -> int -> deferred option list
+    val deferred_next : deferred -> deferred option * Topology.delta
+
+    val deferred_partition : t -> int -> deferred list
+
+    val lazy_neighborhood : t -> Topology.delta Stream.t
+
+    val lazy_of_deferred : t -> deferred -> Topology.delta Stream.t
+
   end

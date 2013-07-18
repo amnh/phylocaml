@@ -1,4 +1,4 @@
-open Phylocaml_pervasives
+open Internal
 
 type collapse_type = [ `Single | `FinalMin | `FinalMax ]
 

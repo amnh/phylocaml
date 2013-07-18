@@ -1,8 +1,8 @@
 
-open Phylocaml_pervasives
+open Internal
 
 
-(** {6 Definition of an Alphabet} *)
+(** {2 Definition of an Alphabet} *)
 
 exception Illegal_Character of string
 exception Illegal_Code of int
@@ -24,7 +24,7 @@ type t =
     code_name : string IntMap.t;    (* Name -> Single Code *)
     comp_code : int IntMap.t;       (* Code -> Compliment of Code *)
     alphabet_type : kind;           (* Type of the alphbet *)
-    size : int;                     (* Size of the basic alphabet *)
+    size : int;                     (* Size of the basic alphabet; excludes gap *)
     full_size : int;                (* Size of associated matrix *)
     orientation : bool;             (* If cost(~x,x) = cost(x,x) + O(n) *)
     gap : int option;               (* Code for the gap-character; if present *)
@@ -74,7 +74,7 @@ let count_states alphabet_type code_names =
   | Sequential -> StringMap.cardinal code_names
   | SimpleBitFlag
   | ExtendedBitFlag -> StringMap.fold succ_atomic code_names 0
-  | CombinationLevels i -> failwith "TODO"
+  | CombinationLevels _ -> failwith "TODO"
   | Continuous -> ~-1
 
 (** Tests any number of things to verify the integrity of an alphabet
@@ -264,7 +264,7 @@ let get_combination_set i t =
   | Sequential -> IntMap.find i t.comb_set
   | Continuous -> IntSet.singleton i
   | ExtendedBitFlag
-  | SimpleBitFlag    -> bitset_of_int IntSet.empty 0 i
+  | SimpleBitFlag -> BitSet.to_set i
 
 (** Opposite of the above function *)
 let get_state_combination s t =
@@ -275,7 +275,7 @@ let get_state_combination s t =
     assert( (IntSet.cardinal s) = 1 );
     IntSet.choose s
   | ExtendedBitFlag
-  | SimpleBitFlag    -> int_of_bitset s
+  | SimpleBitFlag    -> BitSet.to_int s
 
 (** get the code associated with the name of the character *)
 let get_code n t =
@@ -317,7 +317,7 @@ and to_bitflag t =
   match t.alphabet_type with
   | Continuous
   | SimpleBitFlag -> t
-  | CombinationLevels l -> failwith "TODO"
+  | CombinationLevels _ -> failwith "TODO"
   | ExtendedBitFlag ->
     let is_atomic x = 0 = (x land (x-1)) in
     let lst =

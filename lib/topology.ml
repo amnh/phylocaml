@@ -1,4 +1,4 @@
-open Phylocaml_pervasives
+open Internal
 
 type id = int
 type handle = id
