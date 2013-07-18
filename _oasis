@@ -1,0 +1,22 @@
+OASISFormat: 0.3
+Name:        Phylocaml
+Version:     0.0.1
+OCamlVersion: >= 4.0.0
+Synopsis:    A Phylogenetics Library
+Authors:     Nicholas Lucaroni, Ward Wheeler
+Homepage:    http://github.com/AMNH/phylocaml
+BuildTools:  ocamlbuild, ocamldoc
+License:     LGPL
+
+Library "Phylocaml"
+  Path:            lib
+  Pack:            false
+  BuildTools:      ocamlbuild
+  Modules:         Phylocaml
+  InternalModules: Phylocaml_pervasives
+  CSources:        mlmodelc.c, mlmodelc.h, seq.c, seq.h
+  CCOpt:           -O2 -Wall -pedantic -Wextra
+  CCLib:           -llapack -lblas -lgfortran -lm 
+  NativeOpt:       -w @a -warn-error -a
+  ByteOpt:         -w @a -warn-error -a
+  
