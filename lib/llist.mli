@@ -6,7 +6,8 @@
 
 (** {2 Type Definition} *)
 
-type 'a llist = Nil | Cons of 'a * 'a llist Lazy.t
+type 'a llist = Nil
+              | Cons of 'a * 'a llist Lazy.t
 (** An Empty (Nil) lazy list, and a cons cell containing some value and a lazy
     recursive list element. *)
 
@@ -20,12 +21,6 @@ val hd : 'a llist -> 'a option
 val tl : 'a llist -> 'a llist option
 (** Returns the tail of the list. The new head of the list is forced. *)
 
-val const : 'a -> 'a llist
-(** Return an infinite list of a constant value *)
-
-val singleton : 'a -> 'a llist
-(** Return a list of a single element. *)
-
 val cons : 'a -> 'a llist -> 'a llist
 (** Append an element to the front of the list. *)
 
@@ -36,13 +31,20 @@ val is_nil : 'a llist -> bool
 val take : int -> 'a llist -> 'a list
 (** Returns the next [int] elements of the lazt list. *)
 
-val map : ('a -> 'b) -> 'a llist -> 'b llist
-(** Maps a function over the lazy list. *)
-
 val filter : ('a -> bool) -> 'a llist -> 'a llist
 (** Filter a list by values that match the predicate. *)
 
-val map_state : ('a -> 'b -> 'a * 'c) -> 'a -> 'b llist -> 'c llist
+
+val until : ('a -> bool) -> 'a llist -> 'a 
+(** Continually accesses elements of the list and returns the first matching the
+ * criteria defined in the predicate funciton. *)
+
+(** {2 Functions of 'a -> 'b} *)
+
+val map : ('a -> 'b) -> 'a llist -> 'b llist
+(** Maps a function over the lazy list. *)
+
+val thread : ('a -> 'b -> 'a * 'c) -> 'a -> 'b llist -> 'c llist
 (** A function that manages a state ['a] through the computation of the map of
     the function over the list. *)
 
@@ -52,12 +54,18 @@ val map_state : ('a -> 'b -> 'a * 'c) -> 'a -> 'b llist -> 'c llist
 val of_fn_i : (int -> 'a) -> int -> 'a llist
 (** Create an integer indexed list *)
 
-val of_fn : ('a -> 'a) -> 'a -> 'a llist
+val iterate : ('a -> 'a) -> 'a -> 'a llist
 (** Create a lazy list of an iterative function where the next element is a
    function of the previous. *)
 
 val from : int -> int llist
 (** Create an infinite list of integers from [int]. *)
+
+val const : 'a -> 'a llist
+(** Return an infinite list of a constant value *)
+
+val singleton : 'a -> 'a llist
+(** Return a list of a single element. *)
 
 
 (** {2 Functions for Combining lazy-lists} *)
@@ -75,7 +83,11 @@ val ( ++ ) : 'a llist -> 'a llist -> 'a llist
 (** alias. append *)
 
 val concat : 'a llist llist -> 'a llist
-(** Concatenate a lazy-list of lazy-lists. *)
+(** Concatenate lazy-lists from a lazy-lists. *)
+
+
+(** {2 Folding } *)
+val fold : ('a -> 'b -> 'b) -> 'a llist -> 'b -> 'b
 
 
 (** {2 Conversion Functions} *)

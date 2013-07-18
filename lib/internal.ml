@@ -109,7 +109,7 @@ module StringMap = Map.Make (OrdString)
 module IntSetSet = Set.Make (IntSet)
 module IntSetMap = Map.Make (IntSet)
 
-(** int / bitset functions : TODO move to own module *)
+(** int / bitset functions : TODO move to own module // find a nice bitset *)
 
 module BitSet =
   struct

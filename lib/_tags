@@ -1,2 +1,0 @@
-<*.native> : use_str, linkdep(seq.o)
-<*.*byte>  : use_str, linkdep(seq.o)

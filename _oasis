@@ -6,17 +6,17 @@ Synopsis:    A Phylogenetics Library
 Authors:     Nicholas Lucaroni, Ward Wheeler
 Homepage:    http://github.com/AMNH/phylocaml
 BuildTools:  ocamlbuild, ocamldoc
-License:     LGPL
+License:     LGPL with OCaml linking exception
 
 Library "Phylocaml"
   Path:            lib
   Pack:            false
   BuildTools:      ocamlbuild
   Modules:         Phylocaml
-  InternalModules: Phylocaml_pervasives
-  CSources:        mlmodelc.c, mlmodelc.h, seq.c, seq.h
+  InternalModules: Internal
+  CSources:        mlmodel.c, mlmodel.h, seq.c, seq.h
   CCOpt:           -O2 -Wall -pedantic -Wextra
   CCLib:           -llapack -lblas -lgfortran -lm 
   NativeOpt:       -w @a -warn-error -a
   ByteOpt:         -w @a -warn-error -a
-  
+  BuildDepends:    pareto

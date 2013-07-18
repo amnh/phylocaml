@@ -4,26 +4,22 @@ name : "phylocaml
 
 version : "@version@"
 
-homepage : "http://research.amnh.org/Computational Science/Systematic Biology/phylocaml/"
+homepage : "http://research.amnh.org/Computational Science/Systematic Biology/"
 
-doc : "http://research.amnh.org/Compuational Sciences/Systematic Biology/phylocaml/docs/"
+doc : ""
 
-authors : [ "Andres Varon" "Lin Hong" "Nicholas Lucaroni" "Ward Wheeler" ]
+authors : [ "Nicholas Lucaroni" "Ward Wheeler" ]
 
 license: "GNU Lesser General Public License version 3.0"
 
-tags: ["phylogeny" "statistics" "bioinformatics" "biology" "academic"]
+tags: ["phylogeny" "statistics" "bioinformatics" "biology" "systematics"]
 
 maintainer: "nlucaroni@amnh.org"
 
 build : [
-    ["./configure"]
-    [make "install"]
-]
-
-build-doc : [
-    ["./configure"]
-    [make "doc"]
+    ["ocaml" "setup.ml" "-configure"]
+    ["ocaml" "setup.ml" "-build"]
+    ["ocaml" "setup.ml" "-install"]
 ]
 
 remove : [
@@ -32,7 +28,7 @@ remove : [
 
 depopts : [ "parmap" "mpi" ]
 
-depends: [ "biocaml" "core" "ocamlfind" "camlzip" "sexplib" ]
+depends: [ "biocaml" "core" "ocamlfind" "camlzip" "sexplib" "pareto" ]
 
 ocaml-version : [>= "4.00.0"]
 

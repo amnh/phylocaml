@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 680cad7d62fbf6851443b4895fdecfbe)
+# DO NOT EDIT (digest: 5baa5603ba005e75fba303da1430660f)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -16,7 +16,7 @@
 # Library Phylocaml
 "lib/Phylocaml.cmxs": use_Phylocaml
 <lib/*.ml{,i}>: oasis_library_phylocaml_ccopt
-"lib/mlmodelc.c": oasis_library_phylocaml_ccopt
+"lib/mlmodel.c": oasis_library_phylocaml_ccopt
 "lib/seq.c": oasis_library_phylocaml_ccopt
 <lib/Phylocaml.{cma,cmxa}>: oasis_library_phylocaml_cclib
 "lib/libPhylocaml_stubs.lib": oasis_library_phylocaml_cclib
@@ -25,11 +25,14 @@
 "lib/dllPhylocaml_stubs.so": oasis_library_phylocaml_cclib
 <lib/Phylocaml.{cma,cmxa}>: oasis_library_phylocaml_byte
 <lib/*.ml{,i}>: oasis_library_phylocaml_byte
-"lib/mlmodelc.c": oasis_library_phylocaml_byte
+"lib/mlmodel.c": oasis_library_phylocaml_byte
 "lib/seq.c": oasis_library_phylocaml_byte
 <lib/Phylocaml.{cma,cmxa}>: oasis_library_phylocaml_native
 <lib/*.ml{,i}>: oasis_library_phylocaml_native
-"lib/mlmodelc.c": oasis_library_phylocaml_native
+"lib/mlmodel.c": oasis_library_phylocaml_native
 "lib/seq.c": oasis_library_phylocaml_native
 <lib/Phylocaml.{cma,cmxa}>: use_libPhylocaml_stubs
+<lib/*.ml{,i}>: pkg_pareto
+"lib/mlmodel.c": pkg_pareto
+"lib/seq.c": pkg_pareto
 # OASIS_STOP

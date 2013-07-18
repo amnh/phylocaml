@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: feabe23d2e05eaecc53f31f558ceb396) *)
+(* DO NOT EDIT (digest: 8c969b47fb0df15c1c5d6679ffceb974) *)
 module OASISGettext = struct
 (* # 21 "src/oasis/OASISGettext.ml" *)
 
@@ -478,7 +478,7 @@ open Ocamlbuild_plugin;;
 let package_default =
   {
      MyOCamlbuildBase.lib_ocaml = [("Phylocaml", ["lib"])];
-     lib_c = [("Phylocaml", "lib", ["lib/mlmodelc.h"; "lib/seq.h"])];
+     lib_c = [("Phylocaml", "lib", ["lib/mlmodel.h"; "lib/seq.h"])];
      flags =
        [
           (["oasis_library_phylocaml_ccopt"; "compile"],
