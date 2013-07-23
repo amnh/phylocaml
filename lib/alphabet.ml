@@ -242,6 +242,15 @@ let all_char t = t.all
 (** return the type of the alphabet *)
 let kind t = t.alphabet_type
 
+(** return if the alphabet is state identified *)
+let is_statebased t =
+  match t.alphabet_type with
+  | CombinationLevels _
+  | Sequential -> true
+  | Continuous
+  | ExtendedBitFlag
+  | SimpleBitFlag -> false
+
 (** return if the alphabet is bit identified *)
 let is_bitset t =
   match t.alphabet_type with
@@ -257,17 +266,28 @@ let complement i t =
     then Some (IntMap.find i t.comp_code)
     else None
 
-(** return the list of states that represent a state *)
-let get_combination_set i t =
+(** determines if two elements in the alphabet are complements *)
+let is_complement a b t =
+  let is_complement a b t =
+    if IntMap.mem a t.comp_code
+      then ((IntMap.find a t.comp_code) = b)
+      else false
+  in
+  let result = is_complement a b t in
+  assert(result = is_complement b a t);
+  result
+
+(** return the list of states that represent a code *)
+let get_combination i t : IntSet.t =
   match t.alphabet_type with
   | CombinationLevels _
-  | Sequential -> IntMap.find i t.comb_set
-  | Continuous -> IntSet.singleton i
+  | Sequential    -> IntMap.find i t.comb_set
+  | Continuous    -> IntSet.singleton i
   | ExtendedBitFlag
-  | SimpleBitFlag -> BitSet.to_set i
+  | SimpleBitFlag -> BitSet.to_set (`Packed i)
 
 (** Opposite of the above function *)
-let get_state_combination s t =
+let get_state_combination s t : int =
   match t.alphabet_type with
   | CombinationLevels _
   | Sequential -> IntSetMap.find s t.set_comb
@@ -275,7 +295,7 @@ let get_state_combination s t =
     assert( (IntSet.cardinal s) = 1 );
     IntSet.choose s
   | ExtendedBitFlag
-  | SimpleBitFlag    -> BitSet.to_int s
+  | SimpleBitFlag    -> BitSet.to_packed (`List [s])
 
 (** get the code associated with the name of the character *)
 let get_code n t =

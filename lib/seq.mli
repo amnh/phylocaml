@@ -102,6 +102,9 @@ val copy : s -> s -> unit
 val to_array : s -> int array
 (** [to_array s] convert a sequence to an array. *)
 
+val of_list : int list -> s
+(** [of_list s] convert a list of states to a sequence. *)
+
 val of_array : int array -> s
 (** [of_array s] convert an array to a sequence. *)
 
@@ -114,6 +117,12 @@ val of_list : string list -> Alphabet.t -> s
 
 val to_string : s -> Alphabet.t -> string
 (** transform the sequence to a string from the d string *)
+
+val concat : s list -> s
+(** concatenate elements of a list to a single sequence; flatten. *)
+
+
+(** {2 IO} *)
 
 val to_formater : s -> Alphabet.t -> string
 (** transform the sequence to a formatter encoded string *)
@@ -156,6 +165,8 @@ val count : int -> int -> s -> int
 val contains_code : int -> s -> bool
 val length_without_gap : int -> s -> int
 val split : (int * int) list -> s -> Alphabet.t -> s list
+val resize : s -> int -> s
+val safe_reverse : s -> s
 
 *)
 

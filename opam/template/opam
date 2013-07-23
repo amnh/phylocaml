@@ -8,9 +8,9 @@ homepage : "http://research.amnh.org/Computational Science/Systematic Biology/"
 
 doc : ""
 
-authors : [ "Nicholas Lucaroni" "Ward Wheeler" ]
+authors : [ "Lavanya Kannan" "Nicholas Lucaroni" "Ward Wheeler" ]
 
-license: "GNU Lesser General Public License version 3.0"
+license: "GNU Lesser General Public License version 3.0 with OCaml linking exception"
 
 tags: ["phylogeny" "statistics" "bioinformatics" "biology" "systematics"]
 
@@ -26,9 +26,7 @@ remove : [
     ["ocamlfind" "remove" "phylocaml"]
 ]
 
-depopts : [ "parmap" "mpi" ]
-
-depends: [ "biocaml" "core" "ocamlfind" "camlzip" "sexplib" "pareto" ]
+depends: [ "ocamlfind" "pareto" ]
 
 ocaml-version : [>= "4.00.0"]
 

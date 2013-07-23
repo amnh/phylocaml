@@ -185,7 +185,7 @@ let of_string str alph =
     let ch = Char.escaped str.[loc] in
     let new_str = ch ^ cur_str in
     try (Alphabet.get_code new_str alph,loc)
-    with Alphabet.Illegal_Character c ->
+    with Alphabet.Illegal_Character _ ->
       if loc = 0
         then raise (Invalid_Sequence (str, new_str, loc))
         else get_base new_str (loc-1)
@@ -336,10 +336,10 @@ let compare a b =
 
 let select_one ?(how=`Min) s alph =
   let selects = match how with
-    | `Min    -> (fun x -> IntSet.min_elt $ Alphabet.get_combination_set x alph)
-    | `Max    -> (fun x -> IntSet.max_elt $ Alphabet.get_combination_set x alph)
+    | `Min    -> (fun x -> IntSet.min_elt $ Alphabet.get_combination x alph)
+    | `Max    -> (fun x -> IntSet.max_elt $ Alphabet.get_combination x alph)
     | `Random -> failwith "TODO"
-    | `Choose -> (fun x -> IntSet.choose  $ Alphabet.get_combination_set x alph)
+    | `Choose -> (fun x -> IntSet.choose  $ Alphabet.get_combination x alph)
   in
   map selects s
 
@@ -442,11 +442,22 @@ let gap_saturation seq alph =
   proportion gaps len
 
 let poly_saturation sequence alph n =
-  assert( Alphabet.is_bitset alph );
   let len = length sequence
   and poly =
-    fold_left
-      (fun acc base -> if n = BitSet.size base then acc + 1 else acc) 0 sequence
+    if Alphabet.is_bitset alph then
+      fold_left
+        (fun acc base ->
+          if n = BitSet.size (`Packed base) then acc + 1 else acc) 0 sequence
+    else if Alphabet.is_statebased alph then
+      fold_left
+        (fun acc base ->
+          if n = (IntSet.cardinal $ Alphabet.get_combination base alph)
+            then acc + 1
+            else acc)
+        0
+        sequence
+    else
+      failwith "Cannot run polymorphic saturation on continuous data"
   in
   proportion poly len
 
@@ -470,7 +481,7 @@ let unique_elements seq alph =
     if p = len then
       true
     else begin
-      let s : IntSet.t = Alphabet.get_combination_set (get seq p) alph in
+      let s : IntSet.t = Alphabet.get_combination (get seq p) alph in
       if IntSet.is_empty $ IntSet.inter s acc then
         check_char (p+1) $ IntSet.union s acc
       else

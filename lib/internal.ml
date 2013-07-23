@@ -50,6 +50,18 @@ let rand_select n list =
   in
   take n [] list
 
+
+(** Additional Array functions *)
+
+let fold_left2 f acc aray bray =
+  assert( (Array.length aray) = (Array.length bray) );
+  let acc = ref acc in
+  for i = 0 to (Array.length aray)-1 do
+    acc := f !acc aray.(i) bray.(i)
+  done;
+  !acc
+
+
 (** Additional Math functions *)
 
 let proportion a b = (float_of_int a) /. (float_of_int b)
@@ -110,28 +122,67 @@ module IntSetSet = Set.Make (IntSet)
 module IntSetMap = Map.Make (IntSet)
 
 (** int / bitset functions : TODO move to own module // find a nice bitset *)
-
 module BitSet =
   struct
     type t = [ `List of int list | `Packed of int | `Set of IntSet.t ]
 
-    let to_int _ = failwith "TODO"
+    let add _ _ = failwith "TODO"
 
-    and to_list _ = failwith "TODO"
+    and rem _ _ = failwith "TODO"
 
-    and to_set i =
-      let rec set_of_int acc j i =
-        if i = 0 then
-          acc
-        else if (i land (1 lsl j)) > 0 then
-          set_of_int (IntSet.add j acc) (j+1) i
-        else
-          set_of_int acc (j+1) i
-      in
-      set_of_int IntSet.empty 0 i
+    and singleton i = `List [i]
 
-    and size _ = failwith "TODO"
+    and empty = `Packed 0
 
+    let packed_of_list _ = failwith "TODO"
+
+    and list_of_packed _ = failwith "TODO"
+
+    let to_packed t : int = match t with
+      | `List _   -> assert false
+      | `Packed i -> i
+      | `Set _    -> assert false
+
+    and to_list t = match t with
+      | `List t   -> t
+      | `Packed i ->
+        let rec set_of_int acc j i =
+          if i = 0 then
+            acc
+          else if (i land (1 lsl j)) > 0
+            then
+            set_of_int (j::acc) (j+1) i
+          else
+            set_of_int acc (j+1) i
+        in
+        set_of_int [] 0 i
+      | `Set s    -> IntSet.elements s
+
+    and to_set t = match t with
+      | `Set s    -> s
+      | `List t   ->
+        List.fold_left (fun acc x -> IntSet.add x acc) IntSet.empty t
+      | `Packed i ->
+        let rec set_of_int acc j i =
+          if i = 0 then
+            acc
+          else if (i land (1 lsl j)) > 0 then
+            set_of_int (IntSet.add j acc) (j+1) i
+          else
+            set_of_int acc (j+1) i
+        in
+        set_of_int IntSet.empty 0 i
+
+    and size t =  match t with
+      | `List t   -> List.length t
+      | `Set s    -> IntSet.cardinal s
+      | `Packed i ->
+        let rec count_bits acc x =
+          if x = 0
+            then acc
+            else count_bits (acc+1) (x land (x-1))
+        in
+        count_bits 0 i
 end
 
 
@@ -139,7 +190,7 @@ end
 
 module FileStream = struct
 
-  let read_string_matrix file = failwith "TODO"
+  let read_string_matrix _ = failwith "TODO"
 
   let read_float_matrix file =
     Array.map $ Array.map float_of_string $ read_string_matrix file

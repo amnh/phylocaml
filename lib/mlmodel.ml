@@ -6,14 +6,17 @@ exception ModelError of string
 
 let errorf format = Printf.ksprintf (fun x -> ModelError x) format
 
+(** Minimum value for things when 0 is numerically unstable. *)
 let minimum = 1e-13
 
 type site_var =
-  | Gamma of int * float
-  | Theta of int * float * float
+  | DiscreteGamma of int * float
+  | DiscreteTheta of int * float * float
+  | DiscreteCustom of (float * float) array
   | Constant
 
 let default_invar = 0.1
+
 and default_alpha = 0.2
 
 type subst_model =
@@ -24,15 +27,13 @@ type subst_model =
   | HKY85  of float
   | TN93   of (float * float)
   | GTR    of float array
-  | File   of float array array * string
-  | Custom of (int IntMap.t * float array * string)
+  | Const  of float array array
+  | Custom of (int IntMap.t * float array)
 
 let default_tstv  = 2.0
 
 type priors = 
-  | Estimated of float array
-  | Given     of float array
-  | Optimized of float array
+  | Empirical of float array
   | Equal
 
 type gap =
@@ -124,26 +125,29 @@ let compare a b =
   let compare_priors a b = match a.spec.base_priors,b.spec.base_priors with
     | _ when a_asize != b_asize -> false
     | Equal , Equal            -> true
-    | Estimated x, Estimated y
-    | Optimized x, Optimized y
-    | Given     x, Given     y -> compare_array x y
-    | (Equal | Estimated _ | Given _ | Optimized _), _ -> false
+    | Empirical x, Empirical y -> compare_array x y
+    | (Equal | Empirical _ ), _ -> false
   in
   let m_compare = match a.spec.substitution,b.spec.substitution with
     | JC69 , JC69 | F81 , F81 -> 0
     | K2P x, K2P y | F84 x, F84 y | HKY85 x, HKY85 y when x = y -> 0
-    | Custom _, Custom _ -> 0
+    | Custom _, Custom _ -> failwith "TODO"
     | TN93 (x1,x2),  TN93 (y1,y2) when x1 = y1 && x2 = y2 -> 0
     | GTR xs, GTR ys when compare_array xs ys -> 0
-    | File (_,x), File (_,y) when x = y -> 0
-    | (JC69|F81|K2P _|F84 _|HKY85 _|Custom _|TN93 _|GTR _|File _),_ -> ~-1
+    | Const x, Const y when x = y -> 0
+    | (JC69|F81|K2P _|F84 _|HKY85 _|Custom _|TN93 _|GTR _|Const _),_ -> ~-1
   and v_compare = match a.spec.site_variation,b.spec.site_variation with
-    | Gamma (ix,ax), Gamma (iy,ay) ->
+    | DiscreteGamma (ix,ax), DiscreteGamma (iy,ay) ->
       if ix=iy && ax=ay then 0 else ~-1
-    | Theta (ix,ax,bx), Theta (iy,ay,by) ->
+    | DiscreteTheta (ix,ax,bx), DiscreteTheta (iy,ay,by) ->
       if ix=iy && ax=ay && bx=by then 0 else ~-1
-    | Constant, Constant            -> 0
-    | (Gamma _|Theta _|Constant), _ -> ~-1
+    | Constant, Constant -> 0
+    | DiscreteCustom a, DiscreteCustom b ->
+      let r =
+        fold_left2 (fun acc (a,b) (c,d) -> (a =. c) && (b =. d) && acc) true a b
+      in
+      if r then 0 else ~-1
+    | (DiscreteGamma _|DiscreteCustom _ |DiscreteTheta _|Constant), _ -> ~-1
   and g_compare = match snd a.spec.alphabet,snd b.spec.alphabet with
     | Missing, Missing
     | Independent, Independent -> 0
@@ -174,7 +178,7 @@ let categorize_by_model get_fn codes =
   let set_codes,non_lk_codes =
     List.fold_left
       (fun (acc,oth) code ->
-        try let spec = get_fn code in
+        try let spec = (get_fn code).spec in
           try let old = MlModelMap.find spec acc in
             MlModelMap.add spec (code::old) acc,oth
           with Not_found ->
@@ -191,7 +195,7 @@ let generate_opt_vector spec = failwith "TODO"
 
 
 (** Count the number of parameters in the model; used for xIC functions **)
-let count_parameters model : int =
+let num_parameters model : int =
   Bigarray.Array1.dim model.opt
 
 
@@ -605,15 +609,15 @@ let subst_matrix model topt =
   and a_size = alphabet_size model.spec
   and priors = model.priors in
   let m = match model.spec.substitution with
-    | JC69          -> m_jc69 1.0 a_size _gapr
-    | F81           -> m_f81 priors 1.0 a_size _gapr
-    | K2P t         -> m_k2p t 1.0 a_size _gapr
-    | F84 t         -> m_f84 priors t 1.0 a_size _gapr
-    | HKY85 t       -> m_hky85 priors t a_size _gapr
-    | TN93 (ts,tv)  -> m_tn93 priors ts tv 1.0 a_size _gapr
-    | GTR c         -> m_gtr priors c a_size _gapr
-    | File (m,_)    -> m_file priors m a_size
-    | Custom (assoc,ray,_) -> m_custom priors assoc ray a_size
+    | JC69         -> m_jc69 1.0 a_size _gapr
+    | F81          -> m_f81 priors 1.0 a_size _gapr
+    | K2P t        -> m_k2p t 1.0 a_size _gapr
+    | F84 t        -> m_f84 priors t 1.0 a_size _gapr
+    | HKY85 t      -> m_hky85 priors t a_size _gapr
+    | TN93 (ts,tv) -> m_tn93 priors ts tv 1.0 a_size _gapr
+    | GTR c        -> m_gtr priors c a_size _gapr
+    | Const m      -> m_file priors m a_size
+    | Custom (assoc,ray) -> m_custom priors assoc ray a_size
   in
   match topt with
   | Some t ->
@@ -649,17 +653,22 @@ let output_model output output_table nexus model set =
                   Array.iter (printf "%f ") xs;
                   printf ";@]";
                   gtr_mod := true
-      | File (_,str) -> 
-                  printf "@[Model = File:%s;@]" str
-      | Custom (_,xs,str) ->
-                  printf "@[Model = Custom:%s;@]" str;
-                  printf "@[Parameters = ";
-                  Array.iter (printf "%f ") xs;
-                  printf ";@]";
+      | Const m ->
+        printf "@[Model = @[";
+        Array.iter
+          (fun x ->
+            printf "@[";
+            Array.iter (fun y -> printf "%f; " y) x;
+            printf "@]@\n")
+          m
+      | Custom (_,xs) ->
+        printf "@[Parameters = ";
+        Array.iter (printf "%f ") xs;
+        printf ";@]";
     in
     let () = match model.spec.base_priors with
       | Equal -> printf "@[Priors = Equal;@]"
-      | Optimized x | Estimated x | Given x ->
+      | Empirical x ->
         let first = ref true in
         printf "@[Priors =";
         List.iter
@@ -673,10 +682,13 @@ let output_model output output_table nexus model set =
         printf ";@]@]"
       in
       let () = match model.spec.site_variation with
-        | Constant        -> ()
-        | Gamma (c, p)    ->
+        | Constant -> ()
+        | DiscreteCustom ray ->
+          printf "@[Variation = custom;@]";
+          Array.iter (fun (a,b) -> printf "@[@[%.5f@] @[%f; @]@]" a b) ray
+        | DiscreteGamma (c, p) ->
           printf "@[Variation = gamma;@]@[alpha = %.5f@]@[sites = %d;@]" p c
-        | Theta (c, p, i) ->
+        | DiscreteTheta (c, p, i) ->
           printf ("@[Variation = theta;@]@[alpha = %.5f@]@[sites = %d;@]"
                  ^^"@[percent = %.5f;@]") p c i
       in
@@ -701,21 +713,26 @@ let output_model output output_table nexus model set =
       printf ";@]@."
     (* ---------------------------- *)
     end else (* phylip *) begin
+      assert( nexus = `Phylip );
       printf "@[<hov 0>Discrete gamma model: ";
       let () = match model.spec.site_variation with
         | Constant -> printf "No@]\n";
-        | Gamma (cats,param) ->
+        | DiscreteGamma (cats,param) ->
           printf ("Yes@]@\n@[<hov 1>- Number of categories: %d@]\n"^^
-                  "@[<hov 1>- Gamma Shape Parameter: %.4f@]\n") cats param
-        | Theta (cats,param,inv) ->
+                  "@[<hov 1>- DiscreteGamma Shape Parameter: %.4f@]\n") cats param
+        | DiscreteTheta (cats,param,inv) ->
           printf ("Yes@]@\n@[<hov 1>- Number of categories: %d@]\n"^^
-                  "@[<hov 1>- Gamma Shape Parameter: %.4f@]\n") cats param;
+                  "@[<hov 1>- DiscreteGamma Shape Parameter: %.4f@]\n") cats param;
           printf ("@[<hov 1>- Proportion of invariant: %.4f@]\n") inv
+        | DiscreteCustom ray ->
+          let cats = Array.length ray in
+          printf ("Yes@]@\n@[<hov 1>- Number of categories: %d@]\n") cats;
+          Array.iter (fun (a,b) -> printf "@[<hov 1>@[%.5f@] @[%f; @]@]" a b) ray
       in
       printf "@[<hov 0>Priors / Base frequencies:@\n";
       let () = match model.spec.base_priors with
         | Equal -> printf "@[Equal@]@]@\n"
-        | Estimated x | Given x | Optimized x ->
+        | Empirical x ->
           List.iter
             (fun (s,i,_) ->
               (* this expection handling avoids gaps when they are not
@@ -766,8 +783,7 @@ let output_model output output_table nexus model set =
                 done;
               done
           end
-        | File (_,name) ->
-          printf "File:%s@]@\n" name;
+        | Const _ ->
           let mat = compose model 0.0 in
           printf "@[<hov 1>[";
           for i = 0 to a - 1 do
@@ -780,8 +796,7 @@ let output_model output output_table nexus model set =
             done;
             printf "@\n";
           done;
-        | Custom (_,xs,str) ->
-          printf "@[Custom:%s;@]@\n" str;
+        | Custom (_,xs) ->
           printf "@[Parameters : ";
           Array.iter (printf "%f ") xs;
           printf ";@]";
@@ -851,7 +866,7 @@ let integerized_model ?(sigma=4) model t =
   let create = match model.spec.substitution with
     | JC69 | K2P _ ->
       (fun s m i j -> ~-(int_of_float (s *.(log m.(i).(j)))))
-    | (F81 | F84 _ | HKY85 _ | TN93 _| GTR _ | File _ | Custom _) ->
+    | (F81 | F84 _ | HKY85 _ | TN93 _| GTR _ | Const _ | Custom _) ->
       (fun s m i j -> ~-(int_of_float (s *.(log (model.priors.{i} *. m.(i).(j))))))
   and matrix =
     ba_to_array2
@@ -877,7 +892,7 @@ let model_to_cm model t =
   res *)
 
 
-(* convert a string spec (from nexus, for example) to a specification *)
+(* convert a string spec (from nexus, for example) to a specification
 let convert_string_spec alph (name,(var,site,alpha,invar),param,priors,gap,file) =
   let gap_info = match String.uppercase (fst gap),snd gap with
     | "COUPLED", None   -> Coupled default_gap_ratio
@@ -917,7 +932,7 @@ let convert_string_spec alph (name,(var,site,alpha,invar),param,priors,gap,file)
       begin match file with
         | Some name ->
           name |> FileStream.read_float_matrix
-               |> (fun x -> File (x,name))
+               |> (fun x -> Const (x,name))
         | None -> raise (errorf "No File specified for model")
       end
     | "CUSTOM" ->
@@ -937,25 +952,23 @@ let convert_string_spec alph (name,(var,site,alpha,invar),param,priors,gap,file)
   let variation = match String.uppercase var with
     | "GAMMA" ->
       let alpha = if alpha = "" then default_alpha else  float_of_string alpha in
-      Gamma (int_of_string site, alpha)
+      DiscreteGamma (int_of_string site, alpha)
     | "THETA" -> 
       let alpha = if alpha = "" then default_alpha else  float_of_string alpha in
       let invar = if invar = "" then default_invar else  float_of_string invar in
-      Theta (int_of_string site, alpha, invar)
+      DiscreteTheta (int_of_string site, alpha, invar)
     | "NONE" | "CONSTANT" | "" ->
       Constant
     | x -> raise (errorf "Unknown rate variation mode %s" x)
   and priors = match priors with
-    | `Given priors        -> Given (Array.of_list (List.map snd priors))
     | `Equal               -> Equal
-    | `Estimate (Some x)   -> Estimated x
-    | `Optimized           -> failwith "TODO"
+    | `Estimate (Some x)   -> Empirical x
     | `Consistent pre_calc ->
       begin match submatrix, pre_calc with
         | JC69, _
         | K2P _, _   -> Equal
-        | (F81|F84 _|HKY85 _|TN93 _|GTR _|File _|Custom _), Some pi -> Estimated pi
-        | (F81|F84 _|HKY85 _|TN93 _|GTR _|File _|Custom _), None -> assert false
+        | (F81|F84 _|HKY85 _|TN93 _|GTR _|Const _|Custom _), Some pi -> Empirical pi
+        | (F81|F84 _|HKY85 _|TN93 _|GTR _|Const _|Custom _), None -> assert false
       end
     | `Estimate None -> assert false
   in
@@ -975,30 +988,29 @@ let convert_methods_spec (alph,alph_size) (compute_priors)
     match talph with | `Min | `Max  -> w_gap | `Int x -> x
   in
   let base_priors = match base_priors with
-    | `Estimate  -> Estimated (compute_priors ())
+    | `Estimate  -> Empirical (compute_priors ())
     | `Equal     -> Equal
-    | `Given arr -> Given (Array.of_list arr)
+    | `Given arr -> Empirical (Array.of_list arr)
     | `Consistent ->
       begin match subst with
         | `JC69 | `K2P _ -> Equal
-        | _ -> Estimated (compute_priors ())
+        | _ -> Empirical (compute_priors ())
       end
   and site_variation = match site_variation with
     | None -> Constant 
-    | Some (`Gamma (w,y)) -> 
+    | Some (`DiscreteGamma (w,y)) -> 
       let y = match y with
         | Some x -> x 
         | None   -> default_alpha
       in
-      Gamma (w,y)
-    | Some (`Theta (w,y)) ->
+      DiscreteGamma (w,y)
+    | Some (`DiscreteTheta (w,y)) ->
       let y,p = match y with 
         | Some x -> x 
         | None   -> default_alpha, default_invar
       in
-      Theta (w,y,p)
+      DiscreteTheta (w,y,p)
   and substitution = match subst with
-    | `AIC _ | `BIC _ | `AICC _ | `NCM -> assert false
     | `JC69    -> JC69
     | `F81     -> F81
     | `K2P [x] -> K2P x
@@ -1023,7 +1035,7 @@ let convert_methods_spec (alph,alph_size) (compute_priors)
             raise (errorf "TN93 requires 2 or 0 parameters"))
         matrix;
       if Array.length matrix = alph_size
-        then File (matrix,str)
+        then Const matrix
         else raise (errorf "Matrix in %s requires %d columns/rows" str alph_size)
     | `Custom str ->
       let matrix = FileStream.read_char_matrix str in
@@ -1033,7 +1045,7 @@ let convert_methods_spec (alph,alph_size) (compute_priors)
   { substitution = substitution;
   site_variation = site_variation;
      base_priors = base_priors;
-        alphabet = (alph,use_gap); }
+        alphabet = (alph,use_gap); } *)
 
 (** check the rates so SUM(r_k*p_k) == 1 and SUM(p_k) == 1 |p| == |r| *)
 let verify_rates probs rates =
@@ -1050,18 +1062,22 @@ let verify_rates probs rates =
 
 
 (** create a model based on a specification and an alphabet *)
-let create ?(min_prior=minimum) lk_spec = 
+let create lk_spec = 
   let a_size = alphabet_size lk_spec in
   let (alph,gap) = lk_spec.alphabet in
   (* set up all the probability and rates *)
   let rates,probs,pinvar =
     match lk_spec.site_variation with
     | Constant -> ba_of_array1 [| 1.0 |], ba_of_array1 [| 1.0 |], None
-    | Gamma (x,y) -> (* SITES,ALPHA *)
+    | DiscreteGamma (x,y) -> (* SITES,ALPHA *)
       let p = create_ba1 x in
       Bigarray.Array1.fill p (1.0 /. (float_of_int x));
       gamma_rates y y x,p,None
-    | Theta (w,x,z) -> (* GAMMA_SITES,ALPHA,PERCENT_INVAR *)
+    | DiscreteCustom ray ->
+      let rates = ba_of_array1 $ Array.map fst ray
+      and probs = ba_of_array1 $ Array.map snd ray in
+      rates,probs,None
+    | DiscreteTheta (w,x,z) -> (* GAMMA_SITES,ALPHA,PERCENT_INVAR *)
       if w < 1 then
         failwith "Number of rate categories must be >= 1 (if invar w/out gamma)"
       else if w = 1 then begin
@@ -1078,8 +1094,8 @@ let create ?(min_prior=minimum) lk_spec =
   let priors =
     let p = match lk_spec.base_priors with 
       | Equal -> Array.make a_size (1.0 /. (float_of_int a_size))
-      | Estimated p | Given p | Optimized p -> 
-        let p = Array.map (fun i -> max min_prior i) p in
+      | Empirical p ->
+        let p = Array.map (fun i -> max minimum i) p in
         let sum = Array.fold_left (fun a b -> a +. b) 0.0 p in 
         if sum =. 1.0 
           then p
@@ -1112,9 +1128,9 @@ let create ?(min_prior=minimum) lk_spec =
         | (Coupled _ | Independent | Missing), _ -> c
       in
       false, m_gtr priors c a_size _gapr, (GTR c)
-    | File (m,_)->
+    | Const m ->
       false, m_file priors m a_size, lk_spec.substitution
-    | Custom (assoc,xs,_) ->
+    | Custom (assoc,xs) ->
       false, m_custom priors assoc xs a_size, lk_spec.substitution
   in
   let (u,d,ui) = diagonalize sym q in
@@ -1127,12 +1143,13 @@ let create ?(min_prior=minimum) lk_spec =
 
 (** Replace the priors in a model with that of an array *)
 let replace_priors model array = 
-  create {model.spec with base_priors = Estimated array}
+  create {model.spec with base_priors = Empirical array}
 
 
 (** Enumerate models based on some set of criteria. *)
-let enum_models ?(site_var=[`Gamma;`Theta;`Constant])
-                ?(subst_model=[`JC69;`F81;`K2P;`F84;`HKY85;`TN93;`GTR]) epriors =
+let enum_models ?(site_var=[`DiscreteGamma;`DiscreteTheta;`Constant])
+                ?(subst_model=[`JC69;`F81;`K2P;`F84;`HKY85;`TN93;`GTR])
+                ?(priors) : model -> model option =
   let apply_model_delta (substitution,base_priors,site_variation) model =
     create {model.spec with substitution; base_priors; site_variation;}
   in
@@ -1178,7 +1195,7 @@ let compute_priors (alph,u_gap) freq_ (count,gcount) lengths : float array =
 
 
 (** estimate the model based on two sequences with attached weights *)
-let classify_seq_pairs leaf1 leaf2 seq1 seq2 acc =
+let classify_edges leaf1 leaf2 seq1 seq2 acc =
   let incr_map k v map =
     let v = match IntMap.mem k map with
       | true  -> v +. (IntMap.find k map)
@@ -1226,32 +1243,25 @@ let classify_seq_pairs leaf1 leaf2 seq1 seq2 acc =
 
 
 let get_priors f_prior alph name = match f_prior with
-  | Estimated x -> x.(Alphabet.get_code name alph)
-  | Given     x -> x.(Alphabet.get_code name alph)
+  | Empirical x -> x.(Alphabet.get_code name alph)
   | Equal       -> 1.0 /. (float_of_int (Alphabet.size alph))
-  | Optimized x -> x.(Alphabet.get_code name alph)
 
 
 (* Develop a model from a classification --created above *)
-let spec_from_classification alph gap kind rates priors (comp_map,pis) =
-  let tuple_sum = 
-    UnorderedTupleMap.fold (fun _ v a -> a +. v) comp_map 0.0
-  and ugap = match gap with
+let process_classification spec (comp_map,pis) =
+  let ugap = match snd spec.alphabet with
     | Missing      -> false
     | Independent  -> true
     | Coupled _    -> true
-  in
-  let f_priors,a_size = match priors,kind with
-    | `Equal,_ | (`Consistent | `Estimate), (`JC69 | `K2P _) ->
-      let size =
-        if ugap then (Alphabet.size alph) else (Alphabet.size alph)-1
-      in
-      Equal,size
-    | `Consistent,_ | `Estimate,_ ->
+  and alph = fst spec.alphabet in
+  let f_priors,a_size = match spec.base_priors with
+    | Equal when ugap -> Equal,1+Alphabet.size alph
+    | Equal           -> Equal,  Alphabet.size alph
+    | Empirical _     ->
       let sum = IntMap.fold (fun _ v x -> v +. x) pis 0.0
       and gap_size =
         try IntMap.find (Alphabet.get_gap alph) pis
-        with | Not_found -> 0.0
+        with Not_found -> 0.0
       in
       let l =
         let sum = if ugap then sum else sum -. gap_size in
@@ -1267,23 +1277,24 @@ let spec_from_classification alph gap kind rates priors (comp_map,pis) =
           (Alphabet.to_list alph)
       in
       let ray = Array.of_list (List.rev l) in
-      Estimated ray, Array.length ray
-    | `Given xs, _ ->
-      let ray = Array.of_list xs in
-      Given ray, Array.length ray
+      Empirical ray, Array.length ray
   and is_comp a b =
     (* these models assume nucleotides only; T<->C=1, A<->G=2, this is
-      because this is used in DNA/nucleotide models only (k2p,hky85...) *)
-         if (Alphabet.get_code "T" alph) = a then
-           if (Alphabet.get_code "C" alph) = b then 1 else 0
+       because this is used in DNA/nucleotide models only (k2p,hky85...) *)
+    if (Alphabet.get_code "T" alph) = a then
+      if (Alphabet.get_code "C" alph) = b then 1 else 0
     else if (Alphabet.get_code "C" alph) = a then
-           if (Alphabet.get_code "T" alph) = b then 1 else 0
+      if (Alphabet.get_code "T" alph) = b then 1 else 0
     else if (Alphabet.get_code "A" alph) = a then
-           if (Alphabet.get_code "G" alph) = b then 2 else 0
+      if (Alphabet.get_code "G" alph) = b then 2 else 0
     else if (Alphabet.get_code "G" alph) = a then
-           if (Alphabet.get_code "A" alph) = b then 2 else 0
+      if (Alphabet.get_code "A" alph) = b then 2 else 0
     else
-        0
+      0
+  in
+  let get_prior (string:string):float = match f_priors with
+    | Empirical x -> x.(Alphabet.get_code string alph)
+    | Equal       -> 1.0 /. (float_of_int a_size)
   in
   let get_sva comp_map =
     let s1,s2,v,a =
@@ -1299,10 +1310,11 @@ let spec_from_classification alph gap kind rates priors (comp_map,pis) =
     s1 /. a, s2 /. a, v /. a, a
   in
   (* build the model *)
-  let m,gap = try match kind with
-    | `JC69 -> JC69,gap
-    | `F81  -> F81,gap
-    | `K2P _ ->
+  let gap = snd spec.alphabet in
+  let m,gap = match spec.substitution with
+    | JC69 -> JC69,gap
+    | F81  -> F81,gap
+    | K2P _ ->
       (* YANG: 1.12                                       *)
       (*  alpha*t = -0.5 * log(1-2S-V) + 0.25 * log(1-2V) *)
       (* 2*beta*t = -0.5 * log(1-2V)                      *)   
@@ -1313,7 +1325,7 @@ let spec_from_classification alph gap kind rates priors (comp_map,pis) =
       let numer = 2.0 *. (log (1.0-.(2.0*.s)-.v))
       and denom = log (1.0-.(2.0*.v)) in
       K2P ((numer /. denom)-.1.0),gap
-    | `GTR _ ->
+    | GTR _ ->
       let tuple_sum a1 a2 map =
           let one = try UnorderedTupleMap.find (a1,a2) map 
                     with | Not_found -> 0.0
@@ -1378,11 +1390,9 @@ let spec_from_classification alph gap kind rates priors (comp_map,pis) =
           let arr = Array.init ((List.length lst)-1) (fun i -> arr.(i)) in
           GTR arr,gap
       end
-    | `F84 _ ->
-      let pi_a = get_priors f_priors alph "A"
-      and pi_c = get_priors f_priors alph "C"
-      and pi_g = get_priors f_priors alph "G"
-      and pi_t = get_priors f_priors alph "T" in
+    | F84 _ ->
+      let pi_a = get_prior "A" and pi_c = get_prior "C"
+      and pi_g = get_prior "G" and pi_t = get_prior "T" in
       let pi_y = pi_c +. pi_t and pi_r = pi_a +. pi_g in
       let s1,s2,v,_ = get_sva comp_map in let s = s1 +. s2 in
       let a = ~-. (log (1.0 -. (s /. (2.0 *. (pi_t*.pi_c/.pi_y +. pi_a*.pi_g/.pi_r)))
@@ -1391,11 +1401,9 @@ let spec_from_classification alph gap kind rates priors (comp_map,pis) =
                               (2.0 *. (pi_t*.pi_c *. pi_r +. pi_a *. pi_g *. pi_y))))
       and b = ~-. (log (1.0 -. (v/.(2.0 *. pi_y*.pi_r)))) in
       F84 (a/.b -. 1.0),gap
-    | `HKY85 _ ->
-      let pi_a = get_priors f_priors alph "A"
-      and pi_c = get_priors f_priors alph "C"
-      and pi_g = get_priors f_priors alph "G"
-      and pi_t = get_priors f_priors alph "T" in
+    | HKY85 _ ->
+      let pi_a = get_prior "A" and pi_c = get_prior "C"
+      and pi_g = get_prior "G" and pi_t = get_prior "T" in
       let pi_y = pi_c +. pi_t and pi_r = pi_a +. pi_g in
       let s1,s2,v,_ = get_sva comp_map in
       let s = s1 +. s2 in
@@ -1406,11 +1414,9 @@ let spec_from_classification alph gap kind rates priors (comp_map,pis) =
                            (2.0 *. (pi_t*.pi_c *. pi_r +. pi_a *. pi_g *. pi_y))))
       and b = ~-. (log (1.0 -. (v/.(2.0 *. pi_y*.pi_r)))) in
       HKY85 (a/.b -. 1.0),gap
-    | `TN93 _ ->
-      let pi_a = get_priors f_priors alph "A"
-      and pi_c = get_priors f_priors alph "C"
-      and pi_g = get_priors f_priors alph "G"
-      and pi_t = get_priors f_priors alph "T" in
+    | TN93 _ ->
+      let pi_a = get_prior "A" and pi_c = get_prior "C"
+      and pi_g = get_prior "G" and pi_t = get_prior "T" in
       let pi_y = pi_c +. pi_t and pi_r = pi_a +. pi_g
       and s1,s2,v,_ = get_sva comp_map in
       let a1 = ~-. (log (1.0 -. (pi_y*.s1/.(2.0*.pi_t*.pi_c)) -.  (v/.(2.0*.pi_y))))
@@ -1420,9 +1426,8 @@ let spec_from_classification alph gap kind rates priors (comp_map,pis) =
       let k1 = (a1 -. (pi_r *. b)) /. (pi_y *. b)
       and k2 = (a2 -. (pi_y *. b)) /. (pi_r *. b) in 
       TN93 (k1,k2),gap
-    | `Custom _
-    | `File _ -> failwith "I cannot estimate this type of model"
-    with | Not_found -> failwith "Cannot find something for model"
+    | Custom _
+    | Const _ -> failwith "I cannot estimate this type of model"
   and calc_invar all comp_map =
     let same = 
       List.fold_left
@@ -1434,10 +1439,13 @@ let spec_from_classification alph gap kind rates priors (comp_map,pis) =
     in
     same /. all
   in
-  let v = match rates with
-    | None                -> Constant
-    | Some (`Gamma (i,_)) -> Gamma (i,default_alpha)
-    | Some (`Theta (i,_)) -> Theta (i,default_alpha,calc_invar tuple_sum comp_map)
+  let v = match spec.site_variation with
+    | Constant -> Constant
+    | DiscreteGamma (i,_) -> DiscreteGamma (i,default_alpha)
+    | DiscreteTheta (i,_,_) ->
+      let stuple = UnorderedTupleMap.fold (fun _ v a -> a +. v) comp_map 0.0 in
+      DiscreteTheta (i,default_alpha,calc_invar stuple comp_map)
+    | DiscreteCustom _ -> spec.site_variation
   in
   {
     substitution = m;
@@ -1454,12 +1462,13 @@ let short_name model =
     | JC69    -> "JC69" | F81     -> "F81"
     | K2P _   -> "K81"  | F84 _   -> "F84"
     | HKY85 _ -> "HKY"  | TN93 _  -> "TN93"
-    | GTR _   -> "GTR"  | File _  -> "FILE"
+    | GTR _   -> "GTR"  | Const _ -> "GIVEN"
     | Custom _-> "CUSTOM"
   and variation_name = match model.spec.site_variation with
-    | Theta (i,_,_) when i > 1 -> "+G+I"
-    | Gamma _ -> "+G"
-    | Theta _ -> "+I"
+    | DiscreteTheta (i,_,_) when i > 1 -> "+G+I"
+    | DiscreteGamma _ -> "+G"
+    | DiscreteTheta _ -> "+I"
+    | DiscreteCustom _ -> "+?"
     | Constant -> ""
   in
   model_name ^ variation_name

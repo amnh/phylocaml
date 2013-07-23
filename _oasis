@@ -2,11 +2,14 @@ OASISFormat: 0.3
 Name:        Phylocaml
 Version:     0.0.1
 OCamlVersion: >= 4.0.0
-Synopsis:    A Phylogenetics Library
-Authors:     Nicholas Lucaroni, Ward Wheeler
+Synopsis:    A Phylogenetics Library for OCaml
+Authors:     Lavanya Kannan, Nicholas Lucaroni, Ward Wheeler
 Homepage:    http://github.com/AMNH/phylocaml
 BuildTools:  ocamlbuild, ocamldoc
-License:     LGPL with OCaml linking exception
+License:     LGPL-2.1 with OCaml linking exception
+LicenseFile: LICENSE
+
+Description: A Phylogenetics Library for OCaml
 
 Library "Phylocaml"
   Path:            lib
@@ -20,3 +23,11 @@ Library "Phylocaml"
   NativeOpt:       -w @a -warn-error -a
   ByteOpt:         -w @a -warn-error -a
   BuildDepends:    pareto
+
+Document API
+  Title:           API reference for Phylocaml
+  Type:            ocamlbuild (0.3)
+  InstallDir:      $htmldir/phylocaml
+  BuildTools+:     ocamldoc
+  XOCamlbuildPath: lib
+  XOcamlbuildLibraries: Phylocaml
