@@ -164,8 +164,8 @@ val compose :
 
 (** [subst_matrix m t?] return a substitution rate matrix optionally multiplied
     against a branch length [t]. This is the matrix Q in, [P=e^Q*t], or [Q*t] if
-    it is optionally supplied. *)
-val subst_matrix :
+        [t] is optionally supplied. *)
+val substitution_matrix :
   model -> float option ->
     (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
 
@@ -182,7 +182,7 @@ val integerized_model : ?sigma:int -> model -> float -> int array array
 
 
 
-(** {2 Query/Creation Functions on Models/Specs} *)
+(** {2 Creation and Iteration functions of Models *)
 
 (** Create a model from a spec. *)
 val create : spec -> model
@@ -191,19 +191,26 @@ val create : spec -> model
     necessary (diagonalization, et cetera). *)
 val replace_priors : model -> float array -> model
 
+(** replace rate in a model and re-parameterize a model if necesary. *)
+val replace_rates : model -> site_var -> model
+
+(** replace the substitution rate matrix in the model and re-parameterize *)
+val replace_subst : model -> subst_model -> model
+
 (** Generate a function that enumerates the combinations of substitution models
     and site-rate-variation through lists of variants given and generate a new
     model from a previous model. Empirical priors are required if the given model
     does not have them (under JC69, K80), else priors will always be equal. *)
 val enum_models :
-  ?site_var:[>`DiscreteGamma | `DiscreteTheta | `Constant] list -> 
-    ?subst_model:[> `F81 | `F84 | `GTR | `HKY85 | `JC69 | `K2P | `TN93 ] list ->
+  ?site_var:[`DiscreteGamma | `DiscreteTheta | `Constant] list -> 
+    ?subst_model:[`F81 | `F84 | `GTR | `HKY85 | `JC69 | `K2P | `TN93] list ->
       ?priors:float array -> (model -> model option)
 
 val compute_priors :
   Alphabet.t * bool -> float array -> int * int -> int list -> float array
 
 
+(** {2 Query functions of models *)
 
 (** [get_alphabet] return the alphabet of the specification *)
 val get_alphabet : spec -> Alphabet.t
@@ -245,42 +252,42 @@ val categorize_by_model : ('a -> model) -> 'a list -> 'a list list
 
 (** {2 Substitution Rate Matrix Constructions} *)
 
+(** A type to represent how gaps should be treated when creating substitution
+    rate matrices. *)
+type gap_repr =
+  (int * float) option
+
 val m_jc69 :
-  float -> int -> (int * float) option ->
+  int -> gap_repr ->
     (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
 
 val m_k2p :
-  float -> float -> int -> (int * float) option ->
+  float -> int -> gap_repr ->
     (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
 
 val m_tn93 :
   (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t ->
-    float -> float -> float -> int -> (int * float) option ->
-      (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
-
-val m_tn93_ratio :
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t ->
-    float -> float -> int -> (int * float) option ->
+    float -> float -> int -> gap_repr ->
       (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
 
 val m_f81 :
   (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t ->
-    float -> int -> (int * float) option ->
+    int -> gap_repr ->
       (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
 
 val m_hky85 :
   (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t ->
-    float -> int -> (int * float) option ->
+    float -> int -> gap_repr ->
       (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
 
 val m_f84 :
   (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t ->
-    float -> float -> int -> (int * float) option ->
+    float -> int -> gap_repr ->
       (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
 
 val m_gtr :
   (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t ->
-    float array -> int -> (int * float) option ->
+    float array -> int -> gap_repr ->
       (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
 
 val m_file :
@@ -305,12 +312,34 @@ val output_model :
   (string -> unit) -> (string array array -> unit) option
     -> [`Nexus | `Phylip] -> model -> string list option -> unit
 
+(** [short_name model] gives a short and sweet name of the models initials and
+   it's rate information. Like JC69+G (for a jukes-cantor model with gamma). *)
 val short_name : model -> string
 
 
+(** {2 Substitution Rate Matrix Estimation} *)
+
+(** We provide functions for counting and creating matrices from a
+    classification of transformations in a data-set. *)
+
+(** Create a specification from a classification, and parsed model details. *)
+val process_classification :
+  spec -> float Internal.UnorderedTupleMap.t * float Internal.IntMap.t -> spec
+
+(** [classify_edges leaf1? leaf2? data1 data2 (acc1,acc2)]
+   Create an accumulated classification of transformations between [data1] and
+   [data2]. We also store site information for empirical priors in [acc2] when
+   [leaf1] or [leaf2] are set to true. [data1] and [data2] are lists of pairs of
+   the weight of the character and the states assigned to that data. This
+   function can be used to estimate the initial rates from parsimony trees. *)
+val classify_edges :
+  bool -> bool -> (float * Internal.BitSet.t) list -> (float * Internal.BitSet.t) list ->
+    float Internal.UnorderedTupleMap.t * float Internal.IntMap.t ->
+      float Internal.UnorderedTupleMap.t * float Internal.IntMap.t
+
 (** {2 Parser Friendly Functions}
 
-type string_spec = 
+type string_spec =
   string * (string * string * string * string) * float list * (string * float option) * string option
 
 val convert_string_spec : Alphabet.t -> string_spec -> spec
@@ -334,17 +363,4 @@ val convert_methods_spec :
   gap -> spec
 *)
 
-(** {2 Substitution Rate Matrix Estimation} *)
 
-(** We provide functions for counting and creating matrices from a
-    classification of transformations in a data-set. *)
-
-(** Create a specification from a classification, and parsed model details. *)
-val process_classification :
-  spec -> float Internal.UnorderedTupleMap.t * float Internal.IntMap.t -> spec
-
-(** Create an accumulated classification of transformations *)
-val classify_edges :
-  bool -> bool -> (float * 'a * Internal.BitSet.t) list -> (float * 'c * Internal.BitSet.t) list ->
-    float Internal.UnorderedTupleMap.t * float Internal.IntMap.t ->
-      float Internal.UnorderedTupleMap.t * float Internal.IntMap.t

@@ -198,6 +198,10 @@ let generate_opt_vector spec = failwith "TODO"
 let num_parameters model : int =
   Bigarray.Array1.dim model.opt
 
+(** A type to represent how gaps should be treated when creating substitution
+    rate matrices. *)
+type gap_repr =
+  (int * float) option
 
 (** divide a matrix by the mean rate so it will equal 1 *)
 let m_meanrate srm pi_ =
@@ -212,7 +216,8 @@ let m_meanrate srm pi_ =
   done
 
 (** val jc69 :: ANY ALPHABET size *)
-let m_jc69 mu a_size gap_r =
+let m_jc69 a_size gap_r =
+  let mu = 1.0 in
   let srm = create_ba2 a_size a_size in
   Bigarray.Array2.fill srm mu;
   let () = match gap_r with
@@ -243,7 +248,8 @@ let m_jc69 mu a_size gap_r =
   srm
 
 (** val k2p :: only 4 or 5 characters *)
-let m_k2p alpha beta a_size gap_r =
+let m_k2p beta a_size gap_r =
+  let alpha = 1.0 in
   if not ((a_size = 4) || (a_size = 5)) then
     raise (raise (errorf "Alphabet does not support this model"));
   let srm = create_ba2 a_size a_size in
@@ -289,11 +295,11 @@ let m_k2p alpha beta a_size gap_r =
   srm
 
 (** val tn93 :: only 4 or 5 characters *)
-let m_tn93 pi_ alpha beta gamma a_size gap_r =
+let m_tn93 pi_ alpha beta a_size gap_r =
   if not ((a_size = 4) || (a_size = 5)) then
     raise (errorf "Alphabet size does not support this model");
   let srm = create_ba2 a_size a_size in
-  let gamma = max gamma minimum in
+  let gamma = 1.0 in
   Bigarray.Array2.fill srm gamma;
   srm.{0,2} <- alpha; srm.{1,3} <- beta; (* ACGT -- R=AG -- Y=CT *)
   srm.{2,0} <- alpha; srm.{3,1} <- beta; (* 0123 -- R=02 -- Y=13 *)
@@ -324,19 +330,10 @@ let m_tn93 pi_ alpha beta gamma a_size gap_r =
   m_meanrate srm pi_;
   srm
 
-let m_tn93_ratio pi_ kappa1 kappa2 a_size gap_r =
-  let beta = (pi_.{0} *. pi_.{2} *. kappa1)
-          +. (pi_.{1} *. pi_.{3} *. kappa2)
-          +. ((pi_.{0} +. pi_.{2}) *. (pi_.{1}+.pi_.{3}))
-  in
-  let beta = 1.0 /. (2.0 *. beta) in
-  let alpha1 = kappa1 *. beta and alpha2 = kappa2 *. beta in
-  m_tn93 pi_ alpha1 alpha2 beta a_size gap_r
-
 (** val f81 :: ANY ALPHABET size *)
-let m_f81 pi_ lambda a_size gap_r =
+let m_f81 pi_ a_size gap_r =
   let srm = create_ba2 a_size a_size in
-  let lambda = max lambda minimum in
+  let lambda = 1.0 in
   let () = match gap_r with
     | None -> 
       for i = 0 to (a_size-1) do
@@ -367,20 +364,15 @@ let m_f81 pi_ lambda a_size gap_r =
 
 (** val hky85 :: only 4 or 5 characters *)
 let m_hky85 pi_ kappa a_size gap_r =
-  let beta = (pi_.{0} *. pi_.{2} *. kappa) +. (pi_.{1} *. pi_.{3} *. kappa) +.
-             ((pi_.{0} +. pi_.{2}) *. (pi_.{1}+.pi_.{3}) ) in
-  let beta = 1.0 /. (2.0 *. beta) in
-  let alpha = kappa *. beta in
-  m_tn93 pi_ alpha alpha beta a_size gap_r
+  m_tn93 pi_ kappa kappa a_size gap_r
 
 (** val f84 :: only 4 or 5 characters *)
-let m_f84 pi_ gamma kappa a_size gap_r =
-  let gamma = max gamma minimum in
+let m_f84 pi_ kappa a_size gap_r =
   let y = pi_.{1} +. pi_.{3} in (* Y = C + T *)
   let r = pi_.{0} +. pi_.{2} in (* R = A + G *)
-  let alpha = (1.0+.kappa/.r) *. gamma in
-  let beta = (1.0+.kappa/.y) *. gamma in
-  m_tn93 pi_ alpha beta gamma a_size gap_r
+  let alpha = 1.0 +. kappa /. r in
+  let beta = 1.0 +. kappa /. y in
+  m_tn93 pi_ alpha beta a_size gap_r
 
 (* normalize gap rate against rate between non-gap characters. *)
 let normalize ?(m=minimum) gap_state vec = match gap_state with
@@ -601,7 +593,7 @@ let compose model t = match model.ui with
   | None    -> compose_sym model.u model.d t
 
 
-let subst_matrix model topt =
+let substitution_matrix model topt =
   let _gapr = match snd model.spec.alphabet with
     | Coupled x   -> Some (Alphabet.get_gap (fst model.spec.alphabet), x)
     | Independent -> None
@@ -609,12 +601,12 @@ let subst_matrix model topt =
   and a_size = alphabet_size model.spec
   and priors = model.priors in
   let m = match model.spec.substitution with
-    | JC69         -> m_jc69 1.0 a_size _gapr
-    | F81          -> m_f81 priors 1.0 a_size _gapr
-    | K2P t        -> m_k2p t 1.0 a_size _gapr
-    | F84 t        -> m_f84 priors t 1.0 a_size _gapr
+    | JC69         -> m_jc69 a_size _gapr
+    | F81          -> m_f81 priors a_size _gapr
+    | K2P t        -> m_k2p t a_size _gapr
+    | F84 t        -> m_f84 priors t a_size _gapr
     | HKY85 t      -> m_hky85 priors t a_size _gapr
-    | TN93 (ts,tv) -> m_tn93 priors ts tv 1.0 a_size _gapr
+    | TN93 (ts,tv) -> m_tn93 priors ts tv a_size _gapr
     | GTR c        -> m_gtr priors c a_size _gapr
     | Const m      -> m_file priors m a_size
     | Custom (assoc,ray) -> m_custom priors assoc ray a_size
@@ -1114,13 +1106,12 @@ let create lk_spec =
   in
   (*  get the substitution rate matrix and set sym variable and to_formatter vars *)
   let sym, q, substitution = match lk_spec.substitution with
-    | JC69  -> true,  m_jc69 1.0 a_size _gapr, JC69
-    | F81   -> false, m_f81 priors 1.0 a_size _gapr, F81
-    | K2P t -> true,  m_k2p t 1.0 a_size _gapr, lk_spec.substitution
-    | F84 t -> false, m_f84 priors t 1.0 a_size _gapr, lk_spec.substitution
+    | JC69  -> true,  m_jc69 a_size _gapr, JC69
+    | F81   -> false, m_f81 priors a_size _gapr, F81
+    | K2P t -> true,  m_k2p t a_size _gapr, lk_spec.substitution
+    | F84 t -> false, m_f84 priors t a_size _gapr, lk_spec.substitution
     | HKY85 t -> false, m_hky85 priors t a_size _gapr, lk_spec.substitution
-    | TN93 (ts,tv) ->
-      false, m_tn93 priors ts tv 1.0 a_size _gapr, lk_spec.substitution
+    | TN93 (ts,tv) -> false, m_tn93 priors ts tv a_size _gapr, lk_spec.substitution
     | GTR c ->
       let c = match gap, (Array.length c) with
         | Coupled _, 0 -> Array.make ((a_size*(a_size-3))/2) 1.0
@@ -1145,6 +1136,9 @@ let create lk_spec =
 let replace_priors model array = 
   create {model.spec with base_priors = Empirical array}
 
+let replace_subst model matrix = failwith "TODO"
+
+let replace_rates model rates = failwith "TODO"
 
 (** Enumerate models based on some set of criteria. *)
 let enum_models ?(site_var=[`DiscreteGamma;`DiscreteTheta;`Constant])
@@ -1210,7 +1204,7 @@ let classify_edges leaf1 leaf2 seq1 seq2 acc =
     UnorderedTupleMap.add k v map
   in
   (* classify the mutation from a1 to a2 in a map *)
-  let mk_transitions (tmap,fmap) (w1,_,s1) (w2,_,s2) =
+  let mk_transitions (tmap,fmap) (w1,s1) (w2,s2) =
     assert( w1 = w2 );
     let s1 = BitSet.to_list s1 and s2 = BitSet.to_list s2 in 
     let n1 = List.length s1   and n2 = List.length s2   in
