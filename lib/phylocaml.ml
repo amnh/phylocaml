@@ -1,33 +1,47 @@
 (** Main Functor Modules **)
 module Diagnosis    = Diagnosis
 module Neighborhood = Neighborhood
-module Network      = Network
 module Node         = Node
 module NodeData     = NodeData
 module PTopology    = PTopology
 module Topology     = Topology
-module Tree         = Tree
 
+(** Tree Oriented Modules *)
+module Tree         = Tree
+module DiagTree     = DiagTree
+
+(** Network Oriented Modules *)
+module Network      = Network
+module DiagNetwork  = DiagNetwork
+
+(** Model Impelementations *)
+module Model        = Model
+module Mlmodel      = Mlmodel
+module Mpmodel      = Mpmodel
+module Kolmomodel   = Kolmomodel
 
 (** Phylocaml Core Utility Library *)
-
 module Alphabet     = Alphabet
 module Seq          = Seq
-module Mlmodel      = Mlmodel
 module Llist        = Llist
+module BitVector8   = BitVector8
+module BitVector16  = BitVector16
+module BitVector32  = BitVector32
+module BitVector64  = BitVector64
 
+(** NodeData modules implemented with OCaml data-types. *)
+module NodeDataOCaml =
+  struct
+    module Likelihood  = Likelihood_o
+    module NonAdditive = NonAdditive_o
+    module Sequence    = Sequence_o
+  end
 
-(** NodeData modules implemented with OCaml data-types. These methods may be
-   slower, but used for verification on speed-improvements against C types *)
-module NodeDataOCaml = struct
-(*   module Likelihood = Likelihood_o *)
-(*   module NonAdditive = NonAdditive_o *)
-(*   module Sequence = Sequence_o *)
-end
-
-
-(** NodeData modules implemented on with C abstract Types *)
-module NodeDataC = struct
-(*   module Likelihood = Likelihood_c *)
-(*   module Sequence = Sequence_c *)
-end
+(** NodeData modules implemented on with C abstract Types. At least a subset of
+   the NodeDataOCaml module. *)
+module NodeDataC =
+  struct
+    module Likelihood  = Likelihood_c
+    module NonAdditive = NonAdditive_c
+    module Sequence    = Sequence_c
+  end
