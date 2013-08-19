@@ -9,6 +9,8 @@
 
 #include <caml/mlvalues.h>
 
+#include "../phyloc.h"
+
 #define BV_HEADER
 
 /** Set-up definitions for the bit-size of data that the data-type instructions
@@ -88,7 +90,7 @@ value bv_CAML_eltstates( value vbv, value vi );
 value bv_CAML_eltint( value vbv, value vi);
 value bv_CAML_cardinal( value vbv );
 
-value bv_CAML_popcnt( value vbv );
+value bv_CAML_popcount( value vbv );
 
 value bv_CAML_union( value vbv1, value vbv2 );
 value bv_CAML_inter( value vbv1, value vbv2 );

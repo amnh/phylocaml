@@ -25,33 +25,12 @@
 
 /** deconstruct OCaml values; y=Val_vect(x) will be Vect_val(y)=x, see above. */
 #define Vect_val(v) (*((vect**)Data_custom_val(v)))
+#define bv_alloc_val(v,d) v=caml_alloc_custom(&bv_custom_ops,sizeof(vect),1,bv_freq); Vect_val(v)=d
 
-/** these are the same; a constant */
-#define Val_none Val_int(0)
-#define None_val Val_none
-
-#define Some_val(v) Field(v,0)
-value Val_some( value v )
-{
-    value some;
-    some = caml_alloc(1, 0);
-    Store_field(some, 0, v);
-    return some;
-}
 
 /** code generation global */
-long magic_number = 0;
-long get_next_code() { return magic_number++; }
-
-void bv_print(const vect *a)
-{
-  int i;
-  printf("%d :", a->code);
-  for(i=0; i<a->chars;++i)
-    printf("%03d |", a->data[i]);
-  printf("\n");
-}
-
+long bv_magic_number = 0;
+long bv_next_code() { return bv_magic_number++; }
 
 /** Native Implementations for functions */
 
@@ -62,10 +41,17 @@ long bv_alignment_length(const long cs)
 }
 #endif
 
-#ifndef BV_HAS_DISTANCE
-long bv_distance(const vect* a, const vect* b)
+#ifndef BV_HAS_MALLOC
+void bv_malloc(CTYPE *a, const long length)
 {
-  long i, res;
+  a = (CTYPE*) malloc( length * sizeof(CTYPE) );
+}
+#endif
+
+#ifndef BV_HAS_DISTANCE
+unsigned long bv_distance(const vect* a, const vect* b)
+{
+  unsigned long i, res;
   res = 0L;
   for(i=0; i<a->chars;++i){
     if(0 == (a->data[i] & b->data[i]) )
@@ -91,7 +77,7 @@ int bv_eltcount(const vect *a, const int i)
 #ifndef BV_HAS_COMPARE
 int bv_compare( vect *a, vect *b )
 {
-  long i;
+  unsigned long i;
   int ret = 0;
   if(a->chars > b->chars){
     ret = 1;
@@ -112,27 +98,39 @@ int bv_compare( vect *a, vect *b )
 #ifndef BV_HAS_UNION
 void bv_union(vect* c, vect*a, vect*b)
 {
-  long i;
+  unsigned long i;
   for(i=0; i<a->chars;++i)
     c->data[i] = a->data[i] | b->data[i];
+}
+#endif
+
+#ifndef BV_HAS_POPCNT
+unsigned long bv_popcount( const vect*a )
+{
+  unsigned long i,res;
+  for(i=0,res=0;i<a->chars;++i)
+    res += bv_eltcount( a, i );
+  return res;
 }
 #endif
 
 #ifndef BV_HAS_INTER
 void bv_inter(vect* c, vect*a, vect*b)
 {
-  long i;
+  unsigned long i;
   for(i=0; i<a->chars;++i)
     c->data[i] = a->data[i] & b->data[i];
 }
 #endif
 
 #ifndef BV_HAS_SATURATION
-long bv_saturation( const vect*a, const int n)
+unsigned long bv_saturation( const vect*a, const long n)
 {
-  long i,count;
+  unsigned long i,count;
+  CTYPE mask;
   count = 0;
-  if( n <= (1 << WIDTH) ){
+  mask = (CTYPE)1 << (WIDTH-1);
+  if( n <= mask ){
     for(i=0; i < a->chars;++i){
       if (n & a->data[i]) { ++count; }
     }
@@ -142,9 +140,9 @@ long bv_saturation( const vect*a, const int n)
 #endif
 
 #ifndef BV_HAS_PSATURATION
-long bv_poly_saturation( const vect *a, int n )
+unsigned long bv_poly_saturation( const vect *a, int n )
 {
-  long i,count;
+  unsigned long i,count;
   count = 0;
   if( n <= WIDTH ){
     for(i=0; i < a->chars;++i){
@@ -156,15 +154,32 @@ long bv_poly_saturation( const vect *a, int n )
 }
 #endif
 
+#ifndef BV_HAS_FITCH
+/* todo: convert to composition of definitions above? */
+unsigned long bv_fitch( vect *c, const vect *a, const vect *b )
+{
+  unsigned long i,res;
+  for(i = 0,res=0; i < a->chars; ++i)
+  {
+    c->data[i] = a->data[i] & b->data[i];
+    if( 0 == c->data[i] ){
+      c->data[i] = a->data[i] | b->data[i];
+      ++res;
+    }
+  }
+  return res;
+}
+#endif
+
 vect* bv_copy( const vect* a )
 {
   vect *x;
-  CTYPE *data;
+  x = (vect*) malloc(sizeof(vect));
   x->length = a->length;
   x->chars  = a->chars;
   x->padding= a->padding;
-  x->code   = get_next_code();
-  bv_malloc( x->data, a->length * BLOCKS * sizeof(CTYPE));
+  x->code   = bv_next_code();
+  bv_malloc( x->data, a->length);
   return x;
 }
 
@@ -185,18 +200,27 @@ int bv_CAML_compare_values( value vbv1, value vbv2 )
   return( bv_compare(Vect_val(vbv1), Vect_val(vbv2) ) );
 }
 
-void bv_CAML_serialize(value v,unsigned long *wsize_32,unsigned long *wsize_w64){}
-unsigned long bv_CAML_deserialize(void* dst) { return 0L;}
+void bv_CAML_serialize(value v,unsigned long *wsize_32,unsigned long *wsize_w64)
+{
 
-long bv_CAML_hash(value v){}
+
+}
+
+unsigned long bv_CAML_deserialize(void* dst)
+{
+    return 0L;
+}
+
+/* long bv_CAML_hash(value v){ return 0L;} */
 
 static struct custom_operations bv_custom_ops  = {
     "AMNH/bitvector/0.1",       /* identifier */
     (&bv_CAML_free),            /* finalize */
     (&bv_CAML_compare_values),  /* compare */
-    (&bv_CAML_hash),            /* hash */
+    custom_hash_default,        /* hash */
     (&bv_CAML_serialize),       /* serialize */
-    (&bv_CAML_deserialize)      /* deserialize */
+    (&bv_CAML_deserialize),     /* deserialize */
+    custom_compare_ext_default  /* compare_ext */
 };
 
 value bv_CAML_register (value u)
@@ -210,11 +234,11 @@ value bv_CAML_register (value u)
 
 /** OCaml Interface **/
 
-int freq = 10000; /* # of nodes to alloc before GC kicks in */
+int bv_freq = 10000; /* # of nodes to alloc before GC kicks in */
 value bv_CAML_custom_max( value n )
 {
     CAMLparam1( n );
-    freq = Int_val( n );
+    bv_freq = Int_val( n );
     CAMLreturn( Val_unit );
 }
 
@@ -236,43 +260,60 @@ value bv_CAML_create( value vchars )
 {
   CAMLparam1(vchars);
   CAMLlocal1(res);
-  long chars,len,i;
+  unsigned long chars,i;
   vect* v;
   v = (vect*) malloc(sizeof(vect));
   chars = Int_val( vchars );
-  len = bv_alignment_length( chars );
-  bv_alloc_val(res,v);
-  v->code = get_next_code();
+  v->code = bv_next_code();
   v->chars = chars;
-  v->length = len;
-  bv_malloc( v->data, len * BLOCKS * sizeof(CTYPE) );
-  for( i=0; i < len * BLOCKS; ++i)
+  v->length = bv_alignment_length( chars );
+  bv_malloc( v->data, v->length);
+  for( i=0; i < v->length; ++i)
     v->data[i] = 0;
+  bv_alloc_val(res,v);
   CAMLreturn( res );
 }
+
+value bv_CAML_copy( value vbv )
+{
+  CAMLparam1(vbv);
+  CAMLlocal1(res);
+  bv_alloc_val(res,bv_copy(Vect_val(vbv)));
+  CAMLreturn(res);
+}
+
 
 value bv_CAML_ofarray( value vray )
 {
   CAMLparam1( vray );
   CAMLlocal1( vres );
-  long i,len,chrs;
+  unsigned long i;
+  long chrs;
   vect* res;
   chrs = Wosize_val( vray );
   res = (vect*) malloc(sizeof(vect));
-  len = bv_alignment_length( chrs );
-  res->code = get_next_code();
+  res->code = bv_next_code();
   res->chars = chrs;
-  res->length = len;
-  bv_malloc( res->data, len * BLOCKS * sizeof(CTYPE) );
+  res->length = bv_alignment_length( chrs );
+  bv_malloc( res->data, res->length);
   bv_alloc_val(vres,res);
   for( i=0; i < res->chars; ++i)
     res->data[i] = Int_val(Field(vray,i));
-  for( i = res->chars; i < len * BLOCKS; ++i )
+  for( i = res->chars; i < res->length; ++i )
     res->data[i] = 0;
   CAMLreturn( vres );
 }
 
 value bv_CAML_setelt( value vbv, value vi, value vs )
+{
+  CAMLparam3( vbv, vi, vs );
+  vect *bv;
+  bv= Vect_val(vbv);
+  bv->data[ Int_val(vi) ] = Elt_val(vs);
+  CAMLreturn( Val_unit );
+}
+
+value bv_CAML_setbit( value vbv, value vi, value vs )
 {
   CAMLparam3( vbv, vi, vs );
   vect *bv;
@@ -286,13 +327,11 @@ value bv_CAML_setelt( value vbv, value vi, value vs )
 CAMLprim value bv_CAML_eltint( value vbv, value vi ) /** BROKEN **/
 {
   CAMLparam2( vbv, vi );
-  int res;
-  vect* v;
 #ifndef RET_STATE_SUPPORT
   CAMLreturn( None_val );
 #else
-  v = Vect_val(vbv);
-  res = v->data[Int_val(vi)];
+  int res;
+  res = (Vect_val(vbv))->data[Int_val(vi)];
   CAMLreturn(Val_some(Val_int(res)));
 #endif
 }
@@ -328,11 +367,11 @@ value bv_CAML_cardinal( value vbv )
   CAMLreturn( Val_long( Vect_val(vbv)->chars ) );
 }
 
-value bv_CAML_popcnt( value vbv )
+value bv_CAML_popcount( value vbv )
 {
   CAMLparam1( vbv );
   long i;
-  i = bv_popcnt( Vect_val( vbv ) );
+  i = bv_popcount( Vect_val( vbv ) );
   CAMLreturn(Int_val(i));
 }
 
@@ -340,7 +379,6 @@ value bv_CAML_union( value vbv1, value vbv2 )
 {
   CAMLparam2( vbv1, vbv2 );
   CAMLlocal1( vres );
-  long i;
   vect *res, *bv1, *bv2;
   bv1 = Vect_val(vbv1);
   bv2 = Vect_val(vbv2);
@@ -354,7 +392,6 @@ value bv_CAML_inter( value vbv1, value vbv2 )
 {
   CAMLparam2( vbv1, vbv2 );
   CAMLlocal1( vres );
-  long i;
   vect *res, *bv1, *bv2;
   bv1 = Vect_val(vbv1);
   bv2 = Vect_val(vbv2);

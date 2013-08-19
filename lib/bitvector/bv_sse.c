@@ -22,73 +22,31 @@
  * -stream is in SSE4.1; this allows faster performance on non-temporal data,
  *                       use a basic store for earlier versions. */
 #ifdef __SSE4_1__
-#include <smmintrin.h>
-#define _mm_blendv(a,b,c) _mm_blendv_epi8(a,b,c)
-#define _mm_store(a,b) _mm_stream_si128(a,b)
-#define VECTWIDTH 128
-
+ #include <smmintrin.h>
+ #define _mm_blendv(a,b,c) _mm_blendv_epi8(a,b,c)
+ #define _mm_store(a,b) _mm_stream_si128(a,b)
 
 #elif __SSE2__
-#include <emmintrin.h>
-#define _mm_blendv(a,b,c) _mm_or(a, _mm_and(b, c));
-#define _mm_store(a,b) _mm_store_si128(a,b)
-#define VECTWIDTH 128
-
+ #include <emmintrin.h>
+ #define _mm_blendv(a,b,c) _mm_or(a, _mm_and(b, c));
+ #define _mm_store(a,b) _mm_store_si128(a,b)
 #endif
-
-/** Set-up functions for defining the bit-size of data that the SSE 128i
- * instructions will process. This is defined by the WIDTH argument. It is the
- * number of bits taken up by a single interpreted value. Along with definitions
- * for defining certain functions, this value sets a number of other things:
- *   ctype - the type of values being processed in the pipeline
- *           i.e. 8:char, 16:short, 32:int, 64:long.
- *   BLOCKS- the number of values stored in a 128 register = 128/WIDTH
- *   RET_STATE_SUPPORT - defined if states fit into OCaml integers
- * 
- * This file should be processed/renamed into a number of separate compilation
- * units for individual use of WIDTH. Because of this, all functions begin with
- * bv_, and used exclusively, so that can be scripted to bv_8 or whatever. */
 
 #if WIDTH == 8
  #define _mm_cmpeq(a,b) _mm_cmpeq_epi8(a,b)
  #define _mm_extract(a,i) _mm_extract_epi8(a,i)
- #define BLOCKS 16
- #define ctype uint8_t
- #define RET_STATE_SUPPORT
 
 #elif WIDTH == 16
  #define _mm_cmpeq(a,b) _mm_cmpeq_epi16(a,b)
  #define _mm_extract(a,i) _mm_extract_epi16(a,i)
- #define BLOCKS 8
- #define ctype uint16_t
- #define Elt_val(x) Int_val(x)
- #define Val_elt(x) Val_int(x)
- #define RET_STATE_SUPPORT
 
 #elif WIDTH == 32
  #define _mm_cmpeq(a,b) _mm_cmpeq_epi32(a,b)
  #define _mm_extract(a,i) _mm_extract_epi32(a,i)
- #define BLOCKS 4
- #define ctype uint32_t
- #ifdef ARCH64
-  #define Elt_val(x) Int32_val(x)
-  #define Val_elt(x) Val_int32(x)
-  #define RET_STATE_SUPPORT
- #else
-  #define Elt_val(x) Int_val(x)
-  #define Val_elt(x) Val_int(x)
-  #undef RET_STATE_SUPPORT
- #endif
 
 #elif WIDTH == 64
  #define _mm_cmpeq(a,b) _mm_cmpeq_epi64(a,b)
  #define _mm_extract(a,i) _mm_extract_epi64(a,i)
- #define BLOCKS 2
- #define ctype uint64_t
- #define Elt_val(x) Int64_val(x)
- #define Val_elt(x) Val_int64(x)
- #define BLOCKS 2
- #undef RET_STATE_SUPPORT
 
 #else
  #error "Unrecognized Character Size."
