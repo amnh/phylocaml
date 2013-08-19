@@ -28,21 +28,257 @@
         </ul>
       </header>
       <section>
-        <h1>phylocaml</h1>
+        <h1>
+<a name="phylocaml" class="anchor" href="#phylocaml"><span class="octicon octicon-link"></span></a>phylocaml</h1>
 
-<p>A Phylogenetic Library based on a refactoring of POY (code.google.com/p/poy).</p>
+<p>A Phylogenetic Library based on a refactoring of <a href="http://code.google.com/p/poy">POY</a>.</p>
 
-<p>We've thought a lot about how to develop a library from what we have and the
-experience we have gathered from our work on POY3/4/5. The portion of the
-code-base that can be easily translated over is the diagnosis subset --the
-section of code that can analyze a topology and assign optimal ancestral states
-to internal nodes under different optimality criterion. Anyone can develop a
-search heuristic mechanism around this. Of course, designing one that is
-expandable and encompasses 90% of users demands is another story. This document
-talks about the design decisions to diagnose a topology, obtaining a score,
-recovering states, modifying the topology (break, join, re-root, fuse, and
-dealing with a forest) and optimizing those states on the topology to reduce the
-overall score.</p>
+<p>The <strong>goal</strong> of <em>phylocaml</em> is to use the experience from <em>POY 3/4/5</em> to develop a
+library. A major reason for this refactoring is that we need the ability to
+support different types of topologies from our previous implementations.
+Although our utility is to develop a rooted network approach, we believe the
+framework can be used in general for other types of topologies and offers us a
+way to write a powerful library for bioinformatics research.</p>
+
+<p>We are also taking the approach to utilize many of the new features that the
+OCaml team has developed over the years, prefer a standard library (Core), and
+become more idiomatic to the standards developed since the initial versions.</p>
+
+<h1>
+<a name="table-of-contents" class="anchor" href="#table-of-contents"><span class="octicon octicon-link"></span></a>Table of Contents</h1>
+
+<ul>
+<li>Dependencies</li>
+<li>Configure and Install</li>
+<li>Quick Start
+
+<ul>
+<li>Overview of Diagnosis Modules</li>
+<li>Overview of Search Modules</li>
+<li>Overview of Utility Modules</li>
+</ul>
+</li>
+<li>Test Framework</li>
+<li>Design Choices and Rationale</li>
+<li>Contact/Location Information</li>
+</ul><h1>
+<a name="dependencies" class="anchor" href="#dependencies"><span class="octicon octicon-link"></span></a>Dependencies</h1>
+
+<ul>
+<li>
+<a href="http://caml.inria.fr/ocaml/">OCaml</a> (4.00.1+)</li>
+<li><a href="http://github.com/superbobry/pareto/">Pareto</a></li>
+<li><a href="http://projects.camlcity.org/projects/findlib.html">Findlib</a></li>
+</ul><h1>
+<a name="configure-and-install" class="anchor" href="#configure-and-install"><span class="octicon octicon-link"></span></a>Configure and Install</h1>
+
+<p>run,
+    make install</p>
+
+<h1>
+<a name="quick-start" class="anchor" href="#quick-start"><span class="octicon octicon-link"></span></a>Quick Start</h1>
+
+<h2>
+<a name="overview-of-diagnosis-modules" class="anchor" href="#overview-of-diagnosis-modules"><span class="octicon octicon-link"></span></a>Overview of Diagnosis Modules</h2>
+
+<p>The diagnosis module contains the abilities to take a topology and node data and
+assign optimal states, model parameters and assign a utility function (cost)
+to the topology.</p>
+
+<p>Currently, in POY 5, we encapsulate this pretty well. There is some leaking with
+modules that do things to very specific data, but they are few and far between.
+This refactoring will be an effort to eliminate this leakage. We believe a
+functor approach of a diagnosis module will be effective. In this way we can
+implement a parallel diagnosis module that can plug into whatever the diagnosis
+module uses (the Search module for example) as well as deal with unforeseen
+issues with networks or more complex topologies in optimizing states.</p>
+
+<pre><code>                                                        +-------+
+   +------------+----------+-------------+----------+---+---+   |
+   | Likelihood | Sequence | NonAdditive | Additive |  Set  |&lt;--+--+
+   +------------+----------+-------------+----------+-------+      |
+                                                                   |
+      +--------------+-----------+         +--------+----------+   |
+      |              | Node      |--------&gt;|        | NodeData |---+
+      |              +-----------+         | Node   +----------+
+      | Diagnosis    | Root      |--------&gt;|        | Compare  |
+      |              +-----------+         +--------+----------+
+      |              | PTopology |----+    +----------+   |
+      +--------------+-----------+    +---&gt;| Topology |&lt;--+
+                                           +----------+
+
+       Figure 1. Basic Module dependency diagram of a Diagnosis
+</code></pre>
+
+<p>In Figure 1, the diagnosis module is a functor about a node, root, and ptopo.
+The topology designates a way to traverse the topology, and ptopology attaches
+data to the nodes and roots. This allows separation between structure and gives
+a common and basic interface to attach data to a topology. Topology additionally
+contains a compare module for traversing a topology in a consistent way[^1].</p>
+
+<p>The Node/Root module is a functor itself to apply a previously mentioned compare
+module and a data module that contains all the functions in the optimality
+criteria (Likelihood, Additive, Chromosome, Genome, Sankoff, et cetera) all
+share a common module interface (NodeData). Very close to what we have now with
+some added components. </p>
+
+<p>Nodes can also be abstracted to contain further features --laziness has been
+important, as well as a directional node for un-rooted trees in selecting the
+best downpass assignments to perform an uppass on (each internal node of a
+binary tree has three of these corresponding to each combination of 2 children).
+You can see these implementations in the Node module.</p>
+
+<p>Example code to diagnose a tree with known data taxon data and tree file,</p>
+
+<pre><code>module Root = Node.Make1D (Tree.NodeComparator) (SequenceData)
+module Node = Node.Make3D (Tree.NodeComparator) (SequenceData)
+module PTree= Ptopology.Make (Tree)
+module Diag = Diagnosis.Make (PTree) (Root) (Node)
+let diagnose_tree taxa_data edges =
+    let nodes = List.map (fun x -&gt; Node.of_data (SequenceData.of_string x)) taxa_data in
+    let tree = PTree.of_parsed edges nodes in
+    let tree = Diag.diagnose tree in
+    Printf.printf "%s:[%d]" (PTree.to_string tree) (Diag.total_cost tree)
+</code></pre>
+
+<h2>
+<a name="overview-of-search-modules" class="anchor" href="#overview-of-search-modules"><span class="octicon octicon-link"></span></a>Overview of Search Modules</h2>
+
+<p>The search framework will require thoughtfulness to be able to encompass a wide
+range of known search heuristics, as well as unknown situations in regard to
+networks and other topologies. We would also like to spin this part off into a
+general library if possible. Our problem, dealing with two NP-Hard problems
+requires some extra thought that other packages do not often address. We can
+look to current meta-heuristic literature to design a general library. Most of
+these algorithms are dependent on a local search. At minimum this requires,</p>
+
+<ul>
+<li>Solution - A topology.</li>
+<li>Neighborhood- A way to generate solutions using local modifications</li>
+<li>Choose - A method to choose a single member of a neighborhood for
+successive neighborhood searches.</li>
+</ul><p>Full search procedures, like branch and bound will also have to be employed as
+well to round out an exhaustive approach to search on small data-sets.</p>
+
+<pre><code>type local_search =
+  choose : (t -&gt; t -&gt; bool) -&gt;
+    (module Neighborhood.S with type t = Diagnosis.t) -&gt;
+      (module LocalTabu.S with type t = Diagnosis.t) -&gt; t -&gt; t
+
+Figure 2. type definition for a local search
+</code></pre>
+
+<p>It is currently under consideration that the neighborhood be generated from a
+lazy-list. In this way, we believe a wide range of options and strategies can be
+employed. The local search modules Neighborhood and LocalTabu are specialized to
+the type of the topology. This allows multiple diagnosis modules to use the same
+Neighborhood for the same topology. This is important in Variable Neighborhood
+Search especially and in general.</p>
+
+<p>This local-search procedure can be used to build up a more global search
+procedure that includes perturbations, a more robust tabu-search, and other
+functionalities for global optimization and meta-heuristics. These procedures
+can be defined separately instead of a single all encompassing search function,
+and be parameterized about the specific requirements of the topology. In general
+meta-heuristics can be separated into two categories:</p>
+
+<p>Iterative Methods</p>
+
+<ul>
+<li>Simulated Annealing (with restart)</li>
+<li>Tabu-Search</li>
+<li>Greedy Randomized Adaptive Search Procedure (GRASP)</li>
+<li>Variable Neighborhood Search</li>
+<li>Guided Local Search</li>
+<li>Iterated Local Search</li>
+</ul><p>Population Based Methods</p>
+
+<ul>
+<li>Scatter Search / Path Relinking</li>
+<li>Evolutionary Computation (eg, GA)</li>
+<li>Ant Colony Optimization</li>
+<li>Firefly Optimization</li>
+</ul><p>The potential to compose these methods into hyper-heuristics is still a
+question, but at the very least these methods encompass a wide range of ways
+to vary the degrees of Intensification and Diversification. Some questions
+remain regarding the search procedures,</p>
+
+<ul>
+<li>Will this design be robust enough for parallel computation and other types
+of neighborhoods?</li>
+<li>Does the first-class module cause speed issues?</li>
+<li>Can neighborhoods be partitioned effectively with the scheme we have?</li>
+<li>Can the frame-work be generalized into its own library?</li>
+</ul><h2>
+<a name="overview-of-utility-modules" class="anchor" href="#overview-of-utility-modules"><span class="octicon octicon-link"></span></a>Overview of Utility Modules</h2>
+
+<p>These are a list of modules that can be composed and used to handle a wide range
+of data for different optimality criterion. These are oft interfaces to C
+data-types and would be scripted to handle floats, doubles, ints, chars, long,
+et cetera to accommodate a changing need. Special casing some would be
+appropriate to add vectorization to the mix, but previous/general
+implementations and pure OCaml implementations would be built for verification
+purposes.</p>
+
+<ul>
+<li>CostMatrix - Handles median and cost assignments</li>
+<li>Sequence - Handles an ordered continuous set of characters in an alphabet</li>
+<li>Align - Algorithms to align sequences </li>
+<li>Alphabet - Handles codes and names association and type of alphabet to
+generate a cost_matrix when paired with transformation matrix.</li>
+<li>FingerPrinting - Interface to create short tags of data-structures for tabu
+managers in a search. Not required, else entire topology may be stored and
+compared, or no tabus implemented. Also can be used for fusing to name
+potential clades of the topology.</li>
+<li>LikelihoodModel - General storage for a likelihood model.</li>
+</ul><h1>
+<a name="test-framework" class="anchor" href="#test-framework"><span class="octicon octicon-link"></span></a>Test Framework</h1>
+
+<p>...</p>
+
+<h1>
+<a name="design-choices-and-rationale" class="anchor" href="#design-choices-and-rationale"><span class="octicon octicon-link"></span></a>Design Choices and Rationale</h1>
+
+<ul>
+<li>In nodes containing multiple directions and because of heuristics in
+diagnosing un-rooted topologies, we need to know which directional node is
+being queried. This can be done two different ways: by the parent or by the
+children. This variant type is located in the node module and can be used in
+any type of node for any topology.</li>
+<li>Traversing a topology in a consistent way is important for reproducibility
+but this particular issue has to do with the ordering in which nodes enter a
+function to produce the same results. For example, although
+cost(a,b) = cost(b,a), it does not hold that median(a,b) = median(b,a). This
+is because the traceback in the alignment matrix when faced with two equally
+parsimonious alignments, must choose a direction. As these different
+traversals build up the tree to the root, vastly different assignments and
+costs can result. The different assignments/costs are correct none-the-less.
+The final differences are taken care of in the uppass and the assignment
+functions that optimize the internal states of the topology.</li>
+<li>Neighborhoods are defined by a first-class module passed to an enumeration
+function. This neighborhood module will define how breaks and deltas are
+generated. Deltas are a series of steps to transform a tree. Break, Join,
+and re-root currently seem to be the only ones necessary for a full featured
+neighborhood search, but this can be expanded if other options are needed
+(for example, optimization of the tree if this doesn't have a place
+elsewhere in the design of the application). The delta is associated with the
+diagnosis module so the search can be as abstract as possible.</li>
+<li>The NodeComparator is built to generally satisfy the left/right or ordering
+of children for medians[^1]. The design is abstract and depends on proper
+functorizing of the node module with the topology. Currently it is not
+known if this issue will arise with multiple parents in a topology
+(reticulate nodes of networks), or if there is a better way to allow
+consistency between functorized modules.</li>
+</ul><h1>
+<a name="contactlocation-information" class="anchor" href="#contactlocation-information"><span class="octicon octicon-link"></span></a>Contact/Location Information</h1>
+
+<ul>
+<li><a href="mailto:nlucaroni@amnh.org">Nicholas Lucaroni</a></li>
+<li><a href="mailto:wheeler@amnh.org">Ward Wheeler</a></li>
+<li><a href="mailto:lkannan@amnh.org">Lavanya Kannan</a></li>
+<li><a href="https://groups.google.com/forum/?fromgroups#!forum/poy4">Support Forum</a></li>
+<li><a href="http://research.amnh.org/scicomp/research/projects/invertebrate-zoology/poy?q=projects/poy.php">Site on AMNH</a></li>
+</ul><hr>
       </section>
       <footer>
         <p>This project is maintained by <a href="https://github.com/nrlucaroni">nrlucaroni</a></p>
