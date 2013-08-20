@@ -1,0 +1,11 @@
+<lib>        : include
+"lib/mlmodel.ml" : package(pareto)
+
+<**/*.{byte,native,top}> or <**/*.cm{x,}a> : use_phyloc
+
+"lib/bitvector.ml"     : use_phyloc
+
+"lib/bv8.c"  : use_bv8
+"lib/bv16.c" : use_bv16
+"lib/bv32.c" : use_bv32
+"lib/bv64.c" : use_bv64

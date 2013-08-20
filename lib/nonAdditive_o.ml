@@ -2,7 +2,7 @@ type t =
   { codes : int array array;
     weights : float array;
     states : int array;
-    cost : int; }
+    cost : float; }
 
 type spec = t
 

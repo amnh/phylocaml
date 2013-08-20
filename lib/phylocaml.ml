@@ -8,26 +8,23 @@ module Topology     = Topology
 
 (** Tree Oriented Modules *)
 module Tree         = Tree
-module DiagTree     = DiagTree
+(* module DiagTree     = DiagTree *)
 
 (** Network Oriented Modules *)
 module Network      = Network
-module DiagNetwork  = DiagNetwork
+(* module DiagNetwork  = DiagNetwork *)
 
 (** Model Impelementations *)
-module Model        = Model
+(* module Model        = Model *)
 module Mlmodel      = Mlmodel
-module Mpmodel      = Mpmodel
-module Kolmomodel   = Kolmomodel
+(* module Mpmodel      = Mpmodel *)
+(* module Kolmomodel   = Kolmomodel *)
 
 (** Phylocaml Core Utility Library *)
 module Alphabet     = Alphabet
 module Seq          = Seq
 module Llist        = Llist
-module BitVector8   = BitVector8
-module BitVector16  = BitVector16
-module BitVector32  = BitVector32
-module BitVector64  = BitVector64
+module Bitvector    = Bitvector
 
 (** NodeData modules implemented with OCaml data-types. *)
 module NodeDataOCaml =

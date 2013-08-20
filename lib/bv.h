@@ -10,7 +10,7 @@
 
 #include <caml/mlvalues.h>
 
-#include "../phyloc.h"
+#include "phyloc.h"
 
 #define BV_HEADER
 
