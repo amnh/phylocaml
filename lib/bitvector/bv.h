@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdint.h>
+#include <assert.h>
 
 #include <caml/mlvalues.h>
 
@@ -19,46 +20,37 @@
  * certain functions, this value sets a number of other things:
  *   CTYPE - the type of values being processed in the pipeline
  *           i.e. 8:char, 16:short, 32:int, 64:long.
- *   BLOCKS- the number of values stored in a 128 register = 128/WIDTH
- *   RET_STATE_SUPPORT - defined if states fit into OCaml integers natively
+ *   BLOCKS
+ *   Elt_val - OCaml decomposition functions to CTYPE
+ *   Val_elt - OCAML construction type of CTYPE to value
  * 
  * This file should be processed/renamed into a number of separate compilation
  * units for individual use of WIDTH. Because of this, all functions begin with
  * bv_, and used exclusively, so that can be scripted to bv_8 or whatever. */
 #if WIDTH == 8
- #define BLOCKS 16
  #define CTYPE uint8_t
  #define Elt_val(x) Int_val(x)
  #define Val_elt(x) Val_int(x)
- #define RET_STATE_SUPPORT
 
 #elif WIDTH == 16
- #define BLOCKS 8
  #define CTYPE uint16_t
  #define Elt_val(x) Int_val(x)
  #define Val_elt(x) Val_int(x)
- #define RET_STATE_SUPPORT
 
 #elif WIDTH == 32
- #define BLOCKS 4
  #define CTYPE uint32_t
  #ifdef ARCH64
   #define Elt_val(x) Int32_val(x)
   #define Val_elt(x) Val_int32(x)
-  #define RET_STATE_SUPPORT
  #else
   #define Elt_val(x) Int_val(x)
   #define Val_elt(x) Val_int(x)
-  #undef RET_STATE_SUPPORT
  #endif
 
 #elif WIDTH == 64
- #define BLOCKS 2
  #define CTYPE uint64_t
  #define Elt_val(x) Int64_val(x)
  #define Val_elt(x) Val_int64(x)
- #define BLOCKS 2
- #undef RET_STATE_SUPPORT
 
 #else
  #error "Unrecognized Character Size."
@@ -70,6 +62,7 @@ struct vect_t {
   unsigned long chars;   /* number of characters; excludes buffer space  */
   unsigned long padding; /* padding at end of data to fill 128bit vector */
   unsigned int code;     /* automatically generated code for debugging   */
+  unsigned int msize;    /* maximum number of bits allowed to be set     */
   CTYPE *data;           /* bit-data                                     */
 };
 typedef struct vect_t vect;
@@ -83,7 +76,8 @@ unsigned long bv_CAML_deserialize(void* dst);
 
 /* Basic Functions for OCaml Interface */
 value bv_CAML_code( value vbv );
-value bv_CAML_create( value vlen );
+value bv_CAML_create( value vwidth, value vlen );
+value bv_CAML_ofarray( value vwidth, value vray );
 value bv_CAML_setelt( value vbv, value vi, value vs );
 value bv_CAML_compare( value vb1, value vb2 );
 value bv_CAML_eltstates( value vbv, value vi );
