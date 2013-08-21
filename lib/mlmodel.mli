@@ -19,41 +19,42 @@ type site_var =
   (** No site-variability. *)
   | Constant
 
-(** Substitution Rate Models provided in the literature
+(** Substitution Rate Models provided in the literature.
+  
     {b References}
     + T. H. Jukes and C. R. Cantor. Evolution of protein molecules. In
-    N. H. Munro, editor, Mammalian Protein Metabolism, pages 21–132.
-    Academic Press, New York, 1969.
+      N. H. Munro, editor, Mammalian Protein Metabolism, pages 21–132.
+      Academic Press, New York, 1969.
     + M. Kimura. A simple method for estimating evolutionary rate of base
-    substitution through comparative studies of nucleotide sequences. J.
-    Mol. Evol., 16:111–120, 1980.
+      substitution through comparative studies of nucleotide sequences. J.
+      Mol. Evol., 16:111–120, 1980.
     + J. Felsenstein. Evolutionary trees from dna sequences: a maximum
-    likelihood approach. J. Mol. Evol., 17:368–376, 1981.
+      likelihood approach. J. Mol. Evol., 17:368–376, 1981.
     + J. Felsenstein. Confidence limits on phylogenies: An approach using the
-    bootstrap. Evolution, 39(4):783–791, 1985.
+      bootstrap. Evolution, 39(4):783–791, 1985.
     + M. Hasegawa, H. Kishino, and T. Yano. A new molecular clock of
-    mitochondrial dna and the evolution of hominoids. Proc. Japan Acad.,
-    60:95–98, 1984.
+      mitochondrial dna and the evolution of hominoids. Proc. Japan Acad.,
+      60:95–98, 1984.
     + H. Tamura and M. Nei. Estimation of the number of nucleotide sub-
-    stitutions in the control region of mitochondrial dna in humans and
-    chimpanzees. Mol. Biol. Evol., 10:512–526, 1993.
+      stitutions in the control region of mitochondrial dna in humans and
+      chimpanzees. Mol. Biol. Evol., 10:512–526, 1993.
     + S. Tavaré. Some probabilistic and statistical problems on the analysis
-    of dna sequences. Lec. Math. Life Sci., 17:57–86, 1986. *)
+      of dna sequences. Lec. Math. Life Sci., 17:57–86, 1986. *)
 type subst_model =
   | JC69
-  (** Has equal rate of site states with assumed equal priors. *)
+  (** Has equal rate of site states with assumed equal priors. [1] *)
   | F81
-  (** F81 has equal rate of site states with unequal priors *)
+  (** F81 has equal rate of site states with unequal priors. [3] *)
   | K2P of float
-  (** Special case of TN93 wit additionally assumed equal priors *)
+  (** Special case of TN93 wit additionally assumed equal priors. [2] *)
   | F84 of float
-  (** Special case of TN93 implemented in DNAML *)
+  (** Special case of TN93, implemented in DNAML. [4] *)
   | HKY85 of float
-  (** Special case of TN93 where all transitions have the same rate *)
+  (** Special case of TN93 where all transitions have the same rate. [5] *)
   | TN93 of (float * float)
-  (** Transitions of pyrimadines and purines differ *)
+  (** Transitions of pyrimadines and purines differ. [6] *)
   | GTR of float array
-  (** Each transformation has it's own rate parameter *)
+  (** Each transformation has it's own rate parameter. [7] *)
   | Const of float array array
   (** No optimization of parameters; matrix is normalized mean-rate=1 *)
   | Custom of (int Internal.IntMap.t * float array)
@@ -68,7 +69,7 @@ type priors =
   (** Priors are equal to 1/[a], where [a] is the size of the alphabet. *)
 
 (** An additional option for dealing with the possibility of indels as an
- * additional state in the model. *)
+    additional state in the model. *)
 type gap =
   | Missing
   (** Indels are defined the same as missing data *)
@@ -78,7 +79,8 @@ type gap =
   (** The gap is an addtional character with additional parameters given in the
       definition of the substitution model. *)
 
-(** The specification of model; can be modified easily to re-create a new model *)
+(** The specification of model; can be modified to re-create a new model and
+    provides a one-to-one mapping from model to it's specification. *)
 type spec = {
   substitution : subst_model;
   site_variation : site_var;
@@ -87,7 +89,7 @@ type spec = {
 }
 
 (** Fully defined model of cost matrices decomposed for easy use and data-types
- * presented in a fashion for C exposure. *)
+    presented in a fashion for C exposure. *)
 type model = {
   spec : spec;
   (** The specification that created this model. *)
@@ -123,8 +125,8 @@ type model = {
     priors are of this category.
 
     {b References}
-       + Keilson J. Markov Chain Models–Rarity and Exponentiality.
-       New York: Springer-Verlag; 1979.  *)
+    + Keilson J. Markov Chain Models–Rarity and Exponentiality.
+      New York: Springer-Verlag; 1979.  *)
 val diagonalize_gtr :
   (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
   (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->

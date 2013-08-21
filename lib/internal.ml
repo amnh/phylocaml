@@ -85,8 +85,8 @@ module OrderedTuple =
   struct
     type t = (int * int)
     let compare (a, b) (c, d) = match a - c with
-        | 0 -> b - d
-        | x -> x
+      | 0 -> b - d
+      | x -> x
   end
 
 module OrdString =
@@ -99,9 +99,9 @@ module UnorderedTuple =
   struct
     type t = (int * int)
     let compare (a, b) (c, d) =
-        let (a,b) = if a > b then a,b else b,a
-        and (c,d) = if c > d then c,d else d,c in
-        match a - c with
+      let (a,b) = if a > b then a,b else b,a
+      and (c,d) = if c > d then c,d else d,c in
+      match a - c with
         | 0 -> b - d
         | x -> x
   end
@@ -218,20 +218,9 @@ let ba_to_array1 bray =
   Array.init (Bigarray.Array1.dim bray) (fun i -> bray.{i})
 
 and ba_to_array2 bray =
-    let a = Bigarray.Array2.dim1 bray and b = Bigarray.Array2.dim2 bray in
-    let r = Array.make_matrix a b 0.0 in
-    for i = 0 to a-1 do for j = 0 to b-1 do
-        r.(i).(j) <- bray.{i,j};
-    done; done; r
-
-let print_barray1 chan a =
-    for i = 0 to (Bigarray.Array1.dim a)-1 do
-        Printf.fprintf chan "%2.10f\t" a.{i};
-    done; Printf.fprintf chan "\n%!"; ()
-
-and print_barray2 chan a =
-    for i = 0 to (Bigarray.Array2.dim1 a)-1 do
-        for j = 0 to (Bigarray.Array2.dim2 a)-1 do
-            Printf.fprintf chan "%2.10f\t" a.{i,j};
-        done; Printf.fprintf chan "\n";
-    done; Printf.fprintf chan "\n%!"; ()
+  let a = Bigarray.Array2.dim1 bray and b = Bigarray.Array2.dim2 bray in
+  let r = Array.make_matrix a b a.{0,0} in
+  for i = 0 to a-1 do for j = 0 to b-1 do
+    r.(i).(j) <- bray.{i,j};
+  done; done;
+  r
