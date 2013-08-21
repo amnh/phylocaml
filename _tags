@@ -1,11 +1,32 @@
-<lib>        : include
-"lib/mlmodel.ml" : package(pareto)
+<lib>            : include
+<lib/bitvector>  : include
 
 <**/*.{byte,native,top}> or <**/*.cm{x,}a> : use_phyloc
 
-"lib/bitvector.ml"     : use_phyloc
+"lib/bitvector.ml"  : use_phyloc
+"lib/Sequence_c.ml" : use_phyloc
+"lib/mlmodel.ml"    : use_phyloc, package(pareto)
 
-"lib/bv8.c"  : use_bv8
-"lib/bv16.c" : use_bv16
-"lib/bv32.c" : use_bv32
-"lib/bv64.c" : use_bv64
+
+
+"lib/bitvector/bv8.c"  : use_bv8
+"lib/bitvector/bv16.c" : use_bv16
+"lib/bitvector/bv32.c" : use_bv32
+"lib/bitvector/bv64.c" : use_bv64
+
+"lib/bitvector/bv8_sse.c"  : use_bv8
+"lib/bitvector/bv16_sse.c" : use_bv16
+"lib/bitvector/bv32_sse.c" : use_bv32
+"lib/bitvector/bv64_sse.c" : use_bv64
+"lib/bitvector/bv8_alti.c" : use_bv8
+"lib/bitvector/bv16_alti.c": use_bv16
+"lib/bitvector/bv32_alti.c": use_bv32
+"lib/bitvector/bv64_alti.c": use_bv64
+"lib/bitvector/bv8_neon.c" : use_bv8
+"lib/bitvector/bv16_neon.c": use_bv16
+"lib/bitvector/bv32_neon.c": use_bv32
+"lib/bitvector/bv64_neon.c": use_bv64
+"lib/bitvector/bv8_avx.c"  : use_bv8
+"lib/bitvector/bv16_avx.c" : use_bv16
+"lib/bitvector/bv32_avx.c" : use_bv32
+"lib/bitvector/bv64_avx.c" : use_bv64
