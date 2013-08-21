@@ -15,11 +15,11 @@ type kind =
  * sequential alphabets only, to be used to associate a sequential state to
  * a set of sequential state that cannot be transformed easily (unlike bitsets). *)
 type t =
-  { comb_set : IntSet.t IntMap.t;  (* Combination Code -> States *)
-    set_comb : int IntSetMap.t;    (* States -> Combination Code *)
-    name_code : int StringMap.t;    (* Single Code -> Name *)
-    code_name : string IntMap.t;    (* Name -> Single Code *)
-    comp_code : int IntMap.t;       (* Code -> Compliment of Code *)
+  { comb_set : Internal.IntSet.t Internal.IntMap.t;  (* Combination Code -> States *)
+    set_comb : int Internal.IntSetMap.t;    (* States -> Combination Code *)
+    name_code : int Internal.StringMap.t;    (* Single Code -> Name *)
+    code_name : string Internal.IntMap.t;    (* Name -> Single Code *)
+    comp_code : int Internal.IntMap.t;       (* Code -> Compliment of Code *)
     alphabet_type : kind;           (* Type of the alphbet *)
     size : int;                     (* Size of the basic alphabet; excludes gap *)
     full_size : int;                (* Size of associated matrix *)
@@ -31,7 +31,7 @@ type t =
 
 
 
-(** {6 Constants *)
+(** {6 Constants} *)
 
 (** default gap representation *)
 val default_gap : string
@@ -67,7 +67,7 @@ val present_absent : t
 
 
 
-(** {6 Functions for querying alphabets *)
+(** {6 Functions for querying alphabets} *)
 
 (** get the code associated with the name of the character *)
 val get_code : string -> t -> int
@@ -121,11 +121,11 @@ val to_list : t -> (Internal.StringMap.key * Internal.IntMap.key * int option) l
 
 
 
-(** {6 Converting between types of alphabets *)
+(** {6 Converting between types of alphabets} *)
 
 (** convert alphabet to a sequentially ordered alphabet; remove combination if
     they exist in the alphabet, continuous alphabets are unchanged. *)
-val to_sequential : t -> ta
+val to_sequential : t -> t
 
 (** Convert the alphabet to a simple bit encoding format. This removes extra
     polymorphic states; limited to transforming alphabets < 63bits. *)

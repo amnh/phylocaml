@@ -1,12 +1,32 @@
+(** Bitvector is a module that holds a set of bit-sets that can represent any
+ * type of discrete data. The operations are vectorized for speed. *)
+
 module type BV = sig
+
+  (** {2 Types} *)
+
   (** A set of bit-sets used to encode large amounts of data. *)
   type t
 
   (** Type of individual element that stores bits for the vector. *)
   type elt = int
 
-  (** [gc_freq x] Define frequency of garbage collection; tuning parameter. *)
-  val gc_freq : int -> unit
+
+  (** {2 Creation} *)
+
+  (** [create w n] Create a new bitvector of all unset bits of length [n] and
+      maximum width [w]. The [w] option is asserted in C code and used for
+      [elt_int] function to determine if an OCaml int can be returned. *)
+  val create : int -> int -> t 
+
+  (** [copy t] copy vector [t] to a new vector with unique code. *)
+  val copy : t -> t 
+
+  (** [of_array w r] convert an array of elments [r] to a bit-vector. *)
+  val of_array : int -> elt array -> t 
+
+
+  (** {2 Accessors} *)
 
   (** [code t] The unique code generated internally for the vector. *)
   val code : t -> elt 
@@ -21,16 +41,9 @@ module type BV = sig
       popcount which is the total number of set bits in the entire bitvector. *)
   val cardinal : t -> int
 
-  (** [create w n] Create a new bitvector of all unset bits of length [n] and
-      maximum width [w]. The [w] option is asserted in C code and used for
-      [elt_int] function to determine if an OCaml int can be returned. *)
-  val create : int -> int -> t 
 
-  (** [copy t] copy vector [t] to a new vector with unique code. *)
-  val copy : t -> t 
-
-  (** [of_array w r] convert an array of elments [r] to a bit-vector. *)
-  val of_array : int -> elt array -> t 
+  (** {2 Element Manipulation} These functions may not (and probably not) are
+      vectorized, they may also be unsafe. *)
 
   (** [set_elt t i n] Set element [i] of bitvector [t] to a given value [n]. *)
   val set_elt : t -> int -> elt -> unit 
@@ -45,6 +58,9 @@ module type BV = sig
 
   (** [elt_states t i] return element [i] of [t] as a list of set bits *)
   val elt_states : t -> int -> int list 
+
+  
+  (** {2 Logical Operations} *)
 
   (** [union s t] return the bitwise union of [s] and [t]. *)
   val union : t -> t -> t 
@@ -65,11 +81,25 @@ module type BV = sig
   (** [fitch_median_2 s t] calculate the median and the added cost of the
       alinged data of [s] and [t]. *)
   val fitch_median_2 : t -> t -> t * int
+
+
+  (** {2 Tuning Parameters for GC} *)
+
+  (** [gc_freq x] Define frequency of garbage collection; tuning parameter. *)
+  val gc_freq : int -> unit
 end
 
-
+(** (possibly) Vectorized type that store at most 8-bits *)
 module BV8   : BV
+
+(** (possibly) Vectorized type that store at most 16-bits *)
 module BV16  : BV
+
+(** (possibly) Vectorized type that store at most 32-bits *)
 module BV32  : BV
+
+(** (possibly) Vectorized type that store at most 64-bits *)
 module BV64  : BV
-(* module BVGen : BV *)
+
+(** Unvectorized type can store an unlimited number of bits.*)
+module BVGen : BV

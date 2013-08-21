@@ -6,7 +6,7 @@ exception ModelError of string
 
 let errorf format = Printf.ksprintf (fun x -> ModelError x) format
 
-(** Minimum value for things when 0 is numerically unstable. *)
+(* Minimum value for things when 0 is numerically unstable. *)
 let minimum = 1e-13
 
 type site_var =
@@ -123,55 +123,41 @@ let compare a b =
       !results
     in
   let compare_priors a b = match a.spec.base_priors,b.spec.base_priors with
-    | _ when a_asize != b_asize -> false
+    | _ when a_asize != b_asize-> false
     | Equal , Equal            -> true
     | Empirical x, Empirical y -> compare_array x y
-    | (Equal | Empirical _ ), _ -> false
+    | (Equal | Empirical _ ), _-> false
   in
   let m_compare = match a.spec.substitution,b.spec.substitution with
-    | JC69 , JC69 | F81 , F81 -> 0
-    | K2P x, K2P y | F84 x, F84 y | HKY85 x, HKY85 y when x = y -> 0
+    | JC69 , JC69 | F81 , F81 -> true
+    | K2P x, K2P y | F84 x, F84 y | HKY85 x, HKY85 y when x = y -> true
     | Custom _, Custom _ -> failwith "TODO"
-    | TN93 (x1,x2),  TN93 (y1,y2) when x1 = y1 && x2 = y2 -> 0
-    | GTR xs, GTR ys when compare_array xs ys -> 0
-    | Const x, Const y when x = y -> 0
-    | (JC69|F81|K2P _|F84 _|HKY85 _|Custom _|TN93 _|GTR _|Const _),_ -> ~-1
+    | TN93 (x1,x2),  TN93 (y1,y2) when x1 = y1 && x2 = y2 -> true
+    | GTR xs, GTR ys when compare_array xs ys -> true
+    | Const x, Const y when x = y -> true
+    | (JC69|F81|K2P _|F84 _|HKY85 _|Custom _|TN93 _|GTR _|Const _),_ -> false
   and v_compare = match a.spec.site_variation,b.spec.site_variation with
-    | DiscreteGamma (ix,ax), DiscreteGamma (iy,ay) ->
-      if ix=iy && ax=ay then 0 else ~-1
-    | DiscreteTheta (ix,ax,bx), DiscreteTheta (iy,ay,by) ->
-      if ix=iy && ax=ay && bx=by then 0 else ~-1
-    | Constant, Constant -> 0
+    | DiscreteGamma (ix,ax), DiscreteGamma (iy,ay) -> ix=iy && ax=ay
+    | DiscreteTheta (ix,ax,bx), DiscreteTheta (iy,ay,by) -> ix=iy && ax=ay && bx=by
+    | Constant, Constant -> true
     | DiscreteCustom a, DiscreteCustom b ->
-      let r =
-        fold_left2 (fun acc (a,b) (c,d) -> (a =. c) && (b =. d) && acc) true a b
-      in
-      if r then 0 else ~-1
-    | (DiscreteGamma _|DiscreteCustom _ |DiscreteTheta _|Constant), _ -> ~-1
+      fold_left2 (fun acc (a,b) (c,d) -> (a =. c) && (b =. d) && acc) true a b
+    | (DiscreteGamma _|DiscreteCustom _ |DiscreteTheta _|Constant), _ -> false
   and g_compare = match snd a.spec.alphabet,snd b.spec.alphabet with
     | Missing, Missing
-    | Independent, Independent -> 0
-    | Coupled x, Coupled y when x=y-> 0
-    | (Missing | Independent | Coupled _), _ -> ~-1
-  and p_compare = if compare_priors a b then 0 else ~-1 in
-    (* just knowing that they are different is enough *)
-  if debug then begin
-    Printf.printf "Models : %b\n%!" (m_compare = 0);
-    Printf.printf "Rate   : %b\n%!" (v_compare = 0);
-    Printf.printf "Use Gap: %b\n%!" (g_compare = 0);
-    Printf.printf "Priors : %b\n%!" (p_compare = 0);
-  end;
-  m_compare + v_compare + g_compare + p_compare
+    | Independent, Independent -> true
+    | Coupled x, Coupled y when x=y-> true
+    | (Missing | Independent | Coupled _), _ -> false
+  and p_compare = compare_priors a b in
+  m_compare && v_compare && g_compare && p_compare
  
 
 module OrderedML = struct
-  (* we could choose model or spec, but spec can use Pervasives.compare *)
   type t = spec 
   let compare a b = Pervasives.compare a b
 end
 module MlModelMap = Map.Make (OrderedML)
 module MlModelSet = Set.Make (OrderedML)
-
 
 (** Categorize a list of codes by model *)
 let categorize_by_model get_fn codes =
@@ -1158,11 +1144,6 @@ let compute_priors (alph,u_gap) freq_ (count,gcount) lengths : float array =
   let size = if u_gap then (Alphabet.size alph) else (Alphabet.size alph)-1 in
   let gap_contribution = (float_of_int gcount) /. (float_of_int size) in
   let gap_char = Alphabet.get_gap alph in
-  if debug then begin
-    Printf.printf "Computed Priors of %d char + %d gaps: " count gcount;
-    Array.iter (Printf.printf "|%f") freq_;
-    Printf.printf "|]\n%!";
-  end;
   let final_priors =
     if u_gap then begin
       let total_added_gaps =
@@ -1170,7 +1151,6 @@ let compute_priors (alph,u_gap) freq_ (count,gcount) lengths : float array =
         let add_gap = List.fold_left (fun acc x -> (longest - x) + acc) 0 lengths in
         float_of_int add_gap
       in
-      Printf.printf "Total added gaps = %f\n%!" total_added_gaps;
       freq_.(gap_char) <- freq_.(gap_char) +. total_added_gaps;
       let count = (float_of_int (count - gcount)) +. total_added_gaps;
       and weight  = (float_of_int gcount) /. (float_of_int size) in
@@ -1180,11 +1160,6 @@ let compute_priors (alph,u_gap) freq_ (count,gcount) lengths : float array =
     end
   in
   let sum = Array.fold_left (fun a x -> a +. x) 0.0 final_priors in
-  if debug then begin
-    Printf.printf "Final Priors (%f): [" sum;
-    Array.iter (Printf.printf "|%f") final_priors;
-    Printf.printf "|]\n%!";
-  end;
   final_priors
 
 
@@ -1462,7 +1437,7 @@ let short_name model =
     | DiscreteTheta (i,_,_) when i > 1 -> "+G+I"
     | DiscreteGamma _ -> "+G"
     | DiscreteTheta _ -> "+I"
-    | DiscreteCustom _ -> "+?"
+    | DiscreteCustom _ -> "+C"
     | Constant -> ""
   in
   model_name ^ variation_name

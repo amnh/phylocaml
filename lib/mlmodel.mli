@@ -1,5 +1,8 @@
-(** Report General Error Messages for Model Creation through here;
-        TODO:: switch to biocaml type variant exceptions *)
+(** Mlmodel - Represents a Likelihood model for evolution containing all the
+   standard parameters in tradiational applications with general variants for
+   exploration. *)
+
+(** Report General Error Messages for Model Creation through here *)
 exception ModelError of string
 
 
@@ -16,8 +19,8 @@ type site_var =
   (** No site-variability. *)
   | Constant
 
-(** Substitution Rate Models provided in the literaturea
-  {6 References}
+(** Substitution Rate Models provided in the literature
+    {b References}
     + T. H. Jukes and C. R. Cantor. Evolution of protein molecules. In
     N. H. Munro, editor, Mammalian Protein Metabolism, pages 21–132.
     Academic Press, New York, 1969.
@@ -117,9 +120,9 @@ type model = {
 (** [diagonalize_gtr U D Ui] diagonalize [U] into [U] [D] and [Ui], [U] is
     modified in this function call. [U] must be similar to a symmetric matrix,
     as this routine expects no imaginary eigen-values. GTR matrices with unequal
-    priors are of this category
-    
-    {6 References}
+    priors are of this category.
+
+    {b References}
        + Keilson J. Markov Chain Models–Rarity and Exponentiality.
        New York: Springer-Verlag; 1979.  *)
 val diagonalize_gtr :
@@ -182,7 +185,7 @@ val integerized_model : ?sigma:int -> model -> float -> int array array
 
 
 
-(** {2 Creation and Iteration functions of Models *)
+(** {2 Creation and Iteration functions of Models} *)
 
 (** Create a model from a spec. *)
 val create : spec -> model
@@ -206,11 +209,15 @@ val enum_models :
     ?subst_model:[`F81 | `F84 | `GTR | `HKY85 | `JC69 | `K2P | `TN93] list ->
       ?priors:float array -> (model -> model option)
 
+(** [compuate_priors (a,g) f (c,gc) ls] compute the priors of data from an array
+    of base frequencies [f], but predicated on gap being an additional state we
+    also include the indel prior from the number of indels [gc] and the minimum
+    number of indels required to align all data from [ls]. *)
 val compute_priors :
   Alphabet.t * bool -> float array -> int * int -> int list -> float array
 
 
-(** {2 Query functions of models *)
+(** {2 Query functions of models} *)
 
 (** [get_alphabet] return the alphabet of the specification *)
 val get_alphabet : spec -> Alphabet.t
@@ -232,10 +239,8 @@ val gamma_rates :
 
 (** {2 Compare / Higher-Order Data-Types} *)
 
-(** [compare a b] compare model [a] and [b]; because of the complexity of the
- * models, the specifications are compared and we only return [0] if they are
- * same, or [-1] otherwise. *)
-val compare : model -> model -> int
+(** [compare a b] compare model [a] and [b] *)
+val compare : model -> model -> bool
 
 (** [MlModelMap] is a map of values implemented from compare function above. *)
 module MlModelMap : Map.S with type key = spec
@@ -337,8 +342,10 @@ val classify_edges :
     float Internal.UnorderedTupleMap.t * float Internal.IntMap.t ->
       float Internal.UnorderedTupleMap.t * float Internal.IntMap.t
 
-(** {2 Parser Friendly Functions}
+(** {2 Parser Friendly Functions} *)
 
+
+(*
 type string_spec =
   string * (string * string * string * string) * float list * (string * float option) * string option
 

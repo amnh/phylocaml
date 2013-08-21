@@ -148,30 +148,29 @@ module BV64 : BV = struct
   external fitch_median_2 : t -> t -> t * int = "bv64_CAML_fitch_median2"
 end
 
-(* module BVGen : BV = struct
-  type t
+module BVGen : BV = struct
+  type t = unit
   type elt = int
 
-  val gc_freq : int -> unit
+  let gc_freq _ = failwith "TODO"
 
-  val code : t -> elt 
-  val compare : t -> t -> elt 
-  val cardinal : t -> int
+  let code _ = failwith "TODO"
+  let compare _ _ = failwith "TODO"
+  let cardinal _ = failwith "TODO"
 
-  val create : int -> t 
-  val copy : t -> t 
-  val of_array : elt array -> t 
+  let create _ = failwith "TODO"
+  let copy _ = failwith "TODO"
+  let of_array _ = failwith "TODO"
 
-  val set_elt : t -> int -> elt -> unit 
-  val set_bit : t -> int -> int -> unit 
-  val elt_int : t -> int -> int option 
-  val elt_states : t -> int -> int list 
+  let set_elt _ _ _ = failwith "TODO"
+  let set_bit _ _ _ = failwith "TODO"
+  let elt_int _ _ = failwith "TODO"
+  let elt_states _ _ = failwith "TODO"
 
-  val union : t -> t -> t 
-  val inter : t -> t -> t 
-  val saturation : t -> elt -> int 
-  val poly_saturation : t -> int -> int 
-  val distance : t -> t -> int 
-  val fitch_median_2 : t -> t -> t 
-
-end *)
+  let union _ _ = failwith "TODO"
+  let inter _ _ = failwith "TODO"
+  let saturation _ _ = failwith "TODO"
+  let poly_saturation _ _ = failwith "TODO"
+  let distance _ _ = failwith "TODO"
+  let fitch_median_2 _ _ = failwith "TODO"
+end
