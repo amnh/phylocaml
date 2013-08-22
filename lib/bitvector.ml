@@ -15,6 +15,7 @@ module type BV = sig
   val set_elt : t -> int -> elt -> unit 
   val set_bit : t -> int -> int -> unit 
   val elt_int : t -> int -> int option 
+  val get_elt : t -> int -> elt
   val elt_states : t -> int -> int list 
 
   val union : t -> t -> t 
@@ -24,12 +25,28 @@ module type BV = sig
   val distance : t -> t -> int 
   val fitch_median_2 : t -> t -> t * int
 
-(*   val map : (elt -> elt) -> t -> t *)
-(*   val fold_right : (elt -> 'a -> 'a) -> t -> 'a -> 'a *)
-(*   val fold_left  : ('a -> elt -> 'a) -> 'a -> t -> 'a *)
-
 end
 
+let map (module BVN : BV) f t =
+  let r = BVN.copy t in
+  for i = 0 to (BVN.cardinal t)-1 do
+    BVN.set_elt r i $ f (BVN.get_elt t i)
+  done;
+  r
+
+let fold_left (module BVN : BV) f t acc =
+  let acc = ref acc in
+  for i = (BVN.cardinal t)-1 downto 0 do
+    acc := f (BVN.get_elt t i) acc
+  done;
+  !acc
+
+let fold_right (module BVN : BV) f acc t =
+  let acc = ref acc in
+  for i = 0 to (BVN.cardinal t)-1 do
+    acc := f !acc $ BVN.get_elt t i
+  done;
+  !acc
 
 module BV8 : BV = struct
   external register : unit -> unit = "bv8_CAML_register"
@@ -58,6 +75,7 @@ module BV8 : BV = struct
   external poly_saturation : t -> int -> int = "bv8_CAML_poly_saturation"
   external distance : t -> t -> int = "bv8_CAML_distance2"
   external fitch_median_2 : t -> t -> t * int = "bv8_CAML_fitch_median2"
+
 end
 
 

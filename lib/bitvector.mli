@@ -1,5 +1,5 @@
 (** Bitvector is a module that holds a set of bit-sets that can represent any
- * type of discrete data. The operations are vectorized for speed. *)
+    type of discrete data. The operations are vectorized for speed. *)
 
 module type BV = sig
 
@@ -51,6 +51,9 @@ module type BV = sig
   (** [set_bit t i n] Set bit [n] in element [i] of bitvector [t] to 1. *)
   val set_bit : t -> int -> int -> unit 
 
+  (** [get_bit t i] Get element [i] of bitvector [t]. *)
+  val get_bit : t -> int -> elt 
+
   (** [elt_int t i] return an element as an integer; if the data cannot fit in
       an OCaml value we return [None]. In which case, [elt_states] can be used
       to obtain a list of set bits. *)
@@ -88,6 +91,21 @@ module type BV = sig
   (** [gc_freq x] Define frequency of garbage collection; tuning parameter. *)
   val gc_freq : int -> unit
 end
+
+
+(** {6 Higher Order Functions on BV Modules}
+
+(** Standard [map] funciton *)
+val map : (module BVN : BV) -> (BVN.elt -> BVN.elt) -> BVN.t -> BVN.t
+
+(** Standard [fold_left] function *)
+val fold_left : (module BVN : BV) -> ('a -> BVN.elt -> 'a) -> 'a -> BVN.t -> 'a
+
+(** Standard [fod_right] function *)
+val fold_right : (module BVN : BV) -> (BVN.elt -> 'a -> 'a) -> BVN.t -> 'a -> 'a
+*)
+
+(** {2 Modules} *)
 
 (** (possibly) Vectorized type that store at most 8-bits *)
 module BV8   : BV
