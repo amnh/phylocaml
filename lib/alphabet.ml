@@ -3,10 +3,6 @@ open Internal
 
 (** {2 Definition of an Alphabet} *)
 
-exception Illegal_Character of string
-exception Illegal_Code of int
-exception Illegal_Alphabet_Size of int
-
 type kind =
   | Sequential
   | SimpleBitFlag
@@ -29,8 +25,76 @@ type t =
     all : int option;
   }
 
+let print a =
+  let str_of_ioption = function
+    | None -> "none"
+    | Some x -> string_of_int x
+  in
+  Printf.printf "Size: %d, Gap:%s, Missing:%s, All:%s\n%!" a.size
+    (str_of_ioption a.gap) (str_of_ioption a.missing) (str_of_ioption a.all);
+  match a.alphabet_type with
+  | Sequential ->
+    Printf.printf "Sequential:\n%!";
+    IntMap.iter
+      (fun k v ->
+        Printf.printf "\t%s -- %d -- comp:{%s}\n" v k
+          (try string_of_int $ IntMap.find k a.comp_code with _ -> "none"))
+      a.code_name;
+    ()
+  | SimpleBitFlag   -> failwith "TODO"
+  | ExtendedBitFlag -> failwith "TODO"
+  | Continuous      -> failwith "TODO"
+  | CombinationLevels _ -> failwith "TODO"
+                
 
-(** {6 Constants *)
+
+(** {2 Error Module} *)
+
+module Error = struct
+  type t = [
+    | `Missing_State_Sequential_Alphabet of int
+    | `Missing_Name_Sequential_Alphabet of int
+    | `Alphabet_Size_Expectation of int * int 
+    | `Missing_Gap_Element of int
+    | `Complement_Not_Transitive of int * int
+    | `Polymorphisms_In_Continuous_Alphabet
+    | `Unacceptable_Level_Argument of int
+    | `Gap_Not_Atomic_BitFlag_Alphabet of int
+    | `Unacceptable_Level_Argument of int
+    | `Illegal_Character of string
+    | `Illegal_Code of int
+    | `Not_found
+  ]
+
+  let to_string = function
+    | `Missing_State_Sequential_Alphabet x ->
+      Printf.sprintf "Missing state %d in Sequential Alphabet" x
+    | `Missing_Name_Sequential_Alphabet x ->
+      Printf.sprintf "Missing name %d in Sequential Alphabet" x
+    | `Alphabet_Size_Expectation (x,y) ->
+      Printf.sprintf "Alphabet size expected to be %d, actually %d" x y
+    | `Missing_Gap_Element x ->
+      Printf.sprintf "Expected gap code %d in set of codes" x
+    | `Complement_Not_Transitive (x,y) ->
+      Printf.sprintf "Expected complement of %d and %d to be transitive." x y
+    | `Polymorphisms_In_Continuous_Alphabet ->
+      Printf.sprintf "Continuous Alphabets do not have polymorphisms"
+    | `Unacceptable_Level_Argument x ->
+      Printf.sprintf "Level argument is %d, should be > 0" x
+    | `Gap_Not_Atomic_BitFlag_Alphabet x ->
+      Printf.sprintf "Gap character %d is not atomic (multiple bits set)" x
+    | `Illegal_Character str ->
+      Printf.sprintf "Cannot find character '%s' in alphabet" str
+    | `Illegal_Code i ->
+      Printf.sprintf "Cannot find character %d in alphabet" i
+    | `Not_found ->
+      Printf.sprintf "Not Found"
+end
+
+exception Error of Error.t
+
+
+(** {2 Constants *)
 
 let default_gap = "-"
 
@@ -39,7 +103,7 @@ let default_missing = "?"
 let default_orientation = "~"
 
 
-(** {6 Combination Functions} *)
+(** {2 Combination Functions} *)
 
 let generate_combinational_elements ~level codes =
   let incr r = incr r; !r in
@@ -74,21 +138,44 @@ let generate_combinational_elements ~level codes =
     1 - that sequential alphabets are 0 indexed.
     2 - that the correct number of combinations exists.
     3 - the sequential alphabets don't skip numbers *)
-let verify_alphabet a = match a.alphabet_type with
+let verify_alphabet a : unit = match a.alphabet_type with
   | Sequential ->
     let rec verify i =
       if i = a.size then
-        true
-      else if IntMap.mem i a.code_name then
-        (StringMap.mem (IntMap.find i a.code_name) a.name_code) && (verify (i+1))
-      else
-        false
+        ()
+      else if IntMap.mem i a.code_name then begin
+        if (StringMap.mem (IntMap.find i a.code_name) a.name_code)
+          then (verify (i+1))
+          else raise (Error (`Missing_Name_Sequential_Alphabet i))
+      end else begin
+        raise (Error (`Missing_State_Sequential_Alphabet i))
+      end
     in
-    ((IntMap.cardinal a.code_name) = a.size) && (verify 0)
-  | CombinationLevels _ -> true
-  | ExtendedBitFlag
+    let () =
+      let a1 = IntMap.cardinal a.code_name
+      and a2 = StringMap.cardinal a.name_code in
+      if a1 = a2 && a1 = a.size
+        then ()
+        else
+          raise (Error (`Alphabet_Size_Expectation (a.size,(a2+a1+a.size)-(2*a.size))))
+    and () = verify 0 in
+    ()
+  | CombinationLevels _ -> ()
+  | ExtendedBitFlag ->
+    let is_atomic x = 0 = (x land (x-1)) in
+    let () = match a.gap with
+      | Some x when is_atomic x -> ()
+      | None -> ()
+      | Some x -> raise (Error (`Gap_Not_Atomic_BitFlag_Alphabet x))
+    and () =
+      let at =IntMap.cardinal a.code_name in
+      if a.size = at
+        then ()
+        else raise (Error (`Alphabet_Size_Expectation (a.size,at)))
+    in
+    ()
   | SimpleBitFlag
-  | Continuous -> true
+  | Continuous -> ()
 
 let of_list lst gap all missing alphabet_type orientation =
   let add_one (cname,ncode,ccode) (name,code,comp) =
@@ -109,7 +196,8 @@ let of_list lst gap all missing alphabet_type orientation =
   in
   let () = match gap with
     | None -> ()
-    | Some x -> assert( IntMap.mem x code_name );
+    | Some x when IntMap.mem x code_name -> ()
+    | Some x -> raise (Error (`Missing_Gap_Element x))
   in
   let a = {
     size = IntMap.cardinal code_name;
@@ -120,11 +208,11 @@ let of_list lst gap all missing alphabet_type orientation =
     comp_code;
     all; gap; missing;
   } in
-  assert ( verify_alphabet a );
+  let () = verify_alphabet a in
   a
 
 
-(** {6 Basic Alphabets} *)
+(** {2 Basic Alphabets} *)
 
 let continuous =
   { alphabet_type = Continuous;
@@ -142,8 +230,8 @@ let continuous =
   }
 
 let present_absent =
-  let lst = [("present", 1, None); ("absent", 2, None) ] in
-  of_list lst (Some 2) None None Sequential false
+  let lst = [("present", 1, None); ("absent", 0, None) ] in
+  of_list lst (Some 0) None None Sequential false
 
 let dna =
   let lst = [
@@ -223,11 +311,11 @@ let aminoacids =
 
 
 
-(** {6 Basic Functions for querying alphabets *)
+(** {2 Basic Functions for querying alphabets *)
 
 let get_gap t = match t.gap with
   | Some x -> x
-  | None   -> raise Not_found
+  | None   -> raise (Error `Not_found)
 
 let has_gap t = match t.gap with
   | Some _ -> true
@@ -269,8 +357,9 @@ let is_complement a b t =
       else false
   in
   let result = is_complement a b t in
-  assert(result = is_complement b a t);
-  result
+  if result = is_complement b a t
+    then result
+    else raise (Error (`Complement_Not_Transitive (a,b)))
 
 let get_combination i t : IntSet.t =
   match t.alphabet_type with
@@ -285,8 +374,9 @@ let get_state_combination s t : int =
   | CombinationLevels _
   | Sequential -> IntSetMap.find s t.set_comb
   | Continuous ->
-    assert( (IntSet.cardinal s) = 1 );
-    IntSet.choose s
+    if (IntSet.cardinal s) = 1
+      then IntSet.choose s
+      else raise (Error `Polymorphisms_In_Continuous_Alphabet)
   | ExtendedBitFlag
   | SimpleBitFlag    -> BitSet.to_packed (`Set s)
 
@@ -296,20 +386,20 @@ let get_code n t =
     | SimpleBitFlag | ExtendedBitFlag
     | CombinationLevels _ | Sequential ->
       StringMap.find (String.uppercase n) t.name_code
-  with Not_found -> raise (Illegal_Character n)
+  with Not_found -> raise (Error (`Illegal_Character n))
 
 let get_name c t =
   try match t.alphabet_type with
     | Continuous -> string_of_int c
     | SimpleBitFlag | ExtendedBitFlag
     | CombinationLevels _ | Sequential -> IntMap.find c t.code_name
-  with Not_found -> raise (Illegal_Code c)
+  with Not_found -> raise (Error (`Illegal_Code c))
 
 let to_list t =
   StringMap.fold (fun k v lst -> (k,v,complement v t)::lst) t.name_code []
 
 
-(** {6 Converting between types of alphabets *)
+(** {2 Converting between types of alphabets *)
 
 let rec to_sequential t =
   match t.alphabet_type with
@@ -333,8 +423,6 @@ and to_bitflag t =
         t.code_name
         []
     in
-    assert( match t.gap with Some x -> is_atomic x | None -> false );
-    assert( t.size = (IntMap.cardinal t.code_name) );
     of_list lst t.gap t.all t.missing SimpleBitFlag t.orientation
   | Sequential -> failwith "TODO"
     (* how to deal with large alphabets? *)
@@ -348,7 +436,11 @@ and simplify t =
   | Continuous -> t
 
 and to_level level t =
-  assert( level > 0 );
+  let () =
+    if level > 0
+      then ()
+      else raise (Error (`Unacceptable_Level_Argument level))
+  in
   match t.alphabet_type with
   | CombinationLevels _ when level = 1 -> to_sequential t
   | CombinationLevels l when level = l -> t

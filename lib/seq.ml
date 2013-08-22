@@ -185,7 +185,7 @@ let of_string str alph =
     let ch = Char.escaped str.[loc] in
     let new_str = ch ^ cur_str in
     try (Alphabet.get_code new_str alph,loc)
-    with Alphabet.Illegal_Character _ ->
+    with Alphabet.Error (`Illegal_Character _) ->
       if loc = 0
         then raise (Invalid_Sequence (str, new_str, loc))
         else get_base new_str (loc-1)

@@ -1,9 +1,5 @@
 (** {2 Definition of an Alphabet} *)
 
-exception Illegal_Character of string
-exception Illegal_Code of int
-exception Illegal_Alphabet_Size of int
-
 type kind =
   | Sequential (** Numbers define states. Should be 0 -- (n-1) *)
   | SimpleBitFlag (** Set bits in numbers define states. *)
@@ -31,7 +27,7 @@ type t =
 
 
 
-(** {6 Constants} *)
+(** {2 Constants} *)
 
 (** default gap representation *)
 val default_gap : string
@@ -44,7 +40,7 @@ val default_orientation : string
 
 
 
-(** {6 Basic Alphabets} *)
+(** {2 Basic Alphabets} *)
 
 (** A Continuous alphabet does not have character states and an unbounded size.
  * It must be dealt with differently in most situations. *)
@@ -67,7 +63,7 @@ val present_absent : t
 
 
 
-(** {6 Functions for querying alphabets} *)
+(** {2 Functions for querying alphabets} *)
 
 (** get the code associated with the name of the character *)
 val get_code : string -> t -> int
@@ -121,7 +117,7 @@ val to_list : t -> (Internal.StringMap.key * Internal.IntMap.key * int option) l
 
 
 
-(** {6 Converting between types of alphabets} *)
+(** {2 Converting between types of alphabets} *)
 
 (** convert alphabet to a sequentially ordered alphabet; remove combination if
     they exist in the alphabet, continuous alphabets are unchanged. *)
@@ -138,3 +134,44 @@ val simplify : t -> t
 (** Convert the alphabet to one with levels; this generates polymorphisms and
     codes under non-bitset situations. *)
 val to_level : int -> t -> t
+
+
+(** {2 Debugging} *)
+
+val print : t -> unit
+
+
+(** {2 Error Module} *)
+
+module Error : sig
+
+  (** Defines the types of errors that this module can raise. *)
+  type t = [
+    | `Missing_State_Sequential_Alphabet of int
+      (** An element in a sequential alphabet is missing (indexed at 0) *)
+    | `Missing_Name_Sequential_Alphabet of int
+      (** A code was found, but the corresponding name is missing. *)
+    | `Alphabet_Size_Expectation of int * int 
+      (** The calculated alphabet sized expected [a], but found [b] elements. *)
+    | `Missing_Gap_Element of int
+      (** The alphabet expected [a] to be in the set of codes. *)
+    | `Complement_Not_Transitive of int * int
+      (** [a] = f([b]) === [b] = f([a]), where [f] is complement function *)
+    | `Polymorphisms_In_Continuous_Alphabet
+      (** Continuous alphabet does not have polymorphisms. *)
+    | `Gap_Not_Atomic_BitFlag_Alphabet of int
+      (** Gap character in BitFlag has multiple bits set. *)
+    | `Unacceptable_Level_Argument of int
+      (** When level is given <= 0 *)
+    | `Illegal_Character of string
+      (** Character name not found in alphabet *)
+    | `Illegal_Code of int
+      (** Character code not found in alphabet *)
+    | `Not_found
+  ]
+
+  (** Conver the error messages to something human readable. *)
+  val to_string : t -> string
+end
+
+exception Error of Error.t
