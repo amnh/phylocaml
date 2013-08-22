@@ -1,6 +1,5 @@
-(** Mlmodel - Represents a Likelihood model for evolution containing all the
-   standard parameters in tradiational applications with general variants for
-   exploration. *)
+(** Mlmodel - Represents a likelihood model of evolution containing all the
+   standard parameters in tradiational applications with general variants. *)
 
 (** Report General Error Messages for Model Creation through here *)
 exception ModelError of string
@@ -18,6 +17,7 @@ type site_var =
   | DiscreteCustom of (float * float) array
   (** No site-variability. *)
   | Constant
+
 
 (** Substitution Rate Models provided in the literature.
   
@@ -60,6 +60,7 @@ type subst_model =
   | Custom of (int Internal.IntMap.t * float array)
   (** The map is a pairing from element in a matrix->array index of floats *)
 
+
 (** The prior probabilities of the model. *)
 type priors =
   | Empirical of float array
@@ -67,6 +68,7 @@ type priors =
       (mle) as additional nuaces parameter through an optimization routine.*)
   | Equal
   (** Priors are equal to 1/[a], where [a] is the size of the alphabet. *)
+
 
 (** An additional option for dealing with the possibility of indels as an
     additional state in the model. *)
@@ -79,6 +81,7 @@ type gap =
   (** The gap is an addtional character with additional parameters given in the
       definition of the substitution model. *)
 
+
 (** The specification of model; can be modified to re-create a new model and
     provides a one-to-one mapping from model to it's specification. *)
 type spec = {
@@ -87,6 +90,7 @@ type spec = {
   base_priors : priors;
   alphabet : Alphabet.t * gap;
 }
+
 
 (** Fully defined model of cost matrices decomposed for easy use and data-types
     presented in a fashion for C exposure. *)
@@ -109,10 +113,10 @@ type model = {
   (** [d] the eigen-values as a diagonal matrix of the decomposed [q] matrix. *)
   ui : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t option;
   (** [ui] the inverse of the [u] matrix; optional in cases where [ui = ut]
-   * (transpose = inverse in symmetric matrices) *)
+      (transpose = inverse in symmetric matrices) *)
   opt : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t;
   (** A vector of parameters to optimized; this is gathered from the model
-   * specification for easy optimization and update of model parameters. *)
+      specification for easy optimization and update of model parameters. *)
 }
 
 
@@ -334,18 +338,17 @@ val process_classification :
   spec -> float Internal.UnorderedTupleMap.t * float Internal.IntMap.t -> spec
 
 (** [classify_edges leaf1? leaf2? data1 data2 (acc1,acc2)]
-   Create an accumulated classification of transformations between [data1] and
-   [data2]. We also store site information for empirical priors in [acc2] when
-   [leaf1] or [leaf2] are set to true. [data1] and [data2] are lists of pairs of
-   the weight of the character and the states assigned to that data. This
-   function can be used to estimate the initial rates from parsimony trees. *)
+    Create an accumulated classification of transformations between [data1] and
+    [data2]. We also store site information for empirical priors in [acc2] when
+    [leaf1] or [leaf2] are set to true. [data1] and [data2] are lists of pairs of
+    the weight of the character and the states assigned to that data. This
+    function can be used to estimate the initial rates from parsimony trees. *)
 val classify_edges :
   bool -> bool -> (float * Internal.BitSet.t) list -> (float * Internal.BitSet.t) list ->
     float Internal.UnorderedTupleMap.t * float Internal.IntMap.t ->
       float Internal.UnorderedTupleMap.t * float Internal.IntMap.t
 
 (** {2 Parser Friendly Functions} *)
-
 
 (*
 type string_spec =

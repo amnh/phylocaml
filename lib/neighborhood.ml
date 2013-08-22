@@ -13,8 +13,8 @@ module type S =
 
     val deferred_partition : t -> int -> deferred list
 
-    val lazy_neighborhood : t -> Topology.delta Stream.t
+    val lazy_neighborhood : t -> Topology.delta Llist.llist
 
-    val lazy_of_deferred : t -> deferred -> Topology.delta Stream.t
+    val lazy_of_deferred : t -> deferred -> Topology.delta Llist.llist
 
   end

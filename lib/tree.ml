@@ -72,7 +72,7 @@ let remove_replace node o_id n_id = match node with
   | Interior _ | Single _ | Leaf _ -> assert false
 
 let is_leaf = function
-  | Single _   -> true (* TODO is there utility in including this? *)
+  | Single _   -> true
   | Leaf _     -> true
   | Interior _ -> false
 
@@ -274,30 +274,30 @@ let handle_of n t =
       Some n
     else
       match get_node n t with
-      | Single _ -> assert false (* should be a handle *)
-      | Leaf (_,b) -> handle_of n b t
-      | Interior (_,a,b,c) ->
-        let a,b = get_other_two p a b c in
-        begin match handle_of n a t, handle_of n b t with
-          | ((Some _) as a, None)
-          | None, ((Some _) as a) -> a
-          | None, None -> None
-          | (Some _),(Some _) -> assert false (* only one handle valid *)
-        end
+        | Single _ -> assert false (* should be a handle already *)
+        | Leaf (_,b) -> handle_of n b t
+        | Interior (_,a,b,c) ->
+          let a,b = get_other_two p a b c in
+          begin match handle_of n a t, handle_of n b t with
+            | ((Some _) as a, None)
+            | None, ((Some _) as a) -> a
+            | None, None -> None
+            | (Some _),(Some _) -> assert false (* only one handle valid *)
+          end
   in
   match get_node n t with
   | Single x -> assert( is_handle x t ); n
   | Leaf (_,b) ->
     begin match handle_of n b t with
-    | Some x -> x
-    | None   -> assert false
+      | Some x -> x
+      | None   -> assert false
     end
   | Interior (_,a,b,c) ->
     begin match handle_of n a t, handle_of n b t, handle_of n c t with
-    | Some x, None, None
-    | None, Some x, None
-    | None, None, Some x -> x
-    | _ , _, _ -> assert false
+      | Some x, None, None
+      | None, Some x, None
+      | None, None, Some x -> x
+      | _ , _, _ -> assert false
     end
 
 let path_of _ _ _ = failwith "TODO"
@@ -472,7 +472,7 @@ let random lst =
   List.fold_left add_node empty lst
 
 
-type 'a fuse_location = id * t
+type 'a fuse_location = 'a * edge * t
 type 'a fuse_locations = 'a fuse_location list
 
 let fuse_locations _ _ = failwith "TODO"
