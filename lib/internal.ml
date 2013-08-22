@@ -130,13 +130,13 @@ module BitSet =
 
     and rem _ _ = failwith "TODO"
 
-    and singleton i = `List [i]
+    and singleton i : t = `List [i]
 
     and empty = `Packed 0
 
-    let packed_of_list _ = failwith "TODO"
+    and of_list _ = failwith "TODO"
 
-    and list_of_packed _ = failwith "TODO"
+    and of_int _ = failwith "TODO"
 
     let to_packed t : int = match t with
       | `List _   -> assert false
@@ -219,7 +219,7 @@ let ba_to_array1 bray =
 
 and ba_to_array2 bray =
   let a = Bigarray.Array2.dim1 bray and b = Bigarray.Array2.dim2 bray in
-  let r = Array.make_matrix a b a.{0,0} in
+  let r = Array.make_matrix a b bray.{0,0} in
   for i = 0 to a-1 do for j = 0 to b-1 do
     r.(i).(j) <- bray.{i,j};
   done; done;

@@ -1,10 +1,9 @@
+
+.PHONY: clean byte native phyloc docs
+
+.DEFAULT: native
+
 BUILD=ocamlbuild -use-ocamlfind
-
-docs :
-	$(BUILD) phylocaml.docdir/index.html
-
-clean :
-	$(BUILD) -clean
 
 native :
 	$(BUILD) phylocaml.cmxa
@@ -15,6 +14,8 @@ byte :
 phyloc :
 	$(BUILD) libphyloc.a
 
-all : native
+docs :
+	$(BUILD) phylocaml.docdir/index.html
 
-.PHONY: clean byte native phyloc docs all
+clean :
+	$(BUILD) -clean

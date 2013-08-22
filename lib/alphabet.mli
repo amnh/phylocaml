@@ -109,7 +109,7 @@ val is_complement : Internal.IntMap.key -> Internal.IntMap.key -> t -> bool
 val get_combination : Internal.IntMap.key -> t -> Internal.IntSet.t
 
 (** Opposite of the above function *)
-val get_state_combination : Internal.IntSetMap.key -> t -> int
+val get_state_combination : Internal.IntSet.t -> t -> int
 
 (** Generate an alphabet from a list of states (NAME,CODE,COMPLIMENT). *)
 val of_list :

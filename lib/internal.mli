@@ -119,12 +119,11 @@ module IntSetMap : Map.S with type key = IntSet.t
 module BitSet :
   sig
     type t = [`List of int list | `Packed of int | `Set of IntSet.t]
-    val add : 'a -> 'b -> 'c
-    val rem : 'a -> 'b -> 'c
-    val singleton : 'a -> [> `List of 'a list ]
-    val empty : [> `Packed of int ]
-    val packed_of_list : 'a -> 'b
-    val list_of_packed : 'a -> 'b
+    val empty : t
+    val add : t -> int -> t
+    val rem : t -> int -> t
+    val of_list : int list -> t
+    val of_int : int -> t
     val to_packed : t -> int
     val to_list :  t -> IntSet.elt list
     val to_set : t -> IntSet.t
