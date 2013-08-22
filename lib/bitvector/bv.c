@@ -240,6 +240,12 @@ value bv_CAML_code( value vbv )
   CAMLreturn( Val_int(Vect_val(vbv)->code) );
 }
 
+value bv_CAML_size( value vbv )
+{
+  CAMLparam1( vbv );
+  CAMLreturn( Val_int(Vect_val(vbv)->msize) );
+}
+
 value bv_CAML_compare( value vbv1, value vbv2 )
 {
     CAMLparam2( vbv1, vbv2 );
@@ -332,6 +338,17 @@ CAMLprim value bv_CAML_eltint( value vbv, value vi ) /** BROKEN 32/64 bits **/
   vres = Val_some( Val_int(res) );
   CAMLreturn( vres );
 }
+
+CAMLprim value bv_CAML_getelt( value vbv, value vi )
+{
+  CAMLparam2( vbv, vi );
+  CAMLlocal1( vres );
+  vect* v;
+  v = Vect_val(vbv);
+  vres = Val_elt( v->data[ Int_val(vi) ] );
+  CAMLreturn( vres );
+}
+
 
 CAMLprim value bv_CAML_eltstates( value vbv, value vi )
 {

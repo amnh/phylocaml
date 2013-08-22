@@ -41,8 +41,13 @@ module type BV = sig
       popcount which is the total number of set bits in the entire bitvector. *)
   val cardinal : t -> int
 
+  (** [width t] Return the width of available data, this is set upon creation of
+      the vector. It will always be less than or equal to the maximum width of
+      the implemented module. *)
+  val cardinal : t -> int
 
-  (** {2 Element Manipulation} These functions may not (and probably not) are
+
+  (** {2 Element Manipulation} These functions may not be (and are probably not)
       vectorized, they may also be unsafe. *)
 
   (** [set_elt t i n] Set element [i] of bitvector [t] to a given value [n]. *)
@@ -51,13 +56,13 @@ module type BV = sig
   (** [set_bit t i n] Set bit [n] in element [i] of bitvector [t] to 1. *)
   val set_bit : t -> int -> int -> unit 
 
-  (** [get_bit t i] Get element [i] of bitvector [t]. *)
-  val get_bit : t -> int -> elt 
-
   (** [elt_int t i] return an element as an integer; if the data cannot fit in
       an OCaml value we return [None]. In which case, [elt_states] can be used
       to obtain a list of set bits. *)
   val elt_int : t -> int -> int option
+
+  (** [get_elt t i] return the raw state of the [i]th element in [t]. *)
+  val get_elt : t -> int -> elt
 
   (** [elt_states t i] return element [i] of [t] as a list of set bits *)
   val elt_states : t -> int -> int list 
