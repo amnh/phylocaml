@@ -146,7 +146,7 @@ val post_order_edges :
     The boolean return value is used if the sets are disjoint in elements. This
     is always the case in Tree topologies. *)
 val partition_edge :
-  Topology.edge -> t -> Topology.EdgeSet.t * Topology.EdgeSet.t * bool
+  Topology.edge -> t -> Topology.IDSet.t * Topology.IDSet.t * bool
 
 
 (** {2 Topological Functions} *)
@@ -168,7 +168,7 @@ val reroot : Topology.id -> t -> t
 
 (** {2 Fusing Functions} *)
 
-type 'a fuse_location = 'a * Topology.edge * t
+type 'a fuse_location = 'a * Topology.id * t
 type 'a fuse_locations = 'a fuse_location list
 val fuse_locations : 'a -> 'b -> 'c
 val fuse_all_locations : 'a -> 'b

@@ -288,7 +288,7 @@ let get_state_combination s t : int =
     assert( (IntSet.cardinal s) = 1 );
     IntSet.choose s
   | ExtendedBitFlag
-  | SimpleBitFlag    -> BitSet.to_packed (`List [s])
+  | SimpleBitFlag    -> BitSet.to_packed (`Set s)
 
 let get_code n t =
   try match t.alphabet_type with

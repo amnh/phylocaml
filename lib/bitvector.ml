@@ -2,15 +2,13 @@ module type BV = sig
   type t
   type elt = int
 
-  val gc_freq : int -> unit
+  val create : int -> int -> t 
+  val copy : t -> t 
+  val of_array : int -> elt array -> t 
 
   val code : t -> elt 
   val compare : t -> t -> elt 
   val cardinal : t -> int
-
-  val create : int -> int -> t 
-  val copy : t -> t 
-  val of_array : int -> elt array -> t 
 
   val set_elt : t -> int -> elt -> unit 
   val set_bit : t -> int -> int -> unit 
@@ -24,6 +22,8 @@ module type BV = sig
   val poly_saturation : t -> int -> int 
   val distance : t -> t -> int 
   val fitch_median_2 : t -> t -> t * int
+
+  val gc_freq : int -> unit
 
 end
 
@@ -50,7 +50,6 @@ let fold_right (module BVN : BV) f acc t =
 
 module BV8 : BV = struct
   external register : unit -> unit = "bv8_CAML_register"
-  external gc_freq : int -> unit = "bv8_CAML_custom_max"
   let () = register ()
 
   type t
@@ -76,13 +75,14 @@ module BV8 : BV = struct
   external distance : t -> t -> int = "bv8_CAML_distance2"
   external fitch_median_2 : t -> t -> t * int = "bv8_CAML_fitch_median2"
 
+  external gc_freq : int -> unit = "bv8_CAML_custom_max"
 end
 
 
 module BV16 : BV = struct
   external register : unit -> unit = "bv16_CAML_register"
-  external gc_freq : int -> unit = "bv16_CAML_custom_max"
   let () = register ()
+
   type t
   type elt = int
 
@@ -105,12 +105,13 @@ module BV16 : BV = struct
   external poly_saturation : t -> int -> int = "bv16_CAML_poly_saturation"
   external distance : t -> t -> int = "bv16_CAML_distance2"
   external fitch_median_2 : t -> t -> t * int = "bv16_CAML_fitch_median2"
+  
+  external gc_freq : int -> unit = "bv16_CAML_custom_max"
 end
 
 
 module BV32 : BV = struct
   external register : unit -> unit = "bv32_CAML_register"
-  external gc_freq : int -> unit = "bv32_CAML_custom_max"
   let () = register ()
 
   type t
@@ -135,11 +136,12 @@ module BV32 : BV = struct
   external poly_saturation : t -> int -> int = "bv32_CAML_poly_saturation"
   external distance : t -> t -> int = "bv32_CAML_distance2"
   external fitch_median_2 : t -> t -> t * int = "bv32_CAML_fitch_median2"
+  
+  external gc_freq : int -> unit = "bv32_CAML_custom_max"
 end
 
 module BV64 : BV = struct
   external register : unit -> unit = "bv64_CAML_register"
-  external gc_freq : int -> unit = "bv64_CAML_custom_max"
   let () = register ()
 
   type t
@@ -164,13 +166,13 @@ module BV64 : BV = struct
   external poly_saturation : t -> int -> int = "bv64_CAML_poly_saturation"
   external distance : t -> t -> int = "bv64_CAML_distance2"
   external fitch_median_2 : t -> t -> t * int = "bv64_CAML_fitch_median2"
+  
+  external gc_freq : int -> unit = "bv64_CAML_custom_max"
 end
 
 module BVGen : BV = struct
   type t = unit
   type elt = int
-
-  let gc_freq _ = failwith "TODO"
 
   let code _ = failwith "TODO"
   let compare _ _ = failwith "TODO"
@@ -191,4 +193,7 @@ module BVGen : BV = struct
   let poly_saturation _ _ = failwith "TODO"
   let distance _ _ = failwith "TODO"
   let fitch_median_2 _ _ = failwith "TODO"
+  
+  let gc_freq _ = failwith "TODO"
+
 end

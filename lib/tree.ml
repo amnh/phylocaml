@@ -472,7 +472,7 @@ let random lst =
   List.fold_left add_node empty lst
 
 
-type 'a fuse_location = 'a * edge * t
+type 'a fuse_location = 'a * id * t
 type 'a fuse_locations = 'a fuse_location list
 
 let fuse_locations _ _ = failwith "TODO"
