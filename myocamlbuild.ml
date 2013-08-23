@@ -4,12 +4,14 @@ open Command
 (** Modifiable parameters *)
 let cc      = "gcc"
 let cflags  = ["-O2"; "-Wall"; "-pedantic";"-Wextra"]
-let clibs   = ""
+let clibs   = [] (* "-llapack";"-lblas";"-lgfortran"] *)
 let mlflags = ["-w"; "@a"]
+let static  = true
 let vectorization = None
 
 (** Constants *)
 let bv_width = ["8";"16";"32";"64"]
+let headers  = ["lib/seq.h"; "lib/mlmodel.h"; "lib/phyloc.h"]
 
 (** Helper functions *)
 let rec arg_weave p = function
@@ -21,9 +23,6 @@ let (|>) a b = b a
 
 (** C-Header files *)
 let headers =
-  let headers = 
-    ["lib/seq.h"; "lib/mlmodel.h"; "lib/phyloc.h"]
-  in
   let bv_ w =
     let base = "lib/bitvector/bv"^w^".h" in 
     match vectorization with
@@ -74,14 +73,32 @@ let () = dispatch begin function
       in
       arg_weave "-ccopt" cflags
     in
-    List.iter (fun w -> flag ["c"; "use_bv"^w] (S (bv_cflags w))) bv_width;
+    List.iter
+      (fun w -> flag ["c"; "use_bv"^w] (S (bv_cflags w)))
+      bv_width;
 
-    dep ["ocaml";"link"; "use_phyloc"] ["libphyloc.a"];
-    dep ["c"; "compile"]  headers;
+    ocaml_lib "phylocaml";
 
-    flag ["ocaml"; "link";"use_phyloc"]   (S [A"-cclib";A"-lphyloc"]);
+    dep ["link"; "ocaml"; "use_phyloc"] ["libphyloc.a"];
+
+    if static
+      then flag ["link"; "ocaml"; "byte"]  (A"-custom");
+
     flag ["ocaml"; "compile"] (S [A"-cc";A cc]);
-    flag ["ocaml"; "compile"] (S (arg_weave "-ccopt" cflags));
+
+    flag ["c"; "compile"] (S (arg_weave "-ccopt" cflags));
+
+    flag ["link"; "top"; "ocaml"; "use_phyloc"; "byte"]
+      (S[A"-cclib"; A"-lphyloc"; A"-cclib";A"-L." ]);
+
+    flag ["link"; "ocaml"; "use_phyloc"; "byte"]
+      (S[A"-dllib"; A"-lphyloc"; A"-cclib"; A"-lphyloc"; A"-cclib";A"-L." ]);
+
+    flag ["link"; "ocaml"; "use_phyloc"; "native"]
+      (S[A"-cclib"; A"-lphyloc"; A"-cclib";A"-L." ]);
+
+    dep ["c"; "compile"] headers;
+
     ()
   | _ -> ()
 end
