@@ -18,18 +18,8 @@
  *      n/m is the number of rows/columns or size of the alphabet
  *      t is the branch length
  */
+#include "phyloc.h"
 #include "mlmodel.h"
-
-/* extra boxing/unboxing for option types */
-#define Val_none Val_int(0)
-#define Some_val(v) Field(v,0)
-value Val_some( value v )
-{   
-  value s;
-  s = caml_alloc(1, 0);
-  Store_field( s, 0, v );
-  return s;
-}
 
 /* prints a matrix (block format) */
 void printmatrixf( const double* Z, const int s, const int n, const int m)
