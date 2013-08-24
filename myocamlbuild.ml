@@ -4,7 +4,7 @@ open Command
 (** Modifiable parameters *)
 let cc      = "gcc"
 let cflags  = ["-O2"; "-Wall"; "-pedantic";"-Wextra"]
-let clibs   = [] (* "-llapack";"-lblas";"-lgfortran"] *)
+let clibs   = ["-llapack";"-lblas";"-lgfortran"]
 let mlflags = ["-w"; "@a"]
 let static  = true
 let vectorization = None
@@ -38,6 +38,9 @@ let headers =
   List.rev_append headers (List.flatten $ List.map bv_ bv_width)
 
 let () = dispatch begin function
+  | Before_options ->
+    let ocamlfind x = S[A"ocamlfind"; x] in
+    Options.ocamlmktop := ocamlfind $ A"ocamlmktop" (* thanks Gasche *)
   | After_rules ->
     let bitvector_rule filename extension dep_ext width : unit =
       let dep  = "lib/bitvector/bv"^filename^extension
@@ -73,30 +76,27 @@ let () = dispatch begin function
       in
       arg_weave "-ccopt" cflags
     in
-    List.iter
-      (fun w -> flag ["c"; "use_bv"^w] (S (bv_cflags w)))
-      bv_width;
+    List.iter (fun w -> flag ["c";"use_bv"^w] $ S (bv_cflags w)) bv_width;
 
     ocaml_lib "phylocaml";
 
-    dep ["link"; "ocaml"; "use_phyloc"] ["libphyloc.a"];
-
-    if static
-      then flag ["link"; "ocaml"; "byte"]  (A"-custom");
-
-    flag ["ocaml"; "compile"] (S [A"-cc";A cc]);
-
-    flag ["c"; "compile"] (S (arg_weave "-ccopt" cflags));
-
     flag ["link"; "top"; "ocaml"; "use_phyloc"; "byte"]
       (S[A"-cclib"; A"-lphyloc"; A"-cclib";A"-L." ]);
-
     flag ["link"; "ocaml"; "use_phyloc"; "byte"]
-      (S[A"-dllib"; A"-lphyloc"; A"-cclib"; A"-lphyloc"; A"-cclib";A"-L." ]);
-
+      (S[A"-dllib"; A"-lphyloc"; A"-cclib"; A"-lphyloc";A"-cclib";A"-L." ]);
     flag ["link"; "ocaml"; "use_phyloc"; "native"]
-      (S[A"-cclib"; A"-lphyloc"; A"-cclib";A"-L." ]);
+      (S[A"-cclib"; A"-lphyloc";A"-cclib";A"-L." ]);
 
+    (* custom option for building static library *)
+    if static then
+      flag ["link";"ocaml";"use_phyloc";"byte"] (A"-custom");
+    (* dependency of c-library *)
+    dep ["link"; "ocaml"; "use_phyloc"] ["libphyloc.a"];
+    (* set C compiler *)
+    flag ["ocaml"; "compile"] (S [A"-cc";A cc]);
+    (* Set cflags *)
+    flag ["c"; "compile"] (S (arg_weave "-ccopt" cflags));
+    (* headers for c-files *)
     dep ["c"; "compile"] headers;
 
     ()

@@ -3,7 +3,7 @@ module Diagnosis    = Diagnosis
 module Neighborhood = Neighborhood
 module Node         = Node
 module NodeData     = NodeData
-module PTopology    = PTopology
+module PTopology    = Ptopology
 module Topology     = Topology
 
 (** Tree Oriented Modules *)
@@ -16,13 +16,13 @@ module Network      = Network
 
 (** Model Impelementations *)
 (* module Model        = Model *)
-module Mlmodel      = Mlmodel
+module MlModel      = MlModel
 (* module Mpmodel      = Mpmodel *)
 (* module Kolmomodel   = Kolmomodel *)
 
 (** Phylocaml Core Utility Library *)
 module Alphabet     = Alphabet
-module Seq          = Seq
+module Sequence     = Sequence
 module Llist        = Llist
 module Bitvector    = Bitvector
 
