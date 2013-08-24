@@ -80,10 +80,12 @@ let () = dispatch begin function
 
     ocaml_lib "phylocaml";
 
+    if static
+      then flag ["link";"ocaml";"use_phyloc";"byte"] (S[A"-cclib";A"-lphyloc";A"-cclib";A"-L."])
+      else flag ["link";"ocaml";"use_phyloc";"byte"] (S[A"-dllib";A"-lphyloc";A"-cclib";A"-L."]);
+
     flag ["link"; "top"; "ocaml"; "use_phyloc"; "byte"]
       (S[A"-cclib"; A"-lphyloc"; A"-cclib";A"-L." ]);
-    flag ["link"; "ocaml"; "use_phyloc"; "byte"]
-      (S[A"-dllib"; A"-lphyloc"; A"-cclib"; A"-lphyloc";A"-cclib";A"-L." ]);
     flag ["link"; "ocaml"; "use_phyloc"; "native"]
       (S[A"-cclib"; A"-lphyloc";A"-cclib";A"-L." ]);
 
