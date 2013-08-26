@@ -168,7 +168,6 @@ vect* bv_copy( const vect* a )
   x = (vect*) malloc(sizeof(vect));
   x->length = a->length;
   x->chars  = a->chars;
-  x->padding= a->padding;
   x->code   = bv_next_code();
   x->msize  = a->msize;
   bv_malloc(x, a->length);
@@ -192,15 +191,35 @@ int bv_CAML_compare_values( value vbv1, value vbv2 )
   return( bv_compare(Vect_val(vbv1), Vect_val(vbv2) ) );
 }
 
-void bv_CAML_serialize(value v,unsigned long *wsize_32,unsigned long *wsize_w64)
+void bv_CAML_serialize(value v,unsigned long *wsize_32,unsigned long *wsize_64)
 {
+  vect * s;
+  unsigned long i;
+  s = Vect_val(v);
 
-
+  caml_serialize_int_4( s->chars );
+  caml_serialize_int_4( s->msize );
+  caml_serialize_int_2( s->code );
+  for(i=0; i < s->chars; ++i)
+    Serial_elt(s->data[i]);
+  *wsize_64 = *wsize_32 = 8 + 2 + ((WIDTH/8) * s->chars);
 }
 
 unsigned long bv_CAML_deserialize(void* dst)
 {
-    return 0L;
+  vect* s;
+  unsigned long i;
+
+  s = (vect*) dst;
+  s->chars = caml_deserialize_uint_4();
+  s->msize = caml_deserialize_uint_4();
+  s->code= caml_deserialize_uint_2();
+  s->length= bv_alignment_length( s->chars );
+  for(i=0; i < s->chars; ++i)
+    s->data[i] = Deserial_elt();
+  for(i=s->chars;i<s->length;++i)
+    s->data[i] = 0;
+  return (8 + 2 + (WIDTH/8) * s->chars);
 }
 
 /* long bv_CAML_hash(value v){ return 0L;} */

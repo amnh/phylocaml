@@ -31,31 +31,33 @@
  #define CTYPE uint8_t
  #define Elt_val(x) Int_val(x)
  #define Val_elt(x) Val_int(x)
-
+ #define Serial_elt(x) caml_serialize_int_1(x)
+ #define Deserial_elt() caml_deserialize_uint_1()
 #elif WIDTH == 16
  #define CTYPE uint16_t
  #define Elt_val(x) Int_val(x)
  #define Val_elt(x) Val_int(x)
-
+ #define Serial_elt(x) caml_serialize_int_2(x)
+ #define Deserial_elt() caml_deserialize_uint_2()
 #elif WIDTH == 32
  #define CTYPE uint32_t
-  #define Elt_val(x) Int32_val(x)
-  #define Val_elt(x) Val_int32(x)
-
+ #define Elt_val(x) Int32_val(x)
+ #define Val_elt(x) Val_int32(x)
+ #define Serial_elt(x) caml_serialize_int_4(x)
+ #define Deserial_elt() caml_deserialize_uint_4()
 #elif WIDTH == 64
  #define CTYPE uint64_t
  #define Elt_val(x) Int64_val(x)
  #define Val_elt(x) Val_int64(x)
-
+ #define Serial_elt(x) caml_serialize_int_8(x)
+ #define Deserial_elt() caml_deserialize_uint_8()
 #else
  #error "Unrecognized Character Size."
-
 #endif
 
 struct vect_t {
   unsigned long length;  /* length of elements in packed vector          */
   unsigned long chars;   /* number of characters; excludes buffer space  */
-  unsigned long padding; /* padding at end of data to fill vector        */
   unsigned int code;     /* automatically generated code for debugging   */
   unsigned int msize;    /* maximum number of bits allowed to be set/elt */
   CTYPE *data;           /* bit-data                                     */
