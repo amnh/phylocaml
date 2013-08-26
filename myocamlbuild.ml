@@ -5,8 +5,7 @@ open Command
 let cc      = "gcc"
 let cflags  = ["-O2"; "-Wall"; "-pedantic";"-Wextra"]
 let clibs   = ["-llapack";"-lblas";"-lgfortran"]
-let mlflags = ["-w"; "@a"]
-let static  = true
+let mlflags = ["-w"; "@a"; "-warn-error"; "-a"]
 let vectorization = None
 
 (** Constants *)
@@ -19,8 +18,9 @@ let rec arg_weave p = function
   | []    -> []
 
 let ($) a b = a b
-let (|>) a b = b a
 
+let arg x = A x
+ 
 (** C-Header files *)
 let headers =
   let bv_ w =
@@ -39,9 +39,11 @@ let headers =
 
 let () = dispatch begin function
   | Before_options ->
-    let ocamlfind x = S[A"ocamlfind"; x] in
-    Options.ocamlmktop := ocamlfind $ A"ocamlmktop" (* thanks Gasche *)
-  | After_rules ->
+    let ocamlfind x = S[A"ocamlfind";arg x] in
+    Options.ocamlmktop := ocamlfind "ocamlmktop"
+
+  | After_rules    ->
+    (* generate rules for scripted C and header files *)
     let bitvector_rule filename extension dep_ext width : unit =
       let dep  = "lib/bitvector/bv"^filename^extension
       and prod = "lib/bitvector/bv"^width^filename^extension in
@@ -62,6 +64,7 @@ let () = dispatch begin function
         List.iter (bitvector_rule namext ".h" (None)     ) bv_width)
       [""; "_sse"; "_neon"; "_avx"; "_alti"];
 
+    (* generate flags for vectorization compilation *)
     let bv_cflags width =
       let cflags = ["-DWIDTH="^width] in
       let cflags = match vectorization with
@@ -78,28 +81,32 @@ let () = dispatch begin function
     in
     List.iter (fun w -> flag ["c";"use_bv"^w] $ S (bv_cflags w)) bv_width;
 
+    (* define rules for a library named phylocaml *)
     ocaml_lib "phylocaml";
 
-    if static
-      then flag ["link";"ocaml";"use_phyloc";"byte"] (S[A"-cclib";A"-lphyloc";A"-cclib";A"-L."])
-      else flag ["link";"ocaml";"use_phyloc";"byte"] (S[A"-dllib";A"-lphyloc";A"-cclib";A"-L."]);
-
-    flag ["link"; "top"; "ocaml"; "use_phyloc"; "byte"]
-      (S[A"-cclib"; A"-lphyloc"; A"-cclib";A"-L." ]);
-    flag ["link"; "ocaml"; "use_phyloc"; "native"]
-      (S[A"-cclib"; A"-lphyloc";A"-cclib";A"-L." ]);
-
-    (* custom option for building static library *)
-    if static then
-      flag ["link";"ocaml";"use_phyloc";"byte"] (A"-custom");
-    (* dependency of c-library *)
+    (* dependencies for c-stubs *)
     dep ["link"; "ocaml"; "use_phyloc"] ["libphyloc.a"];
-    (* set C compiler *)
-    flag ["ocaml"; "compile"] (S [A"-cc";A cc]);
-    (* Set cflags *)
-    flag ["c"; "compile"] (S (arg_weave "-ccopt" cflags));
-    (* headers for c-files *)
     dep ["c"; "compile"] headers;
+
+    (* flags for c compilation/linking *)
+    flag ["ocaml"; "compile"]
+      (S [A"-cc";A cc]);
+    flag ["c"; "compile"]
+      (S (arg_weave "-ccopt" cflags));
+    flag ["c"; "link"]
+      (S (arg_weave "-cclib" clibs));
+    flag ["ocamlmklib"; "c"]
+      (S (arg_weave "-cclib" clibs));
+
+    (* compile ocaml w/ c-stubs *)
+    flag ["link";"ocaml";"use_phyloc";"byte"]
+      (S[A"-dllib";A"-lphyloc";A"-cclib";A"-lphylocL.";A"-cclib";A"-L." ]);
+    flag ["link";"ocaml";"use_phyloc";"native"]
+      (S[A"-cclib";A"-lphyloc";A"-cclib";A"-L."]);
+
+    (* flags for ocaml compiling/linking *)
+    flag ["ocaml"; "compile"]
+      (S (List.map arg mlflags));
 
     ()
   | _ -> ()

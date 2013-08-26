@@ -1,4 +1,3 @@
-
 .PHONY: clean byte native phyloc docs
 
 .DEFAULT: native
@@ -16,6 +15,9 @@ phyloc :
 
 docs :
 	$(BUILD) phylocaml.docdir/index.html
+
+%.mli :
+	$(BUILD) $*.inferred.mli && cp _build/lib/$*.inferred.mli lib/$*.mli
 
 clean :
 	$(BUILD) -clean

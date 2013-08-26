@@ -4,3 +4,4 @@ bv16.o
 bv32.o
 bv64.o
 seq.o
+mlmodel.o
