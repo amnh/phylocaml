@@ -1,4 +1,4 @@
-.PHONY: clean byte native phyloc docs
+.PHONY: clean byte native phyloc docs top
 
 .DEFAULT: native
 
@@ -9,6 +9,9 @@ native :
 
 byte :
 	$(BUILD) phylocaml.cma
+
+top :
+	$(BUILD) phylocaml.top
 
 phyloc :
 	$(BUILD) libphyloc.a

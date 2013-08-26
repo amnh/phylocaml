@@ -5,6 +5,7 @@ open Command
 let cc      = "gcc"
 let cflags  = ["-O2"; "-Wall"; "-pedantic";"-Wextra"]
 let clibs   = ["-llapack";"-lblas";"-lgfortran"]
+let static  = true
 let mlflags = ["-w"; "@a"; "-warn-error"; "-a"]
 let vectorization = None
 
@@ -39,9 +40,9 @@ let headers =
 
 let () = dispatch begin function
   | Before_options ->
-    let ocamlfind x = S[A"ocamlfind";arg x] in
-    Options.ocamlmktop := ocamlfind "ocamlmktop"
-
+     let ocamlfind x = S[A"ocamlfind";arg x] in
+     Options.ocamlmktop := ocamlfind "ocamlmktop";
+    ()
   | After_rules    ->
     (* generate rules for scripted C and header files *)
     let bitvector_rule filename extension dep_ext width : unit =
@@ -89,25 +90,21 @@ let () = dispatch begin function
     dep ["c"; "compile"] headers;
 
     (* flags for c compilation/linking *)
-    flag ["ocaml"; "compile"]
-      (S [A"-cc";A cc]);
-    flag ["c"; "compile"]
-      (S (arg_weave "-ccopt" cflags));
-    flag ["c"; "link"]
-      (S (arg_weave "-cclib" clibs));
-    flag ["ocamlmklib"; "c"]
-      (S (arg_weave "-cclib" clibs));
+    flag ["ocaml"; "compile"] (S [A"-cc";A cc]);
+    flag ["c"; "compile"]     (S (arg_weave "-ccopt" cflags));
+    flag ["c"; "link"]        (S (arg_weave "-cclib" clibs));
+    flag ["ocamlmklib"; "c"]  (S (arg_weave "-cclib" clibs));
 
     (* compile ocaml w/ c-stubs *)
     flag ["link";"ocaml";"use_phyloc";"byte"]
-      (S[A"-dllib";A"-lphyloc";A"-cclib";A"-lphylocL.";A"-cclib";A"-L." ]);
+      (S[A"-dllib";A"-lphyloc";A"-cclib";A"-lphyloc";A"-cclib";A"-L." ]);
     flag ["link";"ocaml";"use_phyloc";"native"]
       (S[A"-cclib";A"-lphyloc";A"-cclib";A"-L."]);
 
     (* flags for ocaml compiling/linking *)
-    flag ["ocaml"; "compile"]
-      (S (List.map arg mlflags));
-
+    flag ["ocaml"; "compile"]     (S (List.map arg mlflags));
+    flag ["ocaml"; "link"]        (S (arg_weave "-cclib" clibs));
+    flag ["ocaml";"link";"byte"]  (arg "-custom");
     ()
   | _ -> ()
 end
