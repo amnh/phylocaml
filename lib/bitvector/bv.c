@@ -146,7 +146,6 @@ unsigned long bv_poly_saturation( const vect *a, int n )
 #endif
 
 #ifndef BV_HAS_FITCH
-/* todo: convert to composition of definitions above? */
 unsigned long bv_fitch( vect *c, const vect *a, const vect *b )
 {
   unsigned long i,res;
@@ -162,15 +161,20 @@ unsigned long bv_fitch( vect *c, const vect *a, const vect *b )
 }
 #endif
 
-vect* bv_copy( const vect* a )
+vect* bv_copy( const vect* a, const int fill )
 {
   vect *x;
+  unsigned long i;
   x = (vect*) malloc(sizeof(vect));
   x->length = a->length;
   x->chars  = a->chars;
   x->code   = bv_next_code();
   x->msize  = a->msize;
   bv_malloc(x, a->length);
+  if( fill != 0 ){
+    for(i=0; i<a->length; ++i)
+      x->data[i] = a->data[i];
+  }
   return x;
 }
 
@@ -296,7 +300,7 @@ value bv_CAML_copy( value vbv )
 {
   CAMLparam1(vbv);
   CAMLlocal1(res);
-  bv_alloc_val(res,bv_copy(Vect_val(vbv)));
+  bv_alloc_val(res,bv_copy(Vect_val(vbv),1));
   CAMLreturn(res);
 }
 
@@ -415,7 +419,7 @@ value bv_CAML_union( value vbv1, value vbv2 )
   vect *res, *bv1, *bv2;
   bv1 = Vect_val(vbv1);
   bv2 = Vect_val(vbv2);
-  res = bv_copy(bv1);
+  res = bv_copy(bv1,0);
   bv_alloc_val(vres,res);
   bv_union(res, bv1, bv2);
   CAMLreturn(vres);
@@ -428,7 +432,7 @@ value bv_CAML_inter( value vbv1, value vbv2 )
   vect *res, *bv1, *bv2;
   bv1 = Vect_val(vbv1);
   bv2 = Vect_val(vbv2);
-  res = bv_copy(bv1);
+  res = bv_copy(bv1,0);
   bv_alloc_val(vres,res);
   bv_inter(res, bv1, bv2);
   CAMLreturn(vres);
@@ -467,7 +471,7 @@ value bv_CAML_fitch_median2( value vbv1, value vbv2 )
 
   bv1 = Vect_val( vbv1 );
   bv2 = Vect_val( vbv2 );
-  bv0 = bv_copy( bv1 );
+  bv0 = bv_copy( bv1,0 );
   bv_alloc_val(vbv0,bv0);
   cost = bv_fitch( bv0, bv1, bv2 );
 
