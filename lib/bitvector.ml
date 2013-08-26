@@ -9,6 +9,7 @@ module type BV = sig
   val code : t -> int
   val compare : t -> t -> elt
   val cardinal : t -> int
+  val width : t -> int
 
   val set_elt : t -> int -> elt -> unit
   val set_bit : t -> int -> int -> unit
@@ -48,7 +49,6 @@ let fold_right (module BVN : BV) f acc t =
   done;
   !acc
 *)
-
 
 module BV8 : BV with type elt = int = struct
   external register : unit -> unit = "bv8_CAML_register"

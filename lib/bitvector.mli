@@ -44,7 +44,7 @@ module type BV = sig
   (** [width t] Return the width of available data, this is set upon creation of
       the vector. It will always be less than or equal to the maximum width of
       the implemented module. *)
-  val cardinal : t -> int
+  val width : t -> int
 
 
   (** {2 Element Manipulation} These functions may not be (and are probably not)

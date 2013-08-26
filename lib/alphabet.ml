@@ -29,23 +29,61 @@ let print a =
   let str_of_ioption = function
     | None -> "none"
     | Some x -> string_of_int x
+  and pp_ilst chan = function
+    | [] -> ()
+    | [x] ->
+      Printf.fprintf chan "%d" x
+    | x::xs ->
+      Printf.fprintf chan "%d" x;
+      List.iter (Printf.fprintf chan ",%d") xs
   in
-  Printf.printf "Size: %d, Gap:%s, Missing:%s, All:%s\n%!" a.size
-    (str_of_ioption a.gap) (str_of_ioption a.missing) (str_of_ioption a.all);
-  match a.alphabet_type with
-  | Sequential ->
-    Printf.printf "Sequential:\n%!";
+  let print_code_names bits data = 
     IntMap.iter
       (fun k v ->
-        Printf.printf "\t%s -- %d -- comp:{%s}\n" v k
-          (try string_of_int $ IntMap.find k a.comp_code with _ -> "none"))
-      a.code_name;
+        let num_lst =
+          if bits then BitSet.to_list (`Packed k) else [k]
+        and cmp_lst =
+          try let cmp = IntMap.find k a.comp_code in
+              if bits then BitSet.to_list (`Packed cmp) else [cmp]
+          with _ -> []
+        in
+        Printf.printf "\t%s -- {%a} -- comp:{%a}\n"
+                      v pp_ilst num_lst pp_ilst cmp_lst)
+      data;
+  in
+  match a.alphabet_type with
+  | Continuous      ->
+    Printf.printf "Continuous\n%!";
     ()
-  | SimpleBitFlag   -> failwith "TODO"
-  | ExtendedBitFlag -> failwith "TODO"
-  | Continuous      -> failwith "TODO"
-  | CombinationLevels _ -> failwith "TODO"
-                
+  | Sequential ->
+    Printf.printf "Sequential :\n%!";
+    Printf.printf "Size: %d, Gap:%s, Missing:%s, All:%s\n%!" a.size
+      (str_of_ioption a.gap) (str_of_ioption a.missing) (str_of_ioption a.all);
+    print_code_names false a.code_name;
+    ()
+  | ExtendedBitFlag ->
+    Printf.printf "ExtendedBitFlag:\n%!";
+    Printf.printf "Size: %d, Gap:%s, Missing:%s, All:%s\n%!" a.size
+      (str_of_ioption a.gap) (str_of_ioption a.missing) (str_of_ioption a.all);
+    print_code_names true a.code_name;
+    ()
+  | SimpleBitFlag   ->
+    Printf.printf "SimpleBitFlag:\n%!";
+    Printf.printf "Size: %d, Gap:%s, Missing:%s, All:%s\n%!" a.size
+      (str_of_ioption a.gap) (str_of_ioption a.missing) (str_of_ioption a.all);
+    print_code_names true a.code_name;
+    ()
+  | CombinationLevels l ->
+    Printf.printf "Combination Level %d:\n%!" l;
+    Printf.printf "Size: %d, Gap:%s, Missing:%s, All:%s\n%!" a.size
+      (str_of_ioption a.gap) (str_of_ioption a.missing) (str_of_ioption a.all);
+    IntMap.iter
+      (fun k vset ->
+        Printf.printf "\t%d -- {%a} -- comp:{%s}\n"
+            k pp_ilst (IntSet.elements vset)
+            (try string_of_int $ IntMap.find k a.comp_code with _ -> ""))
+      a.comb_set;
+    ()
 
 
 (** {2 Error Module} *)
@@ -222,7 +260,7 @@ let continuous =
     code_name = IntMap.empty;
     comp_code = IntMap.empty;
     size      = max_int;
-    full_size = ~-1;
+    full_size = ~-1; (* no matrix exists *)
     gap       = None;
     missing   = None;
     all       = None;
@@ -239,7 +277,7 @@ let dna =
     ("C", 0b00010, Some 0b00100);
     ("G", 0b00100, Some 0b00010);
     ("T", 0b01000, Some 0b00001);
-    ("-", 0b10000, None);
+    (default_gap, 0b10000, None);
     ("X", 0b11111, Some 0b11111); ]
   in
   of_list lst (Some 0b10000) (Some 0b11111) (Some 0b10000) SimpleBitFlag false
@@ -262,7 +300,7 @@ let nucleotides =
     ("B", 0b01110, Some 0b00111);
     ("N", 0b01111, Some 0b01111);
     ("X", 0b01111, Some 0b01111);
-    ("-", 0b10000, None);
+    (default_gap, 0b10000, None);
     ("1", 0b10001, Some 0b11000);
     ("2", 0b10010, Some 0b10100);
     ("3", 0b10011, Some 0b11100);
@@ -278,7 +316,7 @@ let nucleotides =
     ("I", 0b11101, Some 0b11011);
     ("J", 0b11110, Some 0b10111);
     ("P", 0b11111, Some 0b11111);
-    ("?", 0b11111, Some 0b11111);
+    (default_missing, 0b11111, Some 0b11111);
   ] in
   of_list lst (Some 0b10000) (Some 0b11111) (Some 0b11111) ExtendedBitFlag false
 
@@ -305,7 +343,7 @@ let aminoacids =
     ("Y", 18, None); (* tyrosine *)
     ("V", 19, None); (* valine *)
     ("X", 20, None); (* all element *)
-    ("-", 21, None); (* gap *)
+    (default_gap, 21, None); (* gap *)
   ] in
   of_list lst (Some 21) (Some 20) (Some 20) Sequential false
 

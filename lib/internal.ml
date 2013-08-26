@@ -130,8 +130,6 @@ module BitSet =
 
     and rem _ _ = failwith "TODO"
 
-    and singleton i : t = `List [i]
-
     and empty = `Packed 0
 
     and of_list _ = failwith "TODO"
@@ -149,11 +147,11 @@ module BitSet =
         let rec set_of_int acc j i =
           if i = 0 then
             acc
-          else if (i land (1 lsl j)) > 0
-            then
-            set_of_int (j::acc) (j+1) i
           else
-            set_of_int acc (j+1) i
+            let s = 1 lsl j in
+            if (i land s) > 0
+              then set_of_int (j::acc) (j+1) (i lxor s)
+              else set_of_int acc (j+1) i
         in
         set_of_int [] 0 i
       | `Set s    -> IntSet.elements s

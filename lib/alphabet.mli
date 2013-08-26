@@ -7,35 +7,36 @@ type kind =
   | Continuous (** A continuous alphabet of values; the states define the alphabet. *)
   | CombinationLevels of int (** A sequential alphabet with additional states for polymorphisms. *)
 
-(** An alphabet stores the character codes, states, their compliments, the type * of alphabet and some other basic information. comb_set/set_comb are used in
- * sequential alphabets only, to be used to associate a sequential state to
- * a set of sequential state that cannot be transformed easily (unlike bitsets). *)
+(** An alphabet stores the character codes, states, their compliments, the type
+    of alphabet and some other basic information. comb_set/set_comb are used in
+    sequential alphabets only, to be used to associate a sequential state to
+    a set of sequential state that cannot be transformed easily (unlike bitsets). *)
 type t =
-  { comb_set : Internal.IntSet.t Internal.IntMap.t;  (* Combination Code -> States *)
-    set_comb : int Internal.IntSetMap.t;    (* States -> Combination Code *)
-    name_code : int Internal.StringMap.t;    (* Single Code -> Name *)
-    code_name : string Internal.IntMap.t;    (* Name -> Single Code *)
-    comp_code : int Internal.IntMap.t;       (* Code -> Compliment of Code *)
-    alphabet_type : kind;           (* Type of the alphbet *)
-    size : int;                     (* Size of the basic alphabet; excludes gap *)
-    full_size : int;                (* Size of associated matrix *)
-    orientation : bool;             (* If cost(~x,x) = cost(x,x) + O(n) *)
-    gap : int option;               (* Code for the gap-character; if present *)
-    missing: int option;            (* Code for the missing-character; if present *)
-    all : int option;               (* Code for the all-character; if present *)
+  { comb_set : Internal.IntSet.t Internal.IntMap.t; (** Combination Code -> States *)
+    set_comb : int Internal.IntSetMap.t;            (** States -> Combination Code *)
+    name_code : int Internal.StringMap.t;           (** Single Code -> Name *)
+    code_name : string Internal.IntMap.t;           (** Name -> Single Code *)
+    comp_code : int Internal.IntMap.t;              (** Code -> Compliment of Code *)
+    alphabet_type : kind;    (** Type of the alphbet *)
+    size : int;              (** Size of the basic alphabet; excludes gap *)
+    full_size : int;         (** Size of associated matrix *)
+    orientation : bool;      (** If cost(~x,x) = cost(x,x) + O(n) *)
+    gap : int option;        (** Code for the gap-character; if present *)
+    missing: int option;     (** Code for the missing-character; if present *)
+    all : int option;        (** Code for the all-character; if present *)
   }
 
 
 
 (** {2 Constants} *)
 
-(** default gap representation *)
+(** default gap representation is '-'. *)
 val default_gap : string
 
-(** default missing represenation *)
+(** default missing represenation is '?'. *)
 val default_missing : string
 
-(** default prefix to denote orientation *)
+(** default prefix to denote orientation is '~'. *)
 val default_orientation : string
 
 
@@ -43,22 +44,25 @@ val default_orientation : string
 (** {2 Basic Alphabets} *)
 
 (** A Continuous alphabet does not have character states and an unbounded size.
- * It must be dealt with differently in most situations. *)
+    It must be dealt with differently in most situations. *)
 val continuous : t
 
 (** Basic DNA alphabet; the simple bit flag annotation implies that
- * polymorphisms of characters are not defined in the alphabet *)
+    polymorphisms of characters are not defined in the alphabet. The default
+    missing is over-loaded in this data-set to be "X". *)
 val dna : t
 
 (** Define an extended-bit-flag representation of DNA that carries with it
- * associations of polymorphisms to single characters. This also includes
- * further characters from IUPAC that associates polymorphisms with gaps *)
+    associations of polymorphisms to single characters. This also includes
+    further characters from IUPAC that associates polymorphisms with gaps. *)
 val nucleotides : t
 
-(** Define a Sequential alphabet for the amino-acids *)
+(** Define a Sequential alphabet for the amino-acids. The default missing is
+ * over-loaded inthis data-set to be "X". *)
 val aminoacids : t
  
-(** A binary character for the absence and presence of a character *)
+(** A binary character for the absence and presence of a character. 0 for absent
+    and 1 for present.*)
 val present_absent : t
 
 
@@ -128,7 +132,7 @@ val to_sequential : t -> t
 val to_bitflag : t -> t
 
 (** Simplify turns the alphabet to one of the following based on it's current
- * state: simplebitflag, sequential, or continuous *)
+    state: simplebitflag, sequential, or continuous *)
 val simplify : t -> t
 
 (** Convert the alphabet to one with levels; this generates polymorphisms and

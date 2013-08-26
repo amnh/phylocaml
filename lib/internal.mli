@@ -26,18 +26,18 @@ val ( !$ ) : 'a Lazy.t -> 'a
 val ( !$$ ) : 'a Lazy.t list -> 'a list
 
 (** [a--b] Generate a list of integers from [a] to [b] (inclusive). This
- * function works on decreasing and increasing ranges of values [a] and [b]. *)
+    function works on decreasing and increasing ranges of values [a] and [b]. *)
 val ( -- ) : int -> int -> int list
 
 (** [some x] A function to wrap [x] in an option type. The function usage allows
- * better control with combinators above. *)
+    better control with combinators above. *)
 val some : 'a -> 'a option
 
 
 (** {6 Floating Point Operations} *)
 
 (** [a =. b] defines an approximately equal function for floating point numbers.
- * The tolerance is [epsilon_float] in the standard library. *)
+    The tolerance is [epsilon_float] in the standard library. *)
 val ( =. ) : float -> float -> bool
 
 (** [is_nan x] Determine if a floating point value [x] is a NAN. *)
@@ -114,8 +114,8 @@ module IntSetMap : Map.S with type key = IntSet.t
 (** {6 Modules} *)
 
 (** The bit-set module needs to be taken out and replaced by an appropriate
- * module. Core and Batteries have appropriate replacements. Do they offer the
- * speed and flexibility? *)
+    module. Core and Batteries have appropriate replacements. Do they offer the
+    speed and flexibility? *)
 module BitSet :
   sig
     type t = [`List of int list | `Packed of int | `Set of IntSet.t]
