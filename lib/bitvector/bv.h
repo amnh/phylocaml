@@ -39,13 +39,8 @@
 
 #elif WIDTH == 32
  #define CTYPE uint32_t
- #ifdef ARCH64
   #define Elt_val(x) Int32_val(x)
   #define Val_elt(x) Val_int32(x)
- #else
-  #define Elt_val(x) Int_val(x)
-  #define Val_elt(x) Val_int(x)
- #endif
 
 #elif WIDTH == 64
  #define CTYPE uint64_t
@@ -60,9 +55,9 @@
 struct vect_t {
   unsigned long length;  /* length of elements in packed vector          */
   unsigned long chars;   /* number of characters; excludes buffer space  */
-  unsigned long padding; /* padding at end of data to fill 128bit vector */
+  unsigned long padding; /* padding at end of data to fill vector        */
   unsigned int code;     /* automatically generated code for debugging   */
-  unsigned int msize;    /* maximum number of bits allowed to be set     */
+  unsigned int msize;    /* maximum number of bits allowed to be set/elt */
   CTYPE *data;           /* bit-data                                     */
 };
 typedef struct vect_t vect;

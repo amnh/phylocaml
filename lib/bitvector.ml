@@ -1,30 +1,29 @@
 module type BV = sig
   type t
-  type elt = int
+  type elt
 
-  val create : int -> int -> t 
-  val copy : t -> t 
-  val of_array : int -> elt array -> t 
+  val create : int -> int -> t
+  val copy : t -> t
+  val of_array : int -> elt array -> t
 
-  val code : t -> elt 
-  val compare : t -> t -> elt 
+  val code : t -> int
+  val compare : t -> t -> elt
   val cardinal : t -> int
 
-  val set_elt : t -> int -> elt -> unit 
-  val set_bit : t -> int -> int -> unit 
-  val elt_int : t -> int -> int option 
+  val set_elt : t -> int -> elt -> unit
+  val set_bit : t -> int -> int -> unit
+  val elt_int : t -> int -> int option
   val get_elt : t -> int -> elt
-  val elt_states : t -> int -> int list 
+  val elt_states : t -> int -> int list
 
-  val union : t -> t -> t 
-  val inter : t -> t -> t 
-  val saturation : t -> elt -> int 
-  val poly_saturation : t -> int -> int 
-  val distance : t -> t -> int 
+  val union : t -> t -> t
+  val inter : t -> t -> t
+  val saturation : t -> elt -> int
+  val poly_saturation : t -> int -> int
+  val distance : t -> t -> int
   val fitch_median_2 : t -> t -> t * int
 
   val gc_freq : int -> unit
-
 end
 
 (*
@@ -51,14 +50,14 @@ let fold_right (module BVN : BV) f acc t =
 *)
 
 
-module BV8 : BV = struct
+module BV8 : BV with type elt = int = struct
   external register : unit -> unit = "bv8_CAML_register"
   let () = register ()
 
   type t
   type elt = int
 
-  external code : t -> elt                   = "bv8_CAML_code"
+  external code : t -> int                   = "bv8_CAML_code"
   external compare : t -> t -> elt           = "bv8_CAML_compare"
   external cardinal : t -> int               = "bv8_CAML_cardinal"
   external width : t -> int                  = "bv8_CAML_size"
@@ -84,14 +83,14 @@ module BV8 : BV = struct
 end
 
 
-module BV16 : BV = struct
+module BV16 : BV with type elt = int = struct
   external register : unit -> unit           = "bv16_CAML_register"
   let () = register ()
 
   type t
   type elt = int
 
-  external code : t -> elt                   = "bv16_CAML_code"
+  external code : t -> int                   = "bv16_CAML_code"
   external compare : t -> t -> elt           = "bv16_CAML_compare"
   external cardinal : t -> int               = "bv16_CAML_cardinal"
   external width : t -> int                  = "bv16_CAML_size"
@@ -117,14 +116,14 @@ module BV16 : BV = struct
 end
 
 
-module BV32 : BV = struct
+module BV32 : BV with type elt = Int32.t = struct
   external register : unit -> unit           = "bv32_CAML_register"
   let () = register ()
 
   type t
-  type elt = int
+  type elt = Int32.t
 
-  external code : t -> elt                   = "bv32_CAML_code"
+  external code : t -> int                   = "bv32_CAML_code"
   external compare : t -> t -> elt           = "bv32_CAML_compare"
   external cardinal : t -> int               = "bv32_CAML_cardinal"
   external width : t -> int                  = "bv32_CAML_size"
@@ -149,14 +148,14 @@ module BV32 : BV = struct
   external gc_freq : int -> unit             = "bv32_CAML_custom_max"
 end
 
-module BV64 : BV = struct
+module BV64 : BV with type elt = Int64.t = struct
   external register : unit -> unit           = "bv64_CAML_register"
   let () = register ()
 
   type t
-  type elt = int
+  type elt = Int64.t
 
-  external code : t -> elt                   = "bv64_CAML_code"
+  external code : t -> int                   = "bv64_CAML_code"
   external compare : t -> t -> elt           = "bv64_CAML_compare"
   external cardinal : t -> int               = "bv64_CAML_cardinal"
   external width : t -> int                  = "bv64_CAML_size"
@@ -181,23 +180,29 @@ module BV64 : BV = struct
   external gc_freq : int -> unit             = "bv64_CAML_custom_max"
 end
 
-module BVGen : BV = struct
-  type t = unit
-  type elt = int
+module BVGen : BV with type elt = int list = struct
+  
+  type elt = int list
 
-  let code _ = failwith "TODO"
+  type t = 
+    { bv : elt array; code: int; width : int; }
+  
+  let next_code = ref ~-1
+  let get_next_code () = incr next_code; !next_code
+
+  let code t = t.code
   let compare _ _ = failwith "TODO"
-  let cardinal _ = failwith "TODO"
-  let width _ = failwith "TODO"
+  let cardinal t = Array.length t.bv
+  let width t = t.width
 
-  let create _ = failwith "TODO"
+  let create w l = { bv = Array.make l []; code = get_next_code (); width = l; }
   let copy _ = failwith "TODO"
-  let of_array _ = failwith "TODO"
+  let of_array _ _ = failwith "TODO"
 
   let set_elt _ _ _ = failwith "TODO"
   let set_bit _ _ _ = failwith "TODO"
   let elt_int _ _ = failwith "TODO"
-  let get_elt _ _ = failwith "TODO"
+  let get_elt t i = t.bv.(i)
   let elt_states _ _ = failwith "TODO"
 
   let union _ _ = failwith "TODO"
