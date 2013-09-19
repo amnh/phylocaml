@@ -5,10 +5,13 @@
 <**/*.cm{x,}a>        : package(pareto), package(bigarray), package(str), use_phyloc
 <**/*.top>            : package(pareto), package(bigarray), package(str), use_phyloc
 
+<lib/compatibility.*> : use_compatibility
+
 "lib/bitvector.ml"  : use_phyloc
 "lib/Sequence_c.ml" : use_phyloc, package(str)
 "lib/mlModel.ml"    : use_phyloc, package(pareto)
 "lib/internal.ml"   : package(bigarray)
+
 
 "lib/bitvector/bv8.c"  : use_bv8
 "lib/bitvector/bv16.c" : use_bv16
