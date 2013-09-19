@@ -1,8 +1,15 @@
-.PHONY: clean byte native phyloc docs top
+.PHONY: clean byte native phyloc docs top install uninstall all
 
-.DEFAULT: native
+.DEFAULT: all
 
-BUILD=ocamlbuild -use-ocamlfind
+BUILD=ocamlbuild -use-ocamlfind -classic-display -cflags -verbose
+OFIND=ocamlfind
+
+INST_BYT=_build/phylocaml.cma _build/dllphyloc.so
+INST_NAT=_build/phylocaml.cmxa _build/phyloc.a
+INST_OTH=_build/lib/*.mli _build/lib/*.cm[iox]
+
+all : native byte
 
 native :
 	$(BUILD) phylocaml.cmxa
@@ -24,3 +31,9 @@ docs :
 
 clean :
 	$(BUILD) -clean
+
+install : native byte
+	$(OFIND) install phylocaml META $(INST_BYT) $(INST_NAT) $(INST_OTH)
+
+uninstall :
+	$(OFIND) remove phylocaml

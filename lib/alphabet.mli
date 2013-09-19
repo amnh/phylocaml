@@ -1,29 +1,48 @@
-(** {2 Definition of an Alphabet} *)
+(** {2 Definition of an Alphabet} This provides point between the user and the
+    software to translate data to the proper encoding. The input data to generate
+    an alphabet using of_list is in a common format of (NAME,CODE,COMP). The CODE
+    should be appropriate to the alphabet type. *)
 
+type code = int
+
+module CodeMap : Map.S with type key = int
+module CodeSet : Set.S with type elt = int
+module CodeSetMap : Map.S with type key = CodeSet.t
+
+(** Define additional properties for combinations. *)
+type combinations =
+ {  comb_set : CodeSet.t CodeMap.t;
+    set_comb : code CodeSetMap.t;
+    level    : int;
+ }
+
+(** Defines the type of alphabet that has been processed or will be processed.*)
 type kind =
-  | Sequential (** Numbers define states. Should be 0 -- (n-1) *)
-  | SimpleBitFlag (** Set bits in numbers define states. *)
-  | ExtendedBitFlag (** Same as bitflag with additional character states for polymorphisms. *)
-  | Continuous (** A continuous alphabet of values; the states define the alphabet. *)
-  | CombinationLevels of int (** A sequential alphabet with additional states for polymorphisms. *)
+  | Sequential
+    (** Numbers define states. Should be 0 -- (n-1) *)
+  | BitFlag
+    (** Set bits in numbers define states. *)
+  | Continuous
+    (** A continuous alphabet of values; the states define the alphabet. *)
+  | CombinationLevels of int
+    (** A sequential alphabet with additional states for polymorphisms. *)
 
 (** An alphabet stores the character codes, states, their compliments, the type
     of alphabet and some other basic information. comb_set/set_comb are used in
     sequential alphabets only, to be used to associate a sequential state to
     a set of sequential state that cannot be transformed easily (unlike bitsets). *)
 type t =
-  { comb_set : Internal.IntSet.t Internal.IntMap.t; (** Combination Code -> States *)
-    set_comb : int Internal.IntSetMap.t;            (** States -> Combination Code *)
-    name_code : int Internal.StringMap.t;           (** Single Code -> Name *)
-    code_name : string Internal.IntMap.t;           (** Name -> Single Code *)
-    comp_code : int Internal.IntMap.t;              (** Code -> Compliment of Code *)
-    alphabet_type : kind;    (** Type of the alphbet *)
-    size : int;              (** Size of the basic alphabet; excludes gap *)
-    full_size : int;         (** Size of associated matrix *)
-    orientation : bool;      (** If cost(~x,x) = cost(x,x) + O(n) *)
-    gap : int option;        (** Code for the gap-character; if present *)
-    missing: int option;     (** Code for the missing-character; if present *)
-    all : int option;        (** Code for the all-character; if present *)
+  { kind      : kind;         (** Type of the alphabet *)
+    name_code : code Internal.StringMap.t;  (** Single Code -> Name *)
+    code_name : string CodeMap.t;  (** Name -> Single Code *)
+    comp_code : int CodeMap.t;(** Code -> Compliment of Code *)
+    size      : int;          (** Size of the basic alphabet; excludes gap *)
+    orientation : bool;       (** If ~ symbol should be used to parse *)
+    gap       : int option;   (** Code for the gap-character; if present *)
+    missing   : int option;   (** Code for the missing-character; if present *)
+    all       : int option;   (** Code for the all-character; if present *)
+    case      : bool;         (** Does case matter in parsing/analysis? *)
+    comb_data : combinations; (** Holds combination information. *)
   }
 
 
@@ -38,6 +57,9 @@ val default_missing : string
 
 (** default prefix to denote orientation is '~'. *)
 val default_orientation : string
+
+(** default characters that define higher-level separations of data. *)
+val default_separators : string list
 
 
 
@@ -54,11 +76,11 @@ val dna : t
 
 (** Define an extended-bit-flag representation of DNA that carries with it
     associations of polymorphisms to single characters. This also includes
-    further characters from IUPAC that associates polymorphisms with gaps. *)
+    further characters then IUPAC that associates polymorphisms with gap. *)
 val nucleotides : t
 
 (** Define a Sequential alphabet for the amino-acids. The default missing is
- * over-loaded inthis data-set to be "X". *)
+    over-loaded in this data-set to be "X". *)
 val aminoacids : t
  
 (** A binary character for the absence and presence of a character. 0 for absent
@@ -69,55 +91,64 @@ val present_absent : t
 
 (** {2 Functions for querying alphabets} *)
 
-(** get the code associated with the name of the character *)
-val get_code : string -> t -> int
+(** Get the code associated with the name of the character *)
+val get_code : string -> t -> code
 
 (** Return the name of the character code *)
-val get_name : Internal.IntMap.key -> t -> string
+val get_name : code -> t -> string
 
-(** return the gap character *)
-val get_gap : t -> int
+(** Return the gap character *)
+val get_gap : t -> code
 
-(** return if the alphabet has a gap *)
+(** Return if the alphabet has a gap *)
 val has_gap : t -> bool
 
-(** return the size of the alphabet *)
+(** Return the size of the alphabet *)
 val size : t -> int
 
-(** return if orientation is used *)
+(** Return if orientation is used *)
 val orientation : t -> bool
 
-(** return the all element if it exists *)
-val all_char : t -> int option
+(** Return the all element if it exists *)
+val get_all : t -> code
 
-(** return the type of the alphabet *)
+(** Return if the element has an all element *)
+val has_all : t -> bool
+
+(** Return the type of the alphabet *)
 val kind : t -> kind
 
-(** return if the alphabet is state identified *)
+(** Return if the alphabet is state identified. Combination, Continuous, and
+    Sequential alphabets are statebased. *)
 val is_statebased : t -> bool
 
-(** return if the alphabet is bit identified *)
+(** Return if the alphabet is bit identified. *)
 val is_bitset : t -> bool
 
-(** get the compliment of the character code *)
-val complement : Internal.IntMap.key -> t -> int option
+(** Get the compliment of the character code *)
+val complement : int -> t -> int option
 
-(** determines if two elements in the alphabet are complements *)
-val is_complement : Internal.IntMap.key -> Internal.IntMap.key -> t -> bool
+(** Determines if two elements in the alphabet are complements *)
+val is_complement : int -> int -> t -> bool
 
-(** return the list of states that represent a code *)
-val get_combination : Internal.IntMap.key -> t -> Internal.IntSet.t
+(** Return the list of states that represent a code *)
+val get_combination : code -> t -> CodeSet.t
 
 (** Opposite of the above function *)
-val get_state_combination : Internal.IntSet.t -> t -> int
+val get_state_combination : CodeSet.t -> t -> code
 
-(** Generate an alphabet from a list of states (NAME,CODE,COMPLIMENT). *)
+(** [of_list data g a m t o] Generate an alphabet from a list of states [data]
+    in the form [(NAME,CODE,COMPLIMENT)]. Gap [g], all element [a], and missing
+    [m] are included if they exist as well as the type of alphabet to create
+    [t], and if orientation should be considered [o]. *)
 val of_list :
-  (string * Internal.IntMap.key * int option) list ->
-    int option -> int option -> int option -> kind -> bool -> t
+  states : (string * string option) list -> equates : (string * string list) list ->
+    gap : string option -> all : string option -> missing : string option ->
+      orientation: bool -> case:bool -> kind:kind -> t
 
-(** Convert an alphabet to a list of the main properties *)
-val to_list : t -> (Internal.StringMap.key * Internal.IntMap.key * int option) list
+(** Convert an alphabet to a list of the main properties like [data] in the
+    [of_list] function. *)
+val to_list : t -> (string * code * string option) list
 
 
 
@@ -140,8 +171,14 @@ val simplify : t -> t
 val to_level : int -> t -> t
 
 
+(** {2 Parsing Data} *)
+
+(* val parse_data_stream : t -> in_channel -> int array *)
+
+
 (** {2 Debugging} *)
 
+(** Prints basic information of the alphabet. *)
 val print : t -> unit
 
 
@@ -161,6 +198,8 @@ module Error : sig
       (** The alphabet expected [a] to be in the set of codes. *)
     | `Complement_Not_Transitive of int * int
       (** [a] = f([b]) === [b] = f([a]), where [f] is complement function *)
+    | `Polymorphisms_In_Sequential_Alphabet
+      (** Sequential alphabet does not have polymorphisms. *)
     | `Polymorphisms_In_Continuous_Alphabet
       (** Continuous alphabet does not have polymorphisms. *)
     | `Gap_Not_Atomic_BitFlag_Alphabet of int
@@ -172,9 +211,11 @@ module Error : sig
     | `Illegal_Code of int
       (** Character code not found in alphabet *)
     | `Not_found
+      (** If the alphabet size is too large to convert to bitflags. *)
+    | `Alphabet_Size_Too_Large_For_BitFlag of int
   ]
 
-  (** Conver the error messages to something human readable. *)
+  (** Convert the error messages to something human readable. *)
   val to_string : t -> string
 end
 

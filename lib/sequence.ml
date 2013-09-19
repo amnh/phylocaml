@@ -204,7 +204,7 @@ let of_list str_ls alph =
   let rec aux_parse_ls seq = function
     | []     -> seq
     | hd::tl ->
-      prepend seq $ Alphabet.get_code hd alph;
+      prepend seq @@ Alphabet.get_code hd alph;
       aux_parse_ls seq tl
   in
   let len = List.length str_ls in
@@ -220,7 +220,7 @@ let to_string seq alph =
     in
     let b = Buffer.create len in
     for i = 0 to len - 1 do
-        Buffer.add_string b $ Alphabet.get_name (get seq i) alph;
+        Buffer.add_string b @@ Alphabet.get_name (get seq i) alph;
     done;
     Buffer.contents b
 
@@ -239,7 +239,7 @@ let to_formater seq alph =
   Buffer.contents b
 
 let print chn seq alph =
-  Pervasives.output_string chn $ to_string seq alph
+  Pervasives.output_string chn @@ to_string seq alph
 
 let print_codes seq =
   let len = length seq in
@@ -336,10 +336,10 @@ let compare a b =
 
 let select_one ?(how=`Min) s alph =
   let selects = match how with
-    | `Min    -> (fun x -> IntSet.min_elt $ Alphabet.get_combination x alph)
-    | `Max    -> (fun x -> IntSet.max_elt $ Alphabet.get_combination x alph)
+    | `Min    -> (fun x -> Alphabet.CodeSet.min_elt @@ Alphabet.get_combination x alph)
+    | `Max    -> (fun x -> Alphabet.CodeSet.max_elt @@ Alphabet.get_combination x alph)
     | `Random -> failwith "TODO"
-    | `Choose -> (fun x -> IntSet.choose  $ Alphabet.get_combination x alph)
+    | `Choose -> (fun x -> Alphabet.CodeSet.choose  @@ Alphabet.get_combination x alph)
   in
   map selects s
 
@@ -451,13 +451,13 @@ let poly_saturation sequence alph n =
     else if Alphabet.is_statebased alph then
       fold_left
         (fun acc base ->
-          if n = (IntSet.cardinal $ Alphabet.get_combination base alph)
+          if n = (Alphabet.CodeSet.cardinal @@ Alphabet.get_combination base alph)
             then acc + 1
             else acc)
         0
         sequence
     else
-      failwith "Cannot run polymorphic saturation on continuous data"
+      failwith "Cannot run polymorphic saturation on this data"
   in
   proportion poly len
 
@@ -481,11 +481,11 @@ let unique_elements seq alph =
     if p = len then
       true
     else begin
-      let s : IntSet.t = Alphabet.get_combination (get seq p) alph in
-      if IntSet.is_empty $ IntSet.inter s acc then
-        check_char (p+1) $ IntSet.union s acc
+      let s = Alphabet.get_combination (get seq p) alph in
+      if Alphabet.CodeSet.is_empty @@ Alphabet.CodeSet.inter s acc then
+        check_char (p+1) @@ Alphabet.CodeSet.union s acc
       else
         false
     end
   in
-  check_char 0 IntSet.empty
+  check_char 0 Alphabet.CodeSet.empty

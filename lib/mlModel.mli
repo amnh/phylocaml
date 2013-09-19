@@ -314,15 +314,6 @@ val m_custom :
 
 (** {2 I/O Functions} *)
 
-(** [output model str_chan table_chan nexus model char_sets]
-    Output the model in a [POY Nexus] of [Phylip] like output format to
-    [str_chan] and if available a table-formatted channel [table_chan].
-    [char_sets] are associations of characters to this output block for [POY
-    Nexus] formatting. *)
-val output_model :
-  (string -> unit) -> (string array array -> unit) option
-    -> [`Nexus | `Phylip] -> model -> string list option -> unit
-
 (** [short_name model] gives a short and sweet name of the models initials and
    it's rate information. Like JC69+G (for a jukes-cantor model with gamma). *)
 val short_name : model -> string
@@ -336,43 +327,3 @@ val short_name : model -> string
 (** Create a specification from a classification, and parsed model details. *)
 val process_classification :
   spec -> float Internal.UnorderedTupleMap.t * float Internal.IntMap.t -> spec
-
-(** [classify_edges leaf1? leaf2? data1 data2 (acc1,acc2)]
-    Create an accumulated classification of transformations between [data1] and
-    [data2]. We also store site information for empirical priors in [acc2] when
-    [leaf1] or [leaf2] are set to true. [data1] and [data2] are lists of pairs of
-    the weight of the character and the states assigned to that data. This
-    function can be used to estimate the initial rates from parsimony trees. *)
-val classify_edges :
-  bool -> bool -> (float * Internal.BitSet.t) list -> (float * Internal.BitSet.t) list ->
-    float Internal.UnorderedTupleMap.t * float Internal.IntMap.t ->
-      float Internal.UnorderedTupleMap.t * float Internal.IntMap.t
-
-(** {2 Parser Friendly Functions} *)
-
-(*
-type string_spec =
-  string * (string * string * string * string) * float list * (string * float option) * string option
-
-val convert_string_spec : Alphabet.t -> string_spec -> spec
-
-val convert_methods_spec :
-  Alphabet.t * int ->
-  (unit -> float array) ->
-  [< `Int of int | `Max | `Min ] *
-  [< `Custom of string
-   | `F81
-   | `F84 of float list
-   | `File of string
-   | `GTR of float list
-   | `HKY85 of float list
-   | `JC69
-   | `K2P of float list
-   | `TN93 of float list
-   > `JC69 `K2P ] *
-  [< `Gamma of int * float option | `Theta of int * (float * float) option ]
-  option * [< `Consistent | `Equal | `Estimate | `Given of float list ] * 
-  gap -> spec
-*)
-
-

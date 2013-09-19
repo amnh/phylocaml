@@ -1,7 +1,5 @@
 open Internal
 
-let debug = false
-
 exception ModelError of string
 
 let errorf format = Printf.ksprintf (fun x -> ModelError x) format
@@ -15,9 +13,7 @@ type site_var =
   | DiscreteCustom of (float * float) array
   | Constant
 
-let default_invar = 0.1
-
-and default_alpha = 0.2
+let default_alpha = 0.1
 
 type subst_model =
   | JC69
@@ -30,8 +26,6 @@ type subst_model =
   | Const  of float array array
   | Custom of (int IntMap.t * float array)
 
-let default_tstv  = 2.0
-
 type priors = 
   | Empirical of float array
   | Equal
@@ -40,8 +34,6 @@ type gap =
   | Missing
   | Coupled of float
   | Independent
-
-let default_gap_ratio = 0.05
 
 type spec = {
   substitution : subst_model;
@@ -109,7 +101,7 @@ let alphabet_size s =
     | Missing -> 0
     | Coupled _  | Independent -> 1
   in
-  g + (Alphabet.size $ fst s.alphabet)
+  g + (Alphabet.size @@ fst s.alphabet)
 
 (** Compare two models; not to be used for a total ordering (ret neg or zero) *)
 let compare a b =
@@ -141,7 +133,7 @@ let compare a b =
     | DiscreteTheta (ix,ax,bx), DiscreteTheta (iy,ay,by) -> ix=iy && ax=ay && bx=by
     | Constant, Constant -> true
     | DiscreteCustom a, DiscreteCustom b ->
-      fold_left2 (fun acc (a,b) (c,d) -> (a =. c) && (b =. d) && acc) true a b
+      array_fold_left2 (fun acc (a,b) (c,d) -> (a =. c) && (b =. d) && acc) true a b
     | (DiscreteGamma _|DiscreteCustom _ |DiscreteTheta _|Constant), _ -> false
   and g_compare = match snd a.spec.alphabet,snd b.spec.alphabet with
     | Missing, Missing
@@ -608,219 +600,6 @@ let substitution_matrix model topt =
   | None ->
     m
 
-
-(* print output in our nexus format or Phyml output *)
-let output_model output output_table nexus model set = 
-  let printf format = Printf.ksprintf output format in
-  let gtr_mod = ref false in
-  if nexus = `Nexus then begin
-    printf "@[Likelihood@.";
-    let () = match model.spec.substitution with
-      | JC69   -> printf "@[Model = JC69;@]@\n";
-      | F81    -> printf "@[Model = F81;@]";
-      | K2P x  -> printf "@[Model = K2P;@]";
-                  printf "@[Parameters = %f;@]" x
-      | F84 x  -> printf "@[Model = F84;@]";
-                  printf "@[Parameters = %f;@]" x
-      | HKY85 x-> printf "@[Model = HKY85;@]";
-                  printf "@[Parameters = %f;@]" x
-      | TN93 (a,b) -> printf "@[Model = TN93;@]";
-                  printf "@[Parameters = %f %f;@]" a b
-      | GTR xs -> printf "@[Model = GTR;@]";
-                  printf "@[Parameters = ";
-                  Array.iter (printf "%f ") xs;
-                  printf ";@]";
-                  gtr_mod := true
-      | Const m ->
-        printf "@[Model = @[";
-        Array.iter
-          (fun x ->
-            printf "@[";
-            Array.iter (fun y -> printf "%f; " y) x;
-            printf "@]@\n")
-          m
-      | Custom (_,xs) ->
-        printf "@[Parameters = ";
-        Array.iter (printf "%f ") xs;
-        printf ";@]";
-    in
-    let () = match model.spec.base_priors with
-      | Equal -> printf "@[Priors = Equal;@]"
-      | Empirical x ->
-        let first = ref true in
-        printf "@[Priors =";
-        List.iter
-            (fun (s,i,_) -> 
-                try if !first then begin
-                    printf "@[%s %.5f" s x.(i); first := false
-                end else
-                    printf ",@]@[%s %.5f" s x.(i) 
-                with _ -> ())
-            (Alphabet.to_list $ fst model.spec.alphabet);
-        printf ";@]@]"
-      in
-      let () = match model.spec.site_variation with
-        | Constant -> ()
-        | DiscreteCustom ray ->
-          printf "@[Variation = custom;@]";
-          Array.iter (fun (a,b) -> printf "@[@[%.5f@] @[%f; @]@]" a b) ray
-        | DiscreteGamma (c, p) ->
-          printf "@[Variation = gamma;@]@[alpha = %.5f@]@[sites = %d;@]" p c
-        | DiscreteTheta (c, p, i) ->
-          printf ("@[Variation = theta;@]@[alpha = %.5f@]@[sites = %d;@]"
-                 ^^"@[percent = %.5f;@]") p c i
-      in
-      let () = match snd model.spec.alphabet with
-        (* the meaning of independent/coupled switch under gtr *)
-        | Independent -> printf "@[gap = independent;@]"
-        | Coupled x   -> printf "@[gap = coupled:%f;@]" x
-        | Missing     -> printf "@[gap = missing;@]"
-      in
-      let () = match set with
-        | Some namelist ->
-          let first = ref true in
-          printf "@[CharSet = ";
-          List.iter
-            (fun s -> 
-              if !first then begin printf "@[%s" s; first := false end
-                        else printf ",@]@[%s" s)
-            namelist;
-            printf ";@]@]";
-        | None -> ()
-      in
-      printf ";@]@."
-    (* ---------------------------- *)
-    end else (* phylip *) begin
-      assert( nexus = `Phylip );
-      printf "@[<hov 0>Discrete gamma model: ";
-      let () = match model.spec.site_variation with
-        | Constant -> printf "No@]\n";
-        | DiscreteGamma (cats,param) ->
-          printf ("Yes@]@\n@[<hov 1>- Number of categories: %d@]\n"^^
-                  "@[<hov 1>- DiscreteGamma Shape Parameter: %.4f@]\n") cats param
-        | DiscreteTheta (cats,param,inv) ->
-          printf ("Yes@]@\n@[<hov 1>- Number of categories: %d@]\n"^^
-                  "@[<hov 1>- DiscreteGamma Shape Parameter: %.4f@]\n") cats param;
-          printf ("@[<hov 1>- Proportion of invariant: %.4f@]\n") inv
-        | DiscreteCustom ray ->
-          let cats = Array.length ray in
-          printf ("Yes@]@\n@[<hov 1>- Number of categories: %d@]\n") cats;
-          Array.iter (fun (a,b) -> printf "@[<hov 1>@[%.5f@] @[%f; @]@]" a b) ray
-      in
-      printf "@[<hov 0>Priors / Base frequencies:@\n";
-      let () = match model.spec.base_priors with
-        | Equal -> printf "@[Equal@]@]@\n"
-        | Empirical x ->
-          List.iter
-            (fun (s,i,_) ->
-              (* this expection handling avoids gaps when they are not
-               * enabled in the alphabet as an additional character *)
-              try printf "@[<hov 1>- f(%s)= %.5f@]@\n" s x.(i) with _ -> ())
-            (Alphabet.to_list $ fst model.spec.alphabet);
-      in
-      printf "@[<hov 0>Model Parameters: ";
-      let a = alphabet_size model.spec in
-      let () = match model.spec.substitution with
-        | JC69  -> printf "JC69@]@\n"
-        | F81   -> printf "F81@]@\n"
-        | K2P x ->
-          printf "K2P@]@\n@[<hov 1>- Transition/transversion ratio: %.5f@]@\n" x
-        | F84 x ->
-          printf "F84@]@\n@[<hov 1>- Transition/transversion ratio: %.5f@]@\n" x
-        | HKY85 x    ->
-          printf "HKY85@]@\n@[<hov 1>- Transition/transversion ratio:%.5f@]@\n" x
-        | TN93 (a,b) -> 
-          printf "tn93@]@\n@[<hov 1>- transition/transversion ratio:%.5f/%.5f@]@\n" a b
-        | GTR ray -> gtr_mod := true;
-          printf "GTR@]@\n@[<hov 1>- Rate Parameters: @]@\n";
-          let get_str i = Alphabet.get_name i $ fst model.spec.alphabet
-          and convert s r c = (c + (r*(s-1)) - ((r*(r+1))/2)) - 1 in
-          begin match snd model.spec.alphabet with
-            | Coupled x ->
-              let ray =
-                let size = (((a-3)*a)/2) in
-                Array.init (size+1) (fun i -> if i = size then 1.0 else ray.(i))
-              in
-              for i = 0 to a - 2 do
-                for j = i+1 to a - 2 do
-                  printf "@[<hov 1>%s <-> %s - %.5f@]@\n"
-                         (get_str i) (get_str j) ray.(convert (a-1) i j)
-                done;
-              done;
-              printf "@[<hov 1>%s <-> N - %.5f@]@\n"
-                (get_str (Alphabet.get_gap $ fst model.spec.alphabet)) x
-            | Missing | Independent ->
-              let ray =
-                let size = (((a-1)*a)/2) in
-                Array.init (size) (fun i -> if i = (size-1) then 1.0 else ray.(i))
-              in
-              for i = 0 to a - 1 do
-                for j = i+1 to a - 1 do
-                  printf "@[<hov 1>%s <-> %s - %.5f@]@\n" (get_str i)
-                         (get_str j) ray.(convert a i j)
-                done;
-              done
-          end
-        | Const _ ->
-          let mat = compose model 0.0 in
-          printf "@[<hov 1>[";
-          for i = 0 to a - 1 do
-            printf "%s ------- " (Alphabet.get_name i $ fst model.spec.alphabet)
-          done;
-          printf "]@]@\n";
-          for i = 0 to a - 1 do
-            for j = 0 to a - 1 do
-              printf "%.5f\t" mat.{i,j}
-            done;
-            printf "@\n";
-          done;
-        | Custom (_,xs) ->
-          printf "@[Parameters : ";
-          Array.iter (printf "%f ") xs;
-          printf ";@]";
-      in
-      let () = match snd model.spec.alphabet with
-        | Independent -> printf "@[<hov 0>Gap property: independent;@]@\n"
-        | Coupled x   -> printf "@[<hov 0>Gap property: coupled, Ratio: %f;@]@\n" x
-        | Missing     -> printf "@[<hov 0>Gap property: missing;@]@\n"
-      in
-      printf "@]";
-      printf "@[@[<hov 0>Instantaneous rate matrix:@]@\n";
-      match output_table with
-      | Some output_table ->
-        let table = Array.make_matrix (a+1) a "" in
-        let () =
-          let mat = compose model ~-.1.0 in
-          for i = 0 to a - 1 do
-            table.(0).(i) <- Alphabet.get_name i $ fst model.spec.alphabet;
-          done;
-          for i = 0 to a - 1 do 
-            for j = 0 to a - 1 do
-              table.(i+1).(j) <- string_of_float mat.{i,j}
-            done;
-          done;
-        in
-        let () = output_table table in
-        printf "@\n@]"
-      | None ->
-        let () =
-          let mat = compose model ~-.1.0 in
-          printf "@[<hov 1>[";
-          for i = 0 to a - 1 do
-            printf "%s ------- " (Alphabet.get_name i $ fst model.spec.alphabet)
-          done;
-          printf "]";
-          for i = 0 to a - 1 do
-            printf "@]@\n@[<hov 1>";
-            for j = 0 to a - 1 do
-              printf "%8.5f  " mat.{i,j}
-            done;
-          done;
-        in
-        printf "@]@\n@]"
-    end
-
-
 (** [compose_model] compose a substitution probability matrix from branch length
     and substitution rate matrix. *)
 let compose_model sub_mat t = 
@@ -869,162 +648,6 @@ let model_to_cm model t =
   let res = Cost_matrix.Two_D.of_list ~suppress:true llst (snd model.spec.alphabet) in
   res *)
 
-
-(* convert a string spec (from nexus, for example) to a specification
-let convert_string_spec alph (name,(var,site,alpha,invar),param,priors,gap,file) =
-  let gap_info = match String.uppercase (fst gap),snd gap with
-    | "COUPLED", None   -> Coupled default_gap_ratio
-    | "COUPLED", Some x -> Coupled x
-    | "INDEPENDENT",_   -> Independent
-    | "MISSING",_       -> Missing
-    | "",_              -> Missing
-    | x,_ -> raise (errorf "Invalid gap property, %s" x)
-  in
-  let submatrix = match String.uppercase name with
-    | "JC69" -> begin match param with
-      | [] -> JC69
-      | _ -> failwith "Parameters don't match model" end
-    | "F81" -> begin match param with
-      | [] -> F81
-      | _ -> failwith "Parameters don't match model" end
-    | "K80" | "K2P" -> begin match param with
-      | ratio::[] -> K2P ratio
-      | []        -> K2P default_tstv
-      | _ -> failwith "Parameters don't match model" end
-    | "F84" -> begin match param with
-      | ratio::[] -> F84 ratio
-      | []        -> F84 default_tstv
-      | _ -> failwith "Parameters don't match model" end
-    | "HKY" | "HKY85" -> begin match param with
-      | ratio::[] -> HKY85 ratio
-      | []        -> HKY85 default_tstv
-      | _ -> failwith "Parameters don't match model" end
-    | "TN93" -> begin match param with
-      | ts::tv::[] -> TN93 (ts,tv)
-      | []         -> TN93 (default_tstv,default_tstv)
-      | _ -> failwith "Parameters don't match model" end
-    | "GTR" -> begin match param with
-      | [] -> GTR [||]
-      | ls -> GTR (Array.of_list ls) end
-    | "GIVEN"->
-      begin match file with
-        | Some name ->
-          name |> FileStream.read_float_matrix
-               |> (fun x -> Const (x,name))
-        | None -> raise (errorf "No File specified for model")
-      end
-    | "CUSTOM" ->
-      begin match file with
-        | Some name ->
-          let matrix = FileStream.read_string_matrix name in
-          let a_size = Array.length matrix in
-          let matrix = Array.of_list (List.map (Array.of_list) matrix) in
-          let assoc,ray = process_custom_model a_size matrix in
-          Custom (assoc,ray,name)
-        | None -> raise (errorf "No File specified for model")
-      end
-    (* ERROR *)
-    | "" -> raise (errorf "No model specified")
-    | xx -> raise (errorf "Unknown likelihood model %s" xx)
-  in
-  let variation = match String.uppercase var with
-    | "GAMMA" ->
-      let alpha = if alpha = "" then default_alpha else  float_of_string alpha in
-      DiscreteGamma (int_of_string site, alpha)
-    | "THETA" -> 
-      let alpha = if alpha = "" then default_alpha else  float_of_string alpha in
-      let invar = if invar = "" then default_invar else  float_of_string invar in
-      DiscreteTheta (int_of_string site, alpha, invar)
-    | "NONE" | "CONSTANT" | "" ->
-      Constant
-    | x -> raise (errorf "Unknown rate variation mode %s" x)
-  and priors = match priors with
-    | `Equal               -> Equal
-    | `Estimate (Some x)   -> Empirical x
-    | `Consistent pre_calc ->
-      begin match submatrix, pre_calc with
-        | JC69, _
-        | K2P _, _   -> Equal
-        | (F81|F84 _|HKY85 _|TN93 _|GTR _|Const _|Custom _), Some pi -> Empirical pi
-        | (F81|F84 _|HKY85 _|TN93 _|GTR _|Const _|Custom _), None -> assert false
-      end
-    | `Estimate None -> assert false
-  in
-  { substitution = submatrix;
-    site_variation = variation;
-    base_priors = priors;
-    alphabet = alph,gap_info; }
-
-
-(** Convert Methods.ml specification to that of an MlModel spec *)
-let convert_methods_spec (alph,alph_size) (compute_priors) 
-                         (talph,subst,site_variation,base_priors,use_gap) =
-  let u_gap = match use_gap with 
-    | Independent | Coupled _ -> true | Missing -> false in
-  let alph_size = 
-    let w_gap = if u_gap then alph_size else alph_size - 1 in
-    match talph with | `Min | `Max  -> w_gap | `Int x -> x
-  in
-  let base_priors = match base_priors with
-    | `Estimate  -> Empirical (compute_priors ())
-    | `Equal     -> Equal
-    | `Given arr -> Empirical (Array.of_list arr)
-    | `Consistent ->
-      begin match subst with
-        | `JC69 | `K2P _ -> Equal
-        | _ -> Empirical (compute_priors ())
-      end
-  and site_variation = match site_variation with
-    | None -> Constant 
-    | Some (`DiscreteGamma (w,y)) -> 
-      let y = match y with
-        | Some x -> x 
-        | None   -> default_alpha
-      in
-      DiscreteGamma (w,y)
-    | Some (`DiscreteTheta (w,y)) ->
-      let y,p = match y with 
-        | Some x -> x 
-        | None   -> default_alpha, default_invar
-      in
-      DiscreteTheta (w,y,p)
-  and substitution = match subst with
-    | `JC69    -> JC69
-    | `F81     -> F81
-    | `K2P [x] -> K2P x
-    | `K2P []  -> K2P default_tstv
-    | `K2P _   -> raise (ModelError "K2P requires 1 or 0 parameters")
-    | `HKY85 [x] -> HKY85 x
-    | `HKY85 []  -> HKY85 default_tstv
-    | `HKY85 _   -> raise (ModelError "HKY85 requires 1 or 0 parameters")
-    | `F84 [x]   -> F84 x
-    | `F84 []    -> F84 default_tstv
-    | `F84 _     -> raise (ModelError "F84 requires 1 or 0 parameters")
-    | `TN93 [x;y]-> TN93 (x,y)
-    | `TN93 []   -> TN93 (default_tstv,default_tstv)
-    | `TN93 _    -> raise (ModelError "TN93 requires 2 or 0 parameters")
-    | `GTR xs -> GTR (Array.of_list xs)
-    | `File str ->
-      (* this needs to be changed to allow remote files as well *)
-      let matrix = FileStream.read_float_matrix str in
-      Array.iter
-        (fun x ->
-          if not (Array.length x = alph_size) then
-            raise (errorf "TN93 requires 2 or 0 parameters"))
-        matrix;
-      if Array.length matrix = alph_size
-        then Const matrix
-        else raise (errorf "Matrix in %s requires %d columns/rows" str alph_size)
-    | `Custom str ->
-      let matrix = FileStream.read_char_matrix str in
-      let assoc,ray = process_custom_model alph_size matrix in
-      Custom (assoc,ray,str)
-  in
-  { substitution = substitution;
-  site_variation = site_variation;
-     base_priors = base_priors;
-        alphabet = (alph,use_gap); } *)
-
 (** check the rates so SUM(r_k*p_k) == 1 and SUM(p_k) == 1 |p| == |r| *)
 let verify_rates probs rates =
   let p1 = (Bigarray.Array1.dim probs) = (Bigarray.Array1.dim rates)
@@ -1052,8 +675,8 @@ let create lk_spec =
       Bigarray.Array1.fill p (1.0 /. (float_of_int x));
       gamma_rates y y x,p,None
     | DiscreteCustom ray ->
-      let rates = ba_of_array1 $ Array.map fst ray
-      and probs = ba_of_array1 $ Array.map snd ray in
+      let rates = ba_of_array1 @@ Array.map fst ray
+      and probs = ba_of_array1 @@ Array.map snd ray in
       rates,probs,None
     | DiscreteTheta (w,x,z) -> (* GAMMA_SITES,ALPHA,PERCENT_INVAR *)
       if w < 1 then
@@ -1135,8 +758,7 @@ let enum_models ?(site_var=[`DiscreteGamma;`DiscreteTheta;`Constant])
   in
   let next_models = ref subst_model and next_var = ref subst_model in
   (fun pmodel -> match !next_models,!next_var with
-    | [],[] -> None
-    | mo,xs -> None)
+    | _,_-> None)
 
 
 (** Compute the priors of a dataset by frequency and gap-counts *)
@@ -1159,56 +781,7 @@ let compute_priors (alph,u_gap) freq_ (count,gcount) lengths : float array =
       Array.map (fun x -> (x -. gap_contribution) /. (float_of_int count)) freq_
     end
   in
-  let sum = Array.fold_left (fun a x -> a +. x) 0.0 final_priors in
   final_priors
-
-
-(** estimate the model based on two sequences with attached weights *)
-let classify_edges leaf1 leaf2 seq1 seq2 acc =
-  let incr_map k v map =
-    let v = match IntMap.mem k map with
-      | true  -> v +. (IntMap.find k map)
-      | false -> v 
-    in
-    IntMap.add k v map 
-  and incr_tuple k v map =
-    let v = match UnorderedTupleMap.mem k map with
-      | true -> v +. (UnorderedTupleMap.find k map)
-      | false -> v 
-    in
-    UnorderedTupleMap.add k v map
-  in
-  (* classify the mutation from a1 to a2 in a map *)
-  let mk_transitions (tmap,fmap) (w1,s1) (w2,s2) =
-    assert( w1 = w2 );
-    let s1 = BitSet.to_list s1 and s2 = BitSet.to_list s2 in 
-    let n1 = List.length s1   and n2 = List.length s2   in
-    (* Count all the transitions A->B. Polymorphisms are counted as
-     * 1/(na*nb) each, where na and nb are the number of polymorphisms
-     * in and b respectively. *)
-    let v = w1 /. (float_of_int (n1 * n2) ) in
-    let tmap = (* cross product of states a and b *)
-      List.fold_left 
-        (fun map1 a ->
-           List.fold_left
-             (fun map2 b -> incr_tuple (a,b) v map2)
-             map1 s2)
-        tmap s1
-    in
-    (* Counts the base frequencies. Polymorphisms are counted as 1/n in
-     * each base, where, as above, n is the number of polymorphisms. *)
-    let n1 = w1 /. (float_of_int n1) and n2 = w2 /. (float_of_int n2) in
-    let fmap = 
-      if leaf1 then 
-        List.fold_left (fun map a -> incr_map a n1 map) fmap s1 
-      else fmap in
-    let fmap = 
-      if leaf2 then
-        List.fold_left (fun map a -> incr_map a n2 map) fmap s2
-      else fmap in
-    tmap,fmap
-  in
-  List.fold_left2 mk_transitions acc seq1 seq2
 
 
 let get_priors f_prior alph name = match f_prior with
@@ -1216,7 +789,7 @@ let get_priors f_prior alph name = match f_prior with
   | Equal       -> 1.0 /. (float_of_int (Alphabet.size alph))
 
 
-(* Develop a model from a classification --created above *)
+(* Develop a model from a classification of alignment pairs on edges. *)
 let process_classification spec (comp_map,pis) =
   let ugap = match snd spec.alphabet with
     | Missing      -> false
@@ -1235,7 +808,8 @@ let process_classification spec (comp_map,pis) =
       let l =
         let sum = if ugap then sum else sum -. gap_size in
         List.fold_left
-          (fun acc (_,b,_) -> match b with
+          (fun acc (n,b,_) ->
+            match b with
             | b when (not ugap) && (b = Alphabet.get_gap alph) -> acc
             | b ->
               let c =
@@ -1409,12 +983,12 @@ let process_classification spec (comp_map,pis) =
     same /. all
   in
   let v = match spec.site_variation with
-    | Constant -> Constant
-    | DiscreteGamma (i,_) -> DiscreteGamma (i,default_alpha)
+    | Constant
+    | DiscreteCustom _
+    | DiscreteGamma _ -> spec.site_variation
     | DiscreteTheta (i,_,_) ->
       let stuple = UnorderedTupleMap.fold (fun _ v a -> a +. v) comp_map 0.0 in
       DiscreteTheta (i,default_alpha,calc_invar stuple comp_map)
-    | DiscreteCustom _ -> spec.site_variation
   in
   {
     substitution = m;
