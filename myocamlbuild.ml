@@ -9,6 +9,18 @@ let static  = true
 let mlflags = ["-w"; "@a"; "-warn-error"; "-a"]
 let vectorization = None
 
+let major,minor =
+  let rec get_until i str acc =
+    if (i >= (String.length str)) || ('.' = String.get str i)
+      then String.concat "" (List.rev_map (String.make 1) acc),(i+1)
+      else
+          get_until (i+1) str ((String.get str i)::acc)
+  in
+  let major,n = get_until 0 Sys.ocaml_version [] in
+  let minor,_ = get_until n Sys.ocaml_version [] in
+  int_of_string major, int_of_string minor
+
+
 (** Constants *)
 let bv_width = ["8";"16";"32";"64"]
 let headers  = ["lib/seq.h"; "lib/mlmodel.h"; "lib/phyloc.h"]
@@ -18,14 +30,12 @@ let rec arg_weave p = function
   | x::xs -> (A p) :: (A x) :: arg_weave p xs
   | []    -> []
 
-let ($) a b = a b
-
 let arg x = A x
  
 (** C-Header files *)
 let headers =
   let bv_ w =
-    let base = "lib/bitvector/bv"^w^".h" in 
+    let base = "lib/bitvector/bv"^w^".h" in
     match vectorization with
     | None          -> [base]
     | Some `SSE4_2
@@ -36,16 +46,16 @@ let headers =
     | Some `Altivec -> ["lib/bitvector/bv"^w^"_alti.h"; base]
     | Some `Neon    -> ["lib/bitvector/bv"^w^"_neon.h"; base]
   in
-  List.rev_append headers (List.flatten $ List.map bv_ bv_width)
+  List.rev_append headers (List.flatten (List.map bv_ bv_width))
 
 let () = dispatch begin function
   | Before_options ->
      let ocamlfind x = S[A"ocamlfind";arg x] in
      Options.ocamlmktop := ocamlfind "ocamlmktop";
     ()
-  | After_rules    ->
+  | After_rules ->
     (* generate rules for scripted C and header files *)
-    let bitvector_rule filename extension dep_ext width : unit =
+    let bitvector_rule filename extension dep_ext width =
       let dep  = "lib/bitvector/bv"^filename^extension
       and prod = "lib/bitvector/bv"^width^filename^extension in
       let deps = match dep_ext with
@@ -80,7 +90,19 @@ let () = dispatch begin function
       in
       arg_weave "-ccopt" cflags
     in
-    List.iter (fun w -> flag ["c";"use_bv"^w] $ S (bv_cflags w)) bv_width;
+    List.iter (fun w -> flag ["c";"use_bv"^w] (S (bv_cflags w))) bv_width;
+
+    (* properly pre-process compatibility module for previous versions *)
+    let compatibility_options = 
+      if major < 4 || ((major = 4) && minor <= 0)
+        then ["-pp";"camlp4of -DCOMPATIBILITY"]
+        else ["-pp";"camlp4of -UCOMPATIBILITY"]
+    in
+    flag ["ocaml";"use_compatibility"; "ocamldep"]
+      (S (List.map arg compatibility_options));
+    flag ["ocaml";"use_compatibility"; "compile"]
+      (S (List.map arg compatibility_options));
+(*       (S (arg_weave "-ccopt" compatibility_options)); *)
 
     (* define rules for a library named phylocaml *)
     ocaml_lib "phylocaml";

@@ -6,18 +6,12 @@
    to store modules that may need a final home or exported to an external
    library. *)
 
+include module type of Compatibility
 
-(** {6 Combinators} *)
+(** {6 Shorthands} *)
 
 (** [failwithf format] pass a format string to [failwith]. *)
 val failwithf : ('a, unit, string, 'b) format4 -> 'a
-
-(** [a |> b] applies [a] to function [b], used for streaming functions *)
-val ( |> ) : 'a -> ('a -> 'b) -> 'b
-
-(** [a $ b] applies [b] to [a], used for it's associative properties to avoid
- * parentheiss. *)
-val ( $ ) : ('a -> 'b) -> 'a -> 'b
 
 (** [!$a] forces a lazy value [a]. This is from Okasaki. *)
 val ( !$ ) : 'a Lazy.t -> 'a
@@ -54,16 +48,14 @@ val proportion : int -> int -> float
 val rand_select : int -> 'a list -> 'a list
 
 (** [random_of_pair a b] Select a random value of two choices [a] and [b]. *)
-val random_of_pair : 'a -> 'a -> 'a
+val random_choice : 'a -> 'a -> 'a
+
+(** {6 Array Functions} *)
+
+val array_fold_left2 : ('a -> 'b -> 'c -> 'a) -> 'a -> 'b array -> 'c array -> 'a
 
 
-(** {6 List Functions} *)
-
-(** [fold_left2 f acc l1 l2] Missing fold in the standard library. *)
-val fold_left2 : ('a -> 'b -> 'c -> 'a) -> 'a -> 'b array -> 'c array -> 'a
-
-
-(** {6 BigArray(1,2) Functions} *)
+(** {6 BigArray(1,2) Functions on Floats} *)
 
 (** [ba_of_array1] convert an array to bigarray1 for C data-processing. *)
 val ba_of_array1 :
@@ -133,8 +125,8 @@ module BitSet :
 (** This module should be it's own file or found in an external library. *)
 module FileStream :
   sig
-    val read_string_matrix : 'a -> 'b
-    val read_float_matrix : 'a -> float array array
-    val read_integer_matrix : 'a -> int array array
-    val read_char_matrix : 'a -> char array array
+    val read_string_matrix : string -> string array array
+    val read_float_matrix : string -> float array array
+    val read_integer_matrix : string -> int array array
+    val read_char_matrix : string -> char array array
   end

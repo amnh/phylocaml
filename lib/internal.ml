@@ -1,16 +1,12 @@
-(** Combinators **)
+include Compatibility
 
 let failwithf format = Printf.ksprintf (failwith) format
-
-external ( |> ) : 'a -> ('a -> 'b) -> 'b = "%revapply"
-
-let ( $ ) a b = a b
 
 let ( !$ ) a = Lazy.force a
 
 let ( !$$ ) a = List.map (!$) a
 
-let (=.) a b = (abs_float $ a -. b) < epsilon_float
+let (=.) a b = (abs_float @@ a -. b) < epsilon_float
 
 let ( -- ) a b =
   let rec iter acc a bi =
@@ -18,7 +14,7 @@ let ( -- ) a b =
      else iter (bi::acc) a (bi-1)
   in
   if a <= b then iter [] a b
-  else List.rev $ iter [] b a
+  else List.rev @@ iter [] b a
 
 
 (** Additional Option type functions *)
@@ -53,7 +49,7 @@ let rand_select n list =
 
 (** Additional Array functions *)
 
-let fold_left2 f acc aray bray =
+let array_fold_left2 f acc aray bray =
   assert( (Array.length aray) = (Array.length bray) );
   let acc = ref acc in
   for i = 0 to (Array.length aray)-1 do
@@ -69,7 +65,7 @@ let proportion a b = (float_of_int a) /. (float_of_int b)
 
 (** Additional Random functions *)
 
-let random_of_pair x y =
+let random_choice x y =
   if Random.bool () then x else y
 
 
@@ -137,9 +133,9 @@ module BitSet =
     and of_int _ = failwith "TODO"
 
     let to_packed t : int = match t with
-      | `List _   -> assert false
+      | `List _   -> failwith "TODO"
       | `Packed i -> i
-      | `Set _    -> assert false
+      | `Set _    -> failwith "TODO"
 
     and to_list t = match t with
       | `List t   -> t
@@ -188,16 +184,16 @@ end
 
 module FileStream = struct
 
-  let read_string_matrix _ = failwith "TODO"
+  let read_string_matrix _ : string array array = failwith "TODO"
 
   let read_float_matrix file =
-    Array.map $ Array.map float_of_string $ read_string_matrix file
+    Array.map (Array.map float_of_string) @@ read_string_matrix file
   
   let read_integer_matrix file =
-    Array.map $ Array.map int_of_string $ read_string_matrix file
+    Array.map (Array.map int_of_string) @@ read_string_matrix file
 
   let read_char_matrix file =
-    Array.map $ Array.map (fun x -> assert (1 = String.length x); x.[0]) $ read_string_matrix file
+    Array.map (Array.map (fun x -> assert (1 = String.length x); x.[0])) @@ read_string_matrix file
 
 end
 
