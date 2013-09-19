@@ -82,5 +82,5 @@ let rec of_list = function
 
 let return a = singleton a
 
-let bind a f = concat $ map f a
+let bind a f = concat @@ map f a
 
