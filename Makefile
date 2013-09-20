@@ -2,11 +2,11 @@
 
 .DEFAULT: all
 
-BUILD=ocamlbuild -use-ocamlfind -classic-display -cflags -verbose
+BUILD=ocamlbuild -use-ocamlfind
 OFIND=ocamlfind
 
 INST_BYT=_build/phylocaml.cma _build/dllphyloc.so
-INST_NAT=_build/phylocaml.cmxa _build/phyloc.a
+INST_NAT=_build/phylocaml.cmxa _build/libphyloc.a
 INST_OTH=_build/lib/*.mli _build/lib/*.cm[iox]
 
 all : native byte
