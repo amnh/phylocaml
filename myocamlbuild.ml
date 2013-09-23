@@ -92,17 +92,14 @@ let () = dispatch begin function
     in
     List.iter (fun w -> flag ["c";"use_bv"^w] (S (bv_cflags w))) bv_width;
 
-    (* properly pre-process compatibility module for previous versions *)
+    (* pre-process / compile compatibility module *)
     let compatibility_options = 
       if major < 4 || ((major = 4) && minor <= 0)
-        then ["-pp";"camlp4of -DCOMPATIBILITY"]
-        else ["-pp";"camlp4of -UCOMPATIBILITY"]
+        then [A"-pp";A"camlp4of -DCOMPATIBILITY"]
+        else [A"-pp";A"camlp4of -UCOMPATIBILITY"]
     in
-    flag ["ocaml";"use_compatibility"; "ocamldep"]
-      (S (List.map arg compatibility_options));
-    flag ["ocaml";"use_compatibility"; "compile"]
-      (S (List.map arg compatibility_options));
-(*       (S (arg_weave "-ccopt" compatibility_options)); *)
+    flag ["ocaml";"use_compatibility"; "ocamldep"] (S compatibility_options);
+    flag ["ocaml";"use_compatibility"; "compile" ] (S compatibility_options);
 
     (* define rules for a library named phylocaml *)
     ocaml_lib "phylocaml";

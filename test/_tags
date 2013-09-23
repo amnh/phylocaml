@@ -1,0 +1,2 @@
+<*.*> : package(phylocaml), package(oUnit)
+true  : debug
