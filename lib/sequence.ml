@@ -200,7 +200,7 @@ let of_string str alph =
   let seq = create len in
   aux_parse seq alph (len - 1)
 
-let of_list str_ls alph =
+let of_state_list str_ls alph =
   let rec aux_parse_ls seq = function
     | []     -> seq
     | hd::tl ->
@@ -223,6 +223,15 @@ let to_string seq alph =
         Buffer.add_string b @@ Alphabet.get_name (get seq i) alph;
     done;
     Buffer.contents b
+
+let to_raw_string seq =
+  let len = length seq in
+  let b = Buffer.create len in
+  for i = 0 to len - 1 do
+    Buffer.add_string b @@ (string_of_int (get seq i))^" ";
+  done;
+  Buffer.contents b
+
 
 let to_formater seq alph =
   let len = length seq in
