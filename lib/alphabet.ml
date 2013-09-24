@@ -207,19 +207,8 @@ let verify_alphabet a : unit =
   | Continuous          -> ()
 
 let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
-  let (name_code,code_name),_ =
-    let add_one cincrfn ((cname,ncode),code) (name,_) =
-      let name = if case then name else String.uppercase name in
-      ((StringMap.add name code cname,IntMap.add code name ncode),cincrfn code)
-    and icode,cincr = match kind with
-      | CombinationLevels _ | Sequential -> 0,(fun x -> x+1)
-      | BitFlag                          -> 1,(fun x -> x lsl 1)
-      | Continuous                       -> 0,(fun _ -> assert false)
-    in
-    List.fold_left (add_one cincr) ((StringMap.empty,IntMap.empty),icode) states
-  in
-  let name_code,code_name =
-    let combine_equates = match kind with
+  let name_code,code_name = (* add all states and equates *)
+    let combine_equates name_code = match kind with
       | Sequential ->
         (function [x] -> StringMap.find x name_code 
                  | xs -> raise (Error `Polymorphisms_In_Sequential_Alphabet))
@@ -230,9 +219,20 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
       | BitFlag ->
         (fun xs -> List.fold_left (fun x y -> (StringMap.find y name_code) lor x) 0 xs)
     in
-    List.fold_left
+    let (name_code,code_name),_ = (* add states *)
+      let add_one cincrfn ((cname,ncode),code) (name,_) =
+        let name = if case then name else String.uppercase name in
+        ((StringMap.add name code cname,IntMap.add code name ncode),cincrfn code)
+      and icode,cincr = match kind with
+        | CombinationLevels _ | Sequential -> 0,(fun x -> x+1)
+        | BitFlag                          -> 1,(fun x -> x lsl 1)
+        | Continuous                       -> 0,(fun _ -> assert false)
+      in
+      List.fold_left (add_one cincr) ((StringMap.empty,IntMap.empty),icode) states
+    in
+    List.fold_left (* add equates *)
       (fun (name_code,code_name) (k,vs) ->
-        let v = combine_equates vs in
+        let v = combine_equates name_code vs in
         let name_code = StringMap.add k v name_code
         and code_name =
           if IntMap.mem v code_name
@@ -242,7 +242,8 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
         name_code,code_name)
       (name_code,code_name)
       equates
-  and comp_code =
+  in
+  let comp_code = (* add compliments from states *)
     List.fold_left
       (fun acc -> function
         | (_,None) -> acc
@@ -263,14 +264,23 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
     | BitFlag                 -> empty_comb_data true
   in
   let gap = match gap with
-    | None -> None
-    | Some x -> Some (StringMap.find x name_code)
+    | None   -> None
+    | Some x ->
+        let x = if case then x else String.uppercase x in
+        try Some (StringMap.find x name_code)
+        with Not_found -> failwith "no gap element found in alphabet"
   and missing = match missing with
-    | None -> None
-    | Some x -> Some (StringMap.find x name_code)
+    | None   -> None
+    | Some x ->
+        let x = if case then x else String.uppercase x in
+        try Some (StringMap.find x name_code)
+        with Not_found -> failwith "no missing element found in alphabet"
   and all = match all with
-    | None -> None
-    | Some x -> Some (StringMap.find x name_code)
+    | None   -> None
+    | Some x ->
+        let x = if case then x else String.uppercase x in
+        try Some (StringMap.find x name_code)
+        with Not_found -> failwith "no all element found in alphabet"
   in
   let a = {
     size = IntMap.cardinal code_name;
@@ -305,57 +315,62 @@ let present_absent =
           ~kind:Sequential ~orientation:false ~case:false
 
 let dna =
-  let states = [("A",Some "T");("C",Some "G");("G",Some "C");("T",Some "A");(default_gap,None);]
+  let states =
+    [("A",Some "T");("C",Some "G");("G",Some "C");("T",Some "A");(default_gap,None);("X",None)]
   and equates = [("0",["A"]);("1",["C"]);("2",["G"]);("3",["T"]);("4",["-"])] in
   of_list ~states ~equates ~gap:(Some default_gap) ~all:(Some "X")
           ~missing:(Some "X") ~kind:BitFlag ~orientation:false ~case:false
 
 let nucleotides =
-  let states = 
+  let states =
     [("A",Some "T");("C",Some "G");("G",Some "C");("T",Some "A");(default_gap,None);]
   and equates =
-   [("M", ["A";"C"]); ("R", ["A";"G"]); ("W", ["A";"T"]); ("S", ["G";"C"]);
-    ("Y", ["T";"C"]); ("K", ["G";"T"]); ("V", ["G";"T";"C"]); ("H", ["G";"T";"A"]);
-    ("D", ["C";"T";"A"]); ("B", ["G";"C";"A"]); ("N", ["A";"C";"G";"T"]);
-    ("X", ["A";"C";"G";"T"]); ("1", ["T";"-"]); ("2", ["G";"-"]);
-    ("3", ["G";"T";"-"]); ("4", ["C";"-"]); ("5", ["T";"C";"-"]);
-    ("6", ["G";"C";"-"]); ("7", ["G";"T";"C";"-"]); ("8", ["A";"-"]);
-    ("9", ["T";"A";"-"]); ("0", ["G";"A";"-"]); ("E", ["G";"T";"A";"-"]);
-    ("F", ["A";"C";"-"]); ("I", ["T";"A";"C";"-"]); ("J", ["G";"A";"C";"-"]);
-    ("P", ["G";"T";"A";"C";"-"]); (default_missing, ["G";"T";"A";"C";"-"]);
-   ]
+    (** IUPAC polymorphism codes + indel polymorphism codes. *)
+   [("M", ["A";"C"]);         ("R", ["A";"G"]);         ("W", ["A";"T"]);
+    ("S", ["G";"C"]);         ("Y", ["T";"C"]);         ("K", ["G";"T"]);
+    ("V", ["G";"T";"C"]);     ("H", ["G";"T";"A"]);     ("D", ["C";"T";"A"]);
+    ("B", ["G";"C";"A"]);     ("N", ["A";"C";"G";"T"]); ("X", ["A";"C";"G";"T"]);
+    ("1", ["T";"-"]);         ("2", ["G";"-"]);         ("3", ["G";"T";"-"]);
+    ("4", ["C";"-"]);         ("5", ["T";"C";"-"]);     ("6", ["G";"C";"-"]);
+    ("7", ["G";"T";"C";"-"]); ("8", ["A";"-"]);         ("9", ["T";"A";"-"]);
+    ("0", ["G";"A";"-"]);     ("E", ["G";"T";"A";"-"]); ("F", ["A";"C";"-"]);
+    ("I", ["T";"A";"C";"-"]); ("J", ["G";"A";"C";"-"]); ("P", ["G";"T";"A";"C";"-"]);
+    (default_missing, ["G";"T";"A";"C";"-"])]
   in
   of_list ~states ~equates ~gap:(Some default_gap) ~missing:(Some default_missing)
           ~all:(Some default_missing) ~kind:BitFlag ~orientation:false ~case:false
 
 let aminoacids =
   let states = [
-    ("A",None); (* alanine *)
-    ("R",None); (* arginine *)
-    ("N",None); (* asparagine *)
-    ("D",None); (* aspartic *)
-    ("C",None); (* cysteine *)
-    ("Q",None); (* glutamine *)
-    ("E",None); (* glutamic *)
-    ("G",None); (* glycine *)
-    ("H",None); (* histidine *)
-    ("I",None); (* isoleucine *)
-    ("L",None); (* leucine *)
-    ("K",None); (* lysine *)
-    ("M",None); (* methionine *)
-    ("F",None); (* phenylalanine *)
-    ("P",None); (* proline *)
-    ("S",None); (* serine *)
-    ("T",None); (* threonine *)
-    ("W",None); (* tryptophan *)
-    ("Y",None); (* tyrosine *)
-    ("V",None); (* valine *)
-    ("X",None); (* all element *)
-    (default_gap,None); (* gap *)
+    ("A",None); (* alanine *)     ("R",None); (* arginine *)
+    ("N",None); (* asparagine *)  ("D",None); (* aspartic *)
+    ("C",None); (* cysteine *)    ("Q",None); (* glutamine *)
+    ("E",None); (* glutamic *)    ("G",None); (* glycine *)
+    ("H",None); (* histidine *)   ("I",None); (* isoleucine *)
+    ("L",None); (* leucine *)     ("K",None); (* lysine *)
+    ("M",None); (* methionine *)  ("F",None); (* phenylalanine *)
+    ("P",None); (* proline *)     ("S",None); (* serine *)
+    ("T",None); (* threonine *)   ("W",None); (* tryptophan *)
+    ("Y",None); (* tyrosine *)    ("V",None); (* valine *)
+    ("X",None); (* all element *) (default_gap,None); (* gap *)
   ] in
   of_list ~states ~equates:[] ~gap:(Some default_gap) ~all:(Some "X")
           ~missing:(Some "X") ~kind:Sequential ~orientation:false ~case:false
 
+
+let generate_seq_alphabet ?(gap=true) ?(missing=false) n =
+  let n = n - 1 in (* indexed at 0. *)
+  let rec num_output n = if n > 10 then 1 + (num_output (n/10)) else 1 in
+  let w = num_output n in
+  let states = List.map (fun k -> (Printf.sprintf "%0*d" w k,None)) (0 -- n) in
+  let xstates,gap,missing =
+    let xs,gap = if gap then [(default_gap,None)],Some default_gap else [],None in
+    let xs,mis = if missing then (default_missing,None)::xs,Some default_missing else xs,None in
+    xs, gap, mis
+  in
+  let states = match xstates with | [] -> states | xs -> states @ xs
+  and orientation = false and case = false and kind = Sequential and all = None in
+  of_list ~states ~equates:[] ~gap ~all ~missing ~kind ~orientation ~case
 
 
 (** {2 Basic Functions for querying alphabets *)
@@ -382,15 +397,13 @@ let has_all t = match t.all with
 
 let kind t = t.kind
 
-let is_statebased t =
-  match t.kind with
+let is_statebased t = match t.kind with
   | CombinationLevels _
   | Sequential
   | Continuous -> true
   | BitFlag -> false
 
-let is_bitset t =
-  match t.kind with
+let is_bitset t = match t.kind with
   | CombinationLevels _
   | Sequential
   | Continuous -> false
@@ -412,15 +425,13 @@ let is_complement a b t =
     then result
     else raise (Error (`Complement_Not_Transitive (a,b)))
 
-let get_combination i t : IntSet.t =
-  match t.kind with
+let get_combination i t : IntSet.t = match t.kind with
   | CombinationLevels _
   | Sequential    -> IntMap.find i t.comb_data.comb_set
   | Continuous    -> IntSet.singleton i
   | BitFlag       -> BitSet.to_set (`Packed i)
 
-let get_state_combination s t : int =
-  match t.kind with
+let get_state_combination s t : int = match t.kind with
   | CombinationLevels _
   | Sequential -> IntSetMap.find s t.comb_data.set_comb
   | Continuous ->
@@ -468,12 +479,13 @@ let rec to_sequential t =
           (name,cmp) :: lst)
         t.code_name
         []
+      |> List.rev
     and gap = opt_find t.gap and all = opt_find t.all
     and missing = opt_find t.missing in
     of_list ~states ~equates:[] ~gap ~all ~missing ~kind:Sequential
             ~orientation:t.orientation ~case:t.case
   | CombinationLevels _ ->
-    let states : (string * string option) list =
+    let states =
       IntMap.fold
         (fun code name lst ->
           if 1 = (IntSet.cardinal @@ IntMap.find code t.comb_data.comb_set)
@@ -481,12 +493,12 @@ let rec to_sequential t =
             else lst)
         t.code_name
         []
+      |> List.rev
     in
     of_list ~states ~equates:[] ~gap:(opt_find t.gap) ~all:(opt_find t.all)
       ~missing:(opt_find t.missing) ~kind:Sequential ~orientation:t.orientation ~case:t.case
 
-and to_bitflag t =
-  match t.kind with
+and to_bitflag t = match t.kind with
   | Continuous
   | BitFlag -> t
   | CombinationLevels _ -> to_bitflag (to_sequential t)
@@ -505,13 +517,13 @@ and to_bitflag t =
           (name,cmp)::lst)
         t.code_name
         []
+      |> List.rev
     in
     of_list ~states ~equates:[] ~gap:(opt_find t.gap) ~all:(opt_find t.all)
       ~missing:(opt_find t.missing) ~kind:BitFlag ~orientation:t.orientation ~case:t.case
 
 (** Conver the alphabet to sequential or simple bitflag formats. *)
-and simplify t =
-  match t.kind with
+and simplify t = match t.kind with
   | CombinationLevels _ -> to_sequential t
   | Sequential | BitFlag | Continuous -> t
 
@@ -530,5 +542,6 @@ and to_level level t =
   | Sequential ->
     let combs,lsts = generate_combinational_elements ~level t.code_name in
     let comb_data = {level; comb_set = combs; set_comb = lsts;} in
-    { t with
+    {t with
       kind = CombinationLevels level; comb_data; }
+

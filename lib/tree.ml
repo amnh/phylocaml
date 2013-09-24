@@ -43,6 +43,21 @@ let empty =
     avail_codes = 0,[];
   }
 
+
+let debug_print t =
+  Printf.printf "Edges : ";
+  EdgeSet.iter (fun (a,b) -> Printf.printf "(%d,%d) " a b) t.edges;
+  print_newline ();
+  Printf.printf "Nodes : ";
+  IDMap.iter
+    (fun _ -> function
+      | Leaf (a,b) -> Printf.printf "L(%d,%d) " a b
+      | Interior (a,b,c,d) -> Printf.printf "N(%d,%d,%d,%d) " a b c d
+      | Single a -> Printf.printf "S(%d) " a)
+    t.nodes;
+  print_newline ();
+  ()
+
 let next_code t : int * t = match t.avail_codes with
   | y,x::xs -> x, {t with avail_codes =y,xs; }
   | y,[]    -> y, {t with avail_codes =y+1,[]; }
@@ -57,6 +72,10 @@ let is_node x t = IDMap.mem x t.nodes
 
 let is_handle x t = HandleSet.mem x t.handles
 
+let set_name x t = {t with name = Some x}
+
+let get_name t = t.name
+
 let get_other_two p a b c =
   if p = a then b,c
   else if p = b then a,c
@@ -69,7 +88,7 @@ let remove_replace node o_id n_id = match node with
   | Interior (a,b,c,d) when b = o_id -> Interior (a,n_id,c,d)
   | Interior (a,b,c,d) when c = o_id -> Interior (a,b,n_id,d)
   | Interior (a,b,c,d) when d = o_id -> Interior (a,b,c,n_id)
-  | Interior _ | Single _ | Leaf _ -> assert false
+  | Interior _ | Leaf _ | Single _ -> assert false
 
 let is_leaf = function
   | Single _   -> true
@@ -255,11 +274,13 @@ let get_edges h t = match get_node h t with
       t
       EdgeSet.empty
 
+let get_all_edges t = t.edges
+
 let partition_edge edge t =
   let aset,bset =
     post_order_edges
       (fun _ x set -> IDSet.add x set)
-      (fun _ x s1 s2 -> IDSet.union (IDSet.add x s1) s2)
+      (fun _ _ s1 s2 -> IDSet.union s1 s2)
       edge
       t
       IDSet.empty
@@ -380,7 +401,8 @@ let break (x,y) t =
    
 
 (* TODO: deal with DELTA *)
-let join j1 j2 t = match j1, j2 with
+let join j1 j2 t =
+  match j1, j2 with
   (* x + y ---> x -- y *)
   | `Single x, `Single y ->
     assert( is_single x t );
@@ -410,6 +432,7 @@ let join j1 j2 t = match j1, j2 with
       t.nodes
         |> IDMap.add y (remove_replace (get_node y t) z n_id)
         |> IDMap.add z (remove_replace (get_node z t) y n_id)
+        |> IDMap.add x (Leaf (x,n_id))
         |> IDMap.add n_id n
     and edges =
       t.edges
@@ -437,6 +460,8 @@ let join j1 j2 t = match j1, j2 with
         |> IDMap.add x (remove_replace (get_node x t) w n_id1)
         |> IDMap.add y (remove_replace (get_node y t) z n_id2)
         |> IDMap.add z (remove_replace (get_node z t) y n_id2)
+        |> IDMap.add n_id1 (Interior (n_id1,x,w,n_id2))
+        |> IDMap.add n_id2 (Interior (n_id2,y,z,n_id1))
     and edges =
       t.edges
         |> EdgeSet.remove (w,x)
@@ -467,10 +492,14 @@ let reroot _ t = t
 let random lst =
   let add_node t x =
     let (a,b) = random_edge t in
-    fst (join (`Single x) (`Edge (a,b)) t)
+    fst @@ join (`Single x) (`Edge (a,b)) t
   in
-  List.fold_left add_node empty lst
-
+  let t = create lst in
+  match lst with
+  | x1::x2::xs -> 
+    let tree = fst @@ join (`Single x2) (`Single x1) t in
+    List.fold_left add_node tree xs
+  | _::[] | [] -> t
 
 type 'a fuse_location = 'a * id * t
 type 'a fuse_locations = 'a fuse_location list
@@ -484,3 +513,12 @@ let print _ = failwith "TODO"
 
 let of_parsed _ = failwith "TODO"
 let to_parsed _ = failwith "TODO"
+
+
+(** {2 Math Functions} *)
+
+let num_edges n = failwith "TODO"
+
+let num_nodes n = failwith "TODO"
+
+let num_trees n = failwith "TODO"

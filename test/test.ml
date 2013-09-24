@@ -2,6 +2,7 @@ open OUnit
 
 let tests = [
   AlphabetTest.tests;
+  TreeTest.tests;
 ]
 
 let () =

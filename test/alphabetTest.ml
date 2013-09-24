@@ -1,5 +1,4 @@
 open OUnit
-
 open Internal
 
 let dna = Alphabet.dna

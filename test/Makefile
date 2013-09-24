@@ -1,10 +1,8 @@
-.PHONY: clean byte native test tests all
+.PHONY: clean byte native test tests
 
-.DEFAULT: native
+.DEFAULT: byte
 
 BUILD=ocamlbuild -use-ocamlfind
-
-all : native
 
 tests : native
 

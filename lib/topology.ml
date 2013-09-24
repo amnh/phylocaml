@@ -10,7 +10,7 @@ module IDMap = IntMap
 module EdgeSet = UnorderedTupleSet
 module EdgeMap = UnorderedTupleMap
 
-type jxn = [ `Single of id | `Edge of id * id ]
+type jxn = [ `Single of id | `Edge of (id * id) ]
 
 type general_delta =
   { reroot : id list;
@@ -64,6 +64,9 @@ module type S =
     val is_leaf : id -> t -> bool
     val is_single : id -> t -> bool
 
+    val set_name : string -> t -> t
+    val get_name : t -> string option
+
     val random_edge : t -> edge
     val random_node : t -> id
     val random_leaf : t -> id
@@ -79,6 +82,7 @@ module type S =
     val handle_of : id -> t -> handle
 
     val get_edges : handle -> t -> EdgeSet.t
+    val get_all_edges : t -> EdgeSet.t
 
     val partition_edge : edge -> t -> IntSet.t * IntSet.t * bool
     val path_of : id -> id -> t -> id list

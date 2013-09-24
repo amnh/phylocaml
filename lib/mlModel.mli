@@ -18,7 +18,6 @@ type site_var =
   (** No site-variability. *)
   | Constant
 
-
 (** Substitution Rate Models provided in the literature.
   
     {b References}
@@ -211,9 +210,11 @@ val replace_subst : model -> subst_model -> model
     model from a previous model. Empirical priors are required if the given model
     does not have them (under JC69, K80), else priors will always be equal. *)
 val enum_models :
-  ?site_var:[`DiscreteGamma | `DiscreteTheta | `Constant] list -> 
-    ?subst_model:[`F81 | `F84 | `GTR | `HKY85 | `JC69 | `K2P | `TN93] list ->
-      ?priors:float array -> (model -> model option)
+  ?site_var:[`DiscreteGamma of int | `DiscreteTheta of int | `Constant | `None
+            | `DiscreteCustom of (float * float) array ] list -> 
+    ?subst_model:[`F81 | `F84 | `GTR | `HKY85 | `JC69 | `K2P | `TN93 | `None
+                 | `Custom of int Internal.IntMap.t * float array ] list ->
+      ?priors:[`Empirical of float array | `Equal | `None ] list -> (model -> model option)
 
 (** [compuate_priors (a,g) f (c,gc) ls] compute the priors of data from an array
     of base frequencies [f], but predicated on gap being an additional state we
@@ -259,6 +260,13 @@ module MlModelSet : Set.S with type elt = spec
    obtains the model from the passed values for inclusion. *)
 val categorize_by_model : ('a -> model) -> 'a list -> 'a list list
 
+(** [process_custom_matrix] process data to be used by the Custom model type *)
+
+(** Create a custom model by a Map and array. The map is of the char code of the
+    elements of the matrix to a index in an array. This can be used with the
+    Custom tag for a model. *)
+val process_custom_matrix :
+  int -> char array array -> int Internal.IntMap.t * float array
 
 
 (** {2 Substitution Rate Matrix Constructions} *)

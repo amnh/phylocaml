@@ -13,8 +13,6 @@ type site_var =
   | DiscreteCustom of (float * float) array
   | Constant
 
-let default_alpha = 0.1
-
 type subst_model =
   | JC69
   | F81
@@ -41,6 +39,10 @@ type spec = {
   base_priors : priors;
   alphabet : Alphabet.t * gap;
 }
+
+let default_alpha = 0.1
+and default_invar = 0.1
+and default_tstv  = 2.0
 
 type model = {
   spec  : spec;
@@ -108,12 +110,16 @@ let compare a b =
   let a_asize = alphabet_size a.spec
   and b_asize = alphabet_size b.spec in
   let compare_array x y =
-    let results = ref true in
-      for i = 0 to a_asize - 1 do
+    if Array.length x != Array.length y then
+      false
+    else begin
+      let results = ref true in
+      for i = 0 to (Array.length x) - 1 do
         results := !results && (x.(i) =. y.(i));
       done;
       !results
-    in
+    end
+  in
   let compare_priors a b = match a.spec.base_priors,b.spec.base_priors with
     | _ when a_asize != b_asize-> false
     | Equal , Equal            -> true
@@ -123,7 +129,14 @@ let compare a b =
   let m_compare = match a.spec.substitution,b.spec.substitution with
     | JC69 , JC69 | F81 , F81 -> true
     | K2P x, K2P y | F84 x, F84 y | HKY85 x, HKY85 y when x = y -> true
-    | Custom _, Custom _ -> failwith "TODO"
+    | Custom (a1,r1), Custom (a2,r2) ->
+      (compare_array r1 r2) && 
+        (IntMap.fold
+          (fun k v acc ->
+            if IntMap.mem k a2
+              then acc && (v = IntMap.find k a2)
+              else false)
+          a1 true)
     | TN93 (x1,x2),  TN93 (y1,y2) when x1 = y1 && x2 = y2 -> true
     | GTR xs, GTR ys when compare_array xs ys -> true
     | Const x, Const y when x = y -> true
@@ -167,9 +180,6 @@ let categorize_by_model get_fn codes =
   in
   let init = match non_lk_codes with | [] -> [] | xs -> [xs] in
   MlModelMap.fold (fun _ e a -> e :: a) set_codes init
-
-
-let generate_opt_vector spec = failwith "TODO"
 
 
 (** Count the number of parameters in the model; used for xIC functions **)
@@ -502,7 +512,7 @@ let m_custom pi_ idxs ray a_size =
         a - b a                                  5->1, 6->1 (upper triangular).
         a b - a  Diagonal elements are always ignored, a dash is recommended.
         b a a -  We ensure that the parameters are coupled symmetrically.  *)
-let process_custom_model alph_size (f_aa: char array array) =
+let process_custom_matrix alph_size (f_aa: char array array) =
   let found = ref IntSet.empty in
   let assoc = ref IntMap.empty in
   let idx = ref 0 in
@@ -531,6 +541,8 @@ let process_custom_model alph_size (f_aa: char array array) =
       (0,!assoc)
   in
   (map, Array.create length 1.0)
+
+let generate_opt_vector _ = failwith "TODO"
 
 
 (* functions to diagonalize the two types of substitution matrices *)
@@ -741,24 +753,63 @@ let create lk_spec =
   }
 
 
-(** Replace the priors in a model with that of an array *)
 let replace_priors model array = 
-  create {model.spec with base_priors = Empirical array}
+  create {model.spec with base_priors = Empirical array;}
 
-let replace_subst model matrix = failwith "TODO"
+let replace_subst model matrix =
+  create {model.spec with substitution = matrix;}
 
-let replace_rates model rates = failwith "TODO"
+let replace_rates model rates =
+  create {model.spec with site_variation = rates;}
+  
 
-(** Enumerate models based on some set of criteria. *)
-let enum_models ?(site_var=[`DiscreteGamma;`DiscreteTheta;`Constant])
+(** Enumerate models based on some set of criteria. for Multimodel Inference  *)
+let enum_models ?(site_var=[`DiscreteGamma 4;`DiscreteTheta 4;`Constant])
                 ?(subst_model=[`JC69;`F81;`K2P;`F84;`HKY85;`TN93;`GTR])
-                ?(priors) : model -> model option =
-  let apply_model_delta (substitution,base_priors,site_variation) model =
+                ?(priors=[]) : model -> model option =
+  let apply_model_delta substitution base_priors site_variation model =
+    let base_priors = match base_priors with
+      | `Empirical x -> Empirical x
+      | `Equal       -> Equal
+      | `None        -> model.spec.base_priors
+    in
+    let substitution,base_priors = match substitution with
+      | `JC69  -> JC69,Equal
+      | `F81   -> F81,base_priors
+      | `K2P   -> K2P default_tstv,Equal
+      | `F84   -> F84 default_tstv,base_priors
+      | `HKY85 -> HKY85 default_tstv,base_priors
+      | `TN93  -> TN93 (default_tstv,default_tstv),base_priors
+      | `GTR   -> GTR (Array.create (alphabet_size model.spec) 1.0),base_priors
+      | `Custom x -> Custom x,base_priors
+      | `None  -> model.spec.substitution,base_priors
+    and site_variation = match site_variation with
+      | `DiscreteGamma s      -> DiscreteGamma (s,default_alpha)
+      | `DiscreteTheta s      -> DiscreteTheta (s,default_alpha,default_invar)
+      | `Constant             -> Constant
+      | `DiscreteCustom data  -> DiscreteCustom data
+      | `None                 -> model.spec.site_variation
+    in
     create {model.spec with substitution; base_priors; site_variation;}
   in
-  let next_models = ref subst_model and next_var = ref subst_model in
-  (fun pmodel -> match !next_models,!next_var with
-    | _,_-> None)
+  let next_models =
+    let site_var = match site_var with [] -> [`None] | x -> x in
+    let subst_model = match subst_model with [] -> [`None] | x -> x in
+    let priors = match priors with [] -> [`None] | x -> x in
+    let cp =
+      List.fold_left (fun acc x ->
+        List.fold_left (fun acc y ->
+          List.fold_left (fun acc z -> (x,y,z)::acc) acc priors)
+          acc site_var)
+        [] subst_model
+    in
+    ref cp
+  in
+  (fun pmodel -> match !next_models with
+    | (subst,vari,prior)::ms ->
+        next_models := ms;
+        Some (apply_model_delta subst prior vari pmodel)
+    | [] -> None)
 
 
 (** Compute the priors of a dataset by frequency and gap-counts *)
@@ -784,11 +835,6 @@ let compute_priors (alph,u_gap) freq_ (count,gcount) lengths : float array =
   final_priors
 
 
-let get_priors f_prior alph name = match f_prior with
-  | Empirical x -> x.(Alphabet.get_code name alph)
-  | Equal       -> 1.0 /. (float_of_int (Alphabet.size alph))
-
-
 (* Develop a model from a classification of alignment pairs on edges. *)
 let process_classification spec (comp_map,pis) =
   let ugap = match snd spec.alphabet with
@@ -808,7 +854,7 @@ let process_classification spec (comp_map,pis) =
       let l =
         let sum = if ugap then sum else sum -. gap_size in
         List.fold_left
-          (fun acc (n,b,_) ->
+          (fun acc (_,b,_) ->
             match b with
             | b when (not ugap) && (b = Alphabet.get_gap alph) -> acc
             | b ->

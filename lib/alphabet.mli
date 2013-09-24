@@ -3,10 +3,14 @@
     an alphabet using of_list is in a common format of (NAME,CODE,COMP). The CODE
     should be appropriate to the alphabet type. *)
 
+(** How codes in the alphabet are represented; as an integer. This code an be
+    either bitpacked, packed in some specific ordering, or literally define the
+    state depending on the kind of alphabet. Using the interface to decrypt the
+    states is recommended. *)
 type code = int
 
-module CodeMap : Map.S with type key = int
-module CodeSet : Set.S with type elt = int
+module CodeMap    : Map.S with type key = int
+module CodeSet    : Set.S with type elt = int
 module CodeSetMap : Map.S with type key = CodeSet.t
 
 (** Define additional properties for combinations. *)
@@ -87,6 +91,13 @@ val aminoacids : t
     and 1 for present.*)
 val present_absent : t
 
+(** Generate a sequential alphabet of [n] states. The names of the states are
+    their prefix-free string representation of their code. Thus, "00" --> 0 for
+    an alphabet of size <= 99. The default for gap is true, and will add an
+    additional element to the data. A gap is enabled by default, while missing
+    is not. All element can not be specified. *)
+val generate_seq_alphabet : ?gap:bool -> ?missing:bool -> int -> t
+
 
 
 (** {2 Functions for querying alphabets} *)
@@ -129,7 +140,7 @@ val is_bitset : t -> bool
 val complement : int -> t -> int option
 
 (** Determines if two elements in the alphabet are complements *)
-val is_complement : int -> int -> t -> bool
+val is_complement : code -> code -> t -> bool
 
 (** Return the list of states that represent a code *)
 val get_combination : code -> t -> CodeSet.t
@@ -137,24 +148,29 @@ val get_combination : code -> t -> CodeSet.t
 (** Opposite of the above function *)
 val get_state_combination : CodeSet.t -> t -> code
 
-(** [of_list data g a m t o] Generate an alphabet from a list of states [data]
-    in the form [(NAME,CODE,COMPLIMENT)]. Gap [g], all element [a], and missing
-    [m] are included if they exist as well as the type of alphabet to create
-    [t], and if orientation should be considered [o]. *)
+(** [of_list states equates gap all missing orientation case kind] Generate an
+    alphabet from a list of [states] in the form [(NAME,COMPLIMENT OPTION)].
+    Gap, all element, and missing are included if they exist as well as the type
+    of alphabet to create, and if orientation and cse should be considered for
+    parsing the data. Equates are stored in the name->code field, while states
+    are stored in both. This allows coincident names to exist in parsing but not
+    in the output stream of data. *)
 val of_list :
   states : (string * string option) list -> equates : (string * string list) list ->
     gap : string option -> all : string option -> missing : string option ->
       orientation: bool -> case:bool -> kind:kind -> t
 
 (** Convert an alphabet to a list of the main properties like [data] in the
-    [of_list] function. *)
+    [of_list] function. This, once filtered of the middle element in the tuple,
+    can be used to re-initialize the alphabet, although equates and indel
+    details are missing. *)
 val to_list : t -> (string * code * string option) list
 
 
 
 (** {2 Converting between types of alphabets} *)
 
-(** convert alphabet to a sequentially ordered alphabet; remove combination if
+(** Convert alphabet to a sequentially ordered alphabet; remove combination if
     they exist in the alphabet, continuous alphabets are unchanged. *)
 val to_sequential : t -> t
 
@@ -192,7 +208,7 @@ module Error : sig
       (** An element in a sequential alphabet is missing (indexed at 0) *)
     | `Missing_Name_Sequential_Alphabet of int
       (** A code was found, but the corresponding name is missing. *)
-    | `Alphabet_Size_Expectation of int * int 
+    | `Alphabet_Size_Expectation of int * int
       (** The calculated alphabet sized expected [a], but found [b] elements. *)
     | `Missing_Gap_Element of int
       (** The alphabet expected [a] to be in the set of codes. *)
@@ -217,6 +233,7 @@ module Error : sig
 
   (** Convert the error messages to something human readable. *)
   val to_string : t -> string
+
 end
 
 exception Error of Error.t

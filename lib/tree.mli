@@ -74,8 +74,17 @@ val get_singles : t -> Topology.IDSet.t
 (** Of a pair of node ids, return an edge. *)
 val get_edge : Topology.id -> Topology.id -> t -> Topology.edge
 
+(** set the name for the tree *)
+val set_name : string -> t -> t
+
+(** return the name of the tree *)
+val get_name : t -> string option
+
 (** Return a set of edges attached to the handle of a topology. *)
 val get_edges : Topology.handle -> t -> Topology.EdgeSet.t
+
+(** Return a set of all edges in the tree *)
+val get_all_edges : t -> Topology.EdgeSet.t
 
 (** Return the node type of the node id. *)
 val get_node : Topology.id -> t -> node
@@ -181,3 +190,16 @@ val to_string : 'a -> 'b
 val print : 'a -> 'b
 val of_parsed : 'a -> 'b
 val to_parsed : 'a -> 'b
+
+
+(** {2 Math Functions} 
+    Useful mathematical and combinatorial functions on binary unrooted trees. *)
+
+(** Calculate the number of edges of a binary unrooted tree with [n] leaves. *)
+val num_edges : int -> int
+
+(** Calculate the number of nodes in a binary unrooted tree with [n] leaves. *)
+val num_nodes : int -> int
+
+(** Calculate the number of binary unrooted trees that can be produced from with [n] leaves. *)
+val num_trees : int -> int
