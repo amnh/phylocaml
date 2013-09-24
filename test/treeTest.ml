@@ -64,7 +64,7 @@ let test_4 () =
 
 let local_tests = 
   [
-    "Empty Tree property cardinalities"   >:: test_1;
+    "Empty Tree property cardinalities"   >:: test_0;
     "Tree property cardinalities"         >:: test_1;
     "Disjoint Tree property cardinalites" >:: test_2; 
     "Iterative Tree Construction"         >:: test_3;
