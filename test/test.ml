@@ -2,6 +2,8 @@ open OUnit
 
 let tests = [
   AlphabetTest.tests;
+  BitvectorTest.tests;
+  SequenceTest.tests;
   TreeTest.tests;
 ]
 

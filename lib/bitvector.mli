@@ -34,7 +34,7 @@ module type BV = sig
   (** [compare s t] Compare two vectors [s] and [t], first by size, then by the
       first difference between elements; ie the first vector with a set-bit is
       considered 'larger' and returns 1. *)
-  val compare : t -> t -> elt
+  val compare : t -> t -> int
 
   (** [cardinal t] Number of elements in the bit-vector [t]. Not to be confused
       with eltcount, which is the number of set bits in a bitvector element, or
@@ -45,6 +45,9 @@ module type BV = sig
       the vector. It will always be less than or equal to the maximum width of
       the implemented module. *)
   val width : t -> int
+
+  (** [max_width] The maximum width the module supports. *)
+  val max_width : int
 
 
   (** {2 Element Manipulation} These functions may not be (and are probably not)
@@ -91,24 +94,27 @@ module type BV = sig
   val fitch_median_2 : t -> t -> t * int
 
 
+  (** {2 Element Manipulation Functions} *)
+
+  (** [random_elt w] generate a random element with max width [w] *)
+  val random_elt : int -> elt
+
+  (** Create an [elt] from a list of integers. *)
+  val elt_of_ints : int list -> elt
+
+  (** Create a list of integers from an elt. *)
+  val ints_of_elt : elt -> int list
+
+  (** Convert a bit-packed int to an element. *)
+  val elt_of_int : int -> elt
+
+
   (** {2 Tuning Parameters for GC} *)
 
   (** [gc_freq x] Define frequency of garbage collection; tuning parameter. *)
   val gc_freq : int -> unit
 end
 
-
-(** {6 Higher Order Functions on BV Modules}
-
-(** Standard [map] funciton *)
-val map : (module BVN : BV) -> (BVN.elt -> BVN.elt) -> BVN.t -> BVN.t
-
-(** Standard [fold_left] function *)
-val fold_left : (module BVN : BV) -> ('a -> BVN.elt -> 'a) -> 'a -> BVN.t -> 'a
-
-(** Standard [fod_right] function *)
-val fold_right : (module BVN : BV) -> (BVN.elt -> 'a -> 'a) -> BVN.t -> 'a -> 'a
-*)
 
 (** {2 Modules} *)
 
@@ -124,5 +130,5 @@ module BV32  : BV with type elt = Int32.t
 (** (possibly) Vectorized type that store at most 64-bits *)
 module BV64  : BV with type elt = Int64.t
 
-(** Unvectorized type can store an unlimited number of bits.*)
+(** Unvectorized type can store a virtually unlimited number of bits.*)
 module BVGen : BV with type elt = int list

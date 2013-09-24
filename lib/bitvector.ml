@@ -7,9 +7,10 @@ module type BV = sig
   val of_array : int -> elt array -> t
 
   val code : t -> int
-  val compare : t -> t -> elt
+  val compare : t -> t -> int
   val cardinal : t -> int
   val width : t -> int
+  val max_width : int
 
   val set_elt : t -> int -> elt -> unit
   val set_bit : t -> int -> int -> unit
@@ -23,6 +24,11 @@ module type BV = sig
   val poly_saturation : t -> int -> int
   val distance : t -> t -> int
   val fitch_median_2 : t -> t -> t * int
+
+  val random_elt  : int -> elt
+  val elt_of_ints : int list -> elt
+  val ints_of_elt : elt -> int list
+  val elt_of_int  : int -> elt
 
   val gc_freq : int -> unit
 end
@@ -58,9 +64,10 @@ module BV8 : BV with type elt = int = struct
   type elt = int
 
   external code : t -> int                   = "bv8_CAML_code"
-  external compare : t -> t -> elt           = "bv8_CAML_compare"
+  external compare : t -> t -> int           = "bv8_CAML_compare"
   external cardinal : t -> int               = "bv8_CAML_cardinal"
   external width : t -> int                  = "bv8_CAML_size"
+  let max_width = 8
 
   external create : int -> int -> t          = "bv8_CAML_create"
   external copy : t -> t                     = "bv8_CAML_copy"
@@ -79,6 +86,11 @@ module BV8 : BV with type elt = int = struct
   external distance : t -> t -> int          = "bv8_CAML_distance2"
   external fitch_median_2 : t -> t -> t * int= "bv8_CAML_fitch_median2"
 
+  let random_elt _ = failwith "TODO"
+  let elt_of_ints _ = failwith "TODO"
+  let ints_of_elt _ = failwith "TODO"
+  let elt_of_int _ = failwith "TODO"
+
   external gc_freq : int -> unit             = "bv8_CAML_custom_max"
 end
 
@@ -91,9 +103,10 @@ module BV16 : BV with type elt = int = struct
   type elt = int
 
   external code : t -> int                   = "bv16_CAML_code"
-  external compare : t -> t -> elt           = "bv16_CAML_compare"
+  external compare : t -> t -> int           = "bv16_CAML_compare"
   external cardinal : t -> int               = "bv16_CAML_cardinal"
   external width : t -> int                  = "bv16_CAML_size"
+  let max_width = 16
 
   external create : int -> int -> t          = "bv16_CAML_create"
   external copy : t -> t                     = "bv16_CAML_copy"
@@ -112,6 +125,11 @@ module BV16 : BV with type elt = int = struct
   external distance : t -> t -> int          = "bv16_CAML_distance2"
   external fitch_median_2 : t -> t -> t * int= "bv16_CAML_fitch_median2"
   
+  let random_elt _ = failwith "TODO"
+  let elt_of_ints _ = failwith "TODO"
+  let ints_of_elt _ = failwith "TODO"
+  let elt_of_int _ = failwith "TODO"
+
   external gc_freq : int -> unit             = "bv16_CAML_custom_max"
 end
 
@@ -124,9 +142,10 @@ module BV32 : BV with type elt = Int32.t = struct
   type elt = Int32.t
 
   external code : t -> int                   = "bv32_CAML_code"
-  external compare : t -> t -> elt           = "bv32_CAML_compare"
+  external compare : t -> t -> int           = "bv32_CAML_compare"
   external cardinal : t -> int               = "bv32_CAML_cardinal"
   external width : t -> int                  = "bv32_CAML_size"
+  let max_width = 32
 
   external create : int -> int -> t          = "bv32_CAML_create"
   external copy : t -> t                     = "bv32_CAML_copy"
@@ -145,6 +164,11 @@ module BV32 : BV with type elt = Int32.t = struct
   external distance : t -> t -> int          = "bv32_CAML_distance2"
   external fitch_median_2 : t -> t -> t * int= "bv32_CAML_fitch_median2"
   
+  let random_elt _ = failwith "TODO"
+  let elt_of_ints _ = failwith "TODO"
+  let ints_of_elt _ = failwith "TODO"
+  let elt_of_int _ = failwith "TODO"
+
   external gc_freq : int -> unit             = "bv32_CAML_custom_max"
 end
 
@@ -156,9 +180,10 @@ module BV64 : BV with type elt = Int64.t = struct
   type elt = Int64.t
 
   external code : t -> int                   = "bv64_CAML_code"
-  external compare : t -> t -> elt           = "bv64_CAML_compare"
+  external compare : t -> t -> int           = "bv64_CAML_compare"
   external cardinal : t -> int               = "bv64_CAML_cardinal"
   external width : t -> int                  = "bv64_CAML_size"
+  let max_width = 64
 
   external create : int -> int -> t          = "bv64_CAML_create"
   external copy : t -> t                     = "bv64_CAML_copy"
@@ -177,6 +202,11 @@ module BV64 : BV with type elt = Int64.t = struct
   external distance : t -> t -> int          = "bv64_CAML_distance2"
   external fitch_median_2 : t -> t -> t * int= "bv64_CAML_fitch_median2"
   
+  let random_elt _ = failwith "TODO"
+  let elt_of_ints _ = failwith "TODO"
+  let ints_of_elt _ = failwith "TODO"
+  let elt_of_int _ = failwith "TODO"
+
   external gc_freq : int -> unit             = "bv64_CAML_custom_max"
 end
 
@@ -194,8 +224,9 @@ module BVGen : BV with type elt = int list = struct
   let compare _ _ = failwith "TODO"
   let cardinal t = Array.length t.bv
   let width t = t.width
+  let max_width = max_int
 
-  let create w l = { bv = Array.make l []; code = get_next_code (); width = l; }
+  let create width l = {bv = Array.make l []; code = get_next_code (); width;}
   let copy _ = failwith "TODO"
   let of_array _ _ = failwith "TODO"
 
@@ -211,7 +242,12 @@ module BVGen : BV with type elt = int list = struct
   let poly_saturation _ _ = failwith "TODO"
   let distance _ _ = failwith "TODO"
   let fitch_median_2 _ _ = failwith "TODO"
-  
-  let gc_freq _ = failwith "TODO"
+ 
+  let random_elt _ = failwith "TODO"
+  let elt_of_ints _ = failwith "TODO"
+  let ints_of_elt _ = failwith "TODO"
+  let elt_of_int _ = failwith "TODO"
 
+  let gc_freq _ = failwith "TODO"
 end
+

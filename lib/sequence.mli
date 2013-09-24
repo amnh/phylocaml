@@ -68,7 +68,7 @@ val foldi_right : (int -> int -> 'a -> 'a) -> 'a -> s -> 'a
 val iter : (int -> 'a) -> s -> unit
 
 
-(** {2 Usefule Modifiers.} *)
+(** {2 Useful Modifiers.} *)
 
 val remove_base : ?prependbase:bool -> s -> int -> s
 (** [remoce_base ?p s i] remove all instances of [i] in [s] and then optionally
@@ -112,11 +112,8 @@ val of_string : string -> Alphabet.t -> s
 (** convert a string of characters to a sequence by an alphabet. the alphabet
     must be prefix free for the parsing of the string to be successful. *)
 
-val of_list : string list -> Alphabet.t -> s
+val of_state_list : string list -> Alphabet.t -> s
 (** convert a list of characters to a sequence by an alphabet. *)
-
-val to_string : s -> Alphabet.t -> string
-(** transform the sequence to a string from the d string *)
 
 val concat : s list -> s
 (** concatenate elements of a list to a single sequence; flatten. *)
@@ -132,6 +129,12 @@ val print : out_channel -> s -> Alphabet.t -> unit
 
 val print_codes : s -> unit
 (** print the encoded states, separated by commas. debug function *)
+
+val to_string : s -> Alphabet.t -> string
+(** Transform the sequence to a string from the d string with encoding [a]. *)
+
+val to_raw_string : s -> string
+(** Transform the sequence to a string from the d string *)
 
 
 (** {2 Data Oriented Functions} *)
