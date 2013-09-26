@@ -81,4 +81,4 @@ let local_tests =
       (module Bitvector.BV64); (module Bitvector.BVGen) ]
   |> List.flatten
 
-let tests = "Alphabet" >::: local_tests
+let tests = "Bitvector" >::: local_tests

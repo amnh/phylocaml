@@ -1,17 +1,20 @@
 open Internal
 
-(** The Sequence module allows the interaction of encoded arrays of data for C
- * usage. The sequence can be thought of as dynamically expandable arrays,
- * perfect for unaligned data. They are also pooled through the garbage
- * collector for speed when allocating new sequences. *)
+let safe = true
 
 type s
+
+type elt = int
 
 type single = [ `Choose | `Max | `Min | `Random ]
 
 external register : unit -> unit = "seq_CAML_register"
 
 exception Invalid_Sequence of (string * string * int)
+
+exception ReachedCapacity
+
+exception Invalid_Base of elt
 
 external c_reverse : (s -> s -> unit) = "seq_CAML_reverse"
 
@@ -25,15 +28,24 @@ external copy : (s -> s -> unit) = "seq_CAML_copy"
 
 external length : (s -> int) = "seq_CAML_length"
 
-external get : (s -> int -> int) = "seq_CAML_get"
+external get : (s -> int -> elt) = "seq_CAML_get"
 
-external count : (int -> int -> s -> int ) = "seq_CAML_count"
+(* external count : (int -> int -> s -> int) = "seq_CAML_count" *)
 
-external set : (s -> int -> int -> unit) = "seq_CAML_set"
+external set : (s -> int -> elt -> unit) = "seq_CAML_set"
 
-external prepend : s -> int -> unit = "seq_CAML_prepend"
+external prepend : s -> elt -> unit = "seq_CAML_prepend"
 
 let () = register ()
+
+let safe_prepend seq x =
+  if (capacity seq) > (length seq) then
+    prepend seq x
+  else
+    raise ReachedCapacity
+
+let prepend =
+  if safe then safe_prepend else prepend
 
 let missing a =
   let s = create 1 in
@@ -116,11 +128,13 @@ let init f len =
   done;
   seq
 
-let resize n ns =
+(* unused currently
+let resize s ns =
   let v = create ns in
-  copy !n v;
+  copy !s v;
   n := v;
   ()
+*)
 
 let clone n =
   let sz = length n in
@@ -142,16 +156,13 @@ let safe_reverse x =
   prepend y gap;
   y
 
+let reverse =
+  if safe then safe_reverse else reverse
+
 let of_list l =
-  let rec aux_of_list seq l it = match l with
-    | []   -> seq
-    | h::t ->
-      set seq it h;
-      aux_of_list seq t (it + 1);
-  in
-  let length = List.length l in
-  let seq = create length in
-  aux_of_list seq l 0
+  let seq = create (List.length l) in
+  List.iter (fun x -> prepend seq x) (List.rev l);
+  seq
 
 let remove_base ?(prependbase=true) s gapcode =
   let remove_gap gap base seq =
@@ -201,15 +212,10 @@ let of_string str alph =
   aux_parse seq alph (len - 1)
 
 let of_state_list str_ls alph =
-  let rec aux_parse_ls seq = function
-    | []     -> seq
-    | hd::tl ->
-      prepend seq @@ Alphabet.get_code hd alph;
-      aux_parse_ls seq tl
-  in
-  let len = List.length str_ls in
-  let seq = create len in
-  aux_parse_ls seq str_ls
+  List.fold_right
+    (fun x seq -> let () = prepend seq @@ Alphabet.get_code x alph in seq)
+    (str_ls)
+    (create (List.length str_ls))
 
 let to_string seq alph =
   let len = length seq in
@@ -258,24 +264,6 @@ let print_codes seq =
   done;
   Printf.printf "]\n%!"
 
-let concat x =
-  let copy_from_in x y z u =
-    let to_copy = get x z in
-    set y u to_copy
-  in
-  let len = List.fold_left (fun x y -> x + length y) 0 x in
-  let ns = init (fun _x -> 0) len in
-  let pos = ref 0 in
-  let copier x =
-    let len = length x in
-    for i = 0 to len - 1 do
-      copy_from_in x ns i !pos;
-      Pervasives.incr pos;
-  done;
-  in
-  List.iter (copier) x;
-  ns
-
 let to_array s =
   Array.init (length s) (fun x -> get s x)
 
@@ -301,6 +289,7 @@ let sub_ignore_base base s st len =
   done;
   of_array (Array.of_list !acclst) , !idx
 
+(*
 let length_without_gap gap s =
   let count = ref 0 in
   let slen = length s in
@@ -309,6 +298,7 @@ let length_without_gap gap s =
     if tmp<>gap then count := !count + 1
   done;
   !count
+*)
 
 let prepend_char seq element =
   let len = length seq in
@@ -352,10 +342,13 @@ let select_one ?(how=`Min) s alph =
   in
   map selects s
 
-let split positions s alph =
-  let gap = Alphabet.get_gap alph in
+let split positions s =
   let len = (length s) - 1 in
-  let positions = (0, 0) :: positions in
+  let positions =
+    match List.sort Pervasives.compare positions with
+    | (0::_) as xs -> xs
+    | xs -> 0 :: xs
+  in
   let do_one_pair a b acc =
     let first = a
     and last = b in
@@ -364,62 +357,36 @@ let split positions s alph =
     for i = (last - 1) downto first do
       prepend seq (get s i);
     done;
-    if first <> 0 then prepend seq gap;
     seq :: acc
   in
   let rec splitter acc = function
-    | (a, _) :: (((c, b) :: _) as t) ->
-      assert ( a <= b );
+    | a :: ((c :: _) as t) ->
       splitter (do_one_pair a c acc) t
-    | (a, _) :: [] ->
+    | a :: [] ->
       List.rev (do_one_pair a (len + 1) acc)
     | [] -> []
   in
   splitter [] positions
-
-let of_code_arr code_arr gap =
-  let num_nus =
-    Array.fold_left
-      (fun num_nus code ->
-        if (code = gap) || (code = 0)
-          then num_nus
-          else num_nus + 1)
-      0
-      code_arr
-  in
-  let seq = init (fun _ -> gap) num_nus in
-  let _ =
-    Array.fold_left
-      (fun num_nus code ->
-        if (code=gap) || (code = 0)
-          then num_nus
-          else begin
-            set seq num_nus code;
-            num_nus + 1
-          end)
-      0
-      code_arr
-  in
-  seq
 
 let complement a s =
   let aux_complement start a s =
     let res =
       let acc = (create (length s)) in
       for i = start to (length s) - 1 do
-        match Alphabet.complement (get s i) a with
-        | Some x -> prepend acc x
-        | None -> failwith "I can't complement this alphabet"
+        let y = get s i in
+        match Alphabet.complement y a with
+        | Some y -> prepend acc y
+        | None   -> raise (Invalid_Base y)
       done;
       acc
     in
     res
   in
-  let gap = Alphabet.get_gap a in
   let res = aux_complement 1 a s in
-  prepend res gap;
+  prepend res (Alphabet.get_gap a);
   res
 
+(*
 let contains_code code seq =
   fold_left (fun existed c -> if c = code then true else existed) false seq
 
@@ -440,6 +407,7 @@ let cmp_num_not_gap seq alph =
     if (get seq p) != gap then num_nu := !num_nu + 1;
   done;
   !num_nu
+*)
 
 let gap_saturation seq alph =
   assert( Alphabet.is_bitset alph );
@@ -470,19 +438,22 @@ let poly_saturation sequence alph n =
   in
   proportion poly len
 
-let concat (seq_ls : s list) =
-  let total_len = List.fold_left (fun acc x -> acc + length x) 0 seq_ls in
-  let concat_seq = create total_len in
-  let concat_pos = ref 0 in
-  let copier seq =
-    let len = length seq in
-    for pos = 0 to len - 1 do
-      set concat_seq !concat_pos (get seq pos);
-	  concat_pos := !concat_pos + 1
-    done;
+
+
+let concat x =
+  let len = List.fold_left (fun x y -> x + length y) 0 x in
+  let ns = init (fun _ -> 0) len in
+  let pos = ref 0 in
+  let copier x =
+    let len = length x in
+    for i = 0 to len - 1 do
+      set ns !pos  (get x i);
+      Pervasives.incr pos;
+  done;
   in
-  List.iter copier seq_ls;
-  concat_seq
+  List.iter (copier) x;
+  ns
+
 
 let unique_elements seq alph =
   let len = length seq in

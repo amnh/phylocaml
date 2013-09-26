@@ -10,22 +10,18 @@ doc : ""
 
 authors : [ "Lavanya Kannan" "Nicholas Lucaroni" "Ward Wheeler" ]
 
-license: "GNU Lesser General Public License version 3.0 with OCaml linking exception"
+license: "MPL v2.0"
 
 tags: ["phylogeny" "statistics" "bioinformatics" "biology" "systematics"]
 
 maintainer: "nlucaroni@amnh.org"
 
 build : [
-    ["ocaml" "setup.ml" "-configure"]
-    ["ocaml" "setup.ml" "-build"]
-    ["ocaml" "setup.ml" "-install"]
+    ["make"]
+    ["make" "install"]
 ]
-
-remove : [
-    ["ocamlfind" "remove" "phylocaml"]
-]
-
+remove : ["ocamlfind" "remove" "phylocaml"]
+build-doc : ["make" "docs"]
 depends: [ "ocamlfind" "pareto" ]
 
 ocaml-version : [>= "4.00.0"]
