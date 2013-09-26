@@ -18,7 +18,7 @@ Table of Contents
 =================
 
 + Dependencies
-+ Configure and Install
++ Configure, Install, and Uninstall
 + Quick Start
   + Overview of Diagnosis Modules
   + Overview of Search Modules
@@ -35,10 +35,15 @@ Dependencies
 + [Findlib](http://projects.camlcity.org/projects/findlib.html)
 
 
-Configure and Install
+Configure, Install, and Uninstall
 =====================
-run,
+
+To compile and install phylocaml run,
+    make
     make install
+
+To uninstall phylocaml run,
+    make uninstall
 
 
 Quick Start
