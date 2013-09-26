@@ -300,13 +300,11 @@ seq_CAML_copy (value from, value to) {
 value seq_CAML_count (value gap, value startNO, value seq) {
   CAMLparam3(gap, seq, startNO);
   seqt sc;
-  int i, cnt = 0;
+  int i, start, tmp, cnt = 0;
   SEQT cgap;
-  int start;
   Seq_custom_val (sc,seq);
   cgap = Int_val(gap);
   start = Int_val(startNO);
-  int tmp;
   for (i = 0; i < sc->len; i++){
     tmp = seq_get (sc, i); 
     if(start>0) {

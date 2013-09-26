@@ -1,10 +1,28 @@
+(** {2 Sequence} *)
+(** The Sequence module allows the interaction of encoded arrays of data for C
+   usage. The sequence can be thought of as dynamically expandable arrays,
+   perfect for unaligned data. The [create] command allocates the upper bound of
+   space that can be manipulated, and prepend like function increase the
+   allowable space to manipulate. Setting elements directly before the length is
+   initiallized will result in assertion failures.*)
+
+
 (** {2 Type Definitions} *)
 
 type s
 (** Basic type to a sequence of data; abstracted by the interface. *)
 
+type elt = int
+(** element type within the sequence. *)
+
 exception Invalid_Sequence of (string * string * int)
 (** Parse error raised; returns entire sequence, invalid base, and location *)
+
+exception ReachedCapacity
+(** Raised in safe_* commands when accessing outside range or when length isn't
+    initiallized. *)
+
+exception Invalid_Base of elt
 
 val compare : s -> s -> int
 (** Basic compare function for two sequences. *)
@@ -15,7 +33,7 @@ val compare : s -> s -> int
 val create : int -> s
 (** [create i] create a sequence of capacity [i]. *)
 
-val init : (int -> int) -> int -> s
+val init : (int -> elt) -> int -> s
 (** [init f l] Create a sequence initialized by the function [f] about the
     indexes of the sequence up to [l]-1. capacity is equal to [l]. *)
 
@@ -26,6 +44,12 @@ val clone : s -> s
 val missing : Alphabet.t -> s
 (** [missing a] is a special case. The sequence is of one element that is a
     [gap] as defined in the alphabet [a]. *)
+
+val split : int list -> s -> s list
+(** [split p s] split a sequence at the positions indicated in the [p] list.
+    Zero is not necessary as a position, as well as the ordering of the list.
+    The order of the returned elements would be the same as if concat was
+    called. Thus, {S = concat (split xs S)}. *)
 
 
 (** {2 Information Queries} *)
@@ -43,34 +67,34 @@ val length : s -> int
 
 (** {2 Accessors / Setters} *)
 
-val get : s -> int -> int
+val get : s -> int -> elt
 (** [get s i] get the [i]th element of sequence [s]. *)
 
-val set : s -> int -> int -> unit
+val set : s -> int -> elt -> unit
 (** [set s i v] set the [i]th element of the sequence [s] with value [v]. *)
 
-val prepend : s -> int -> unit
+val prepend : s -> elt -> unit
 (** [prepend s v] prepend the sequence [s] with value [v]. *)
 
-val prepend_char : s -> int -> s
+val prepend_char : s -> elt -> s
 (** functional version of prepend; returns a new sequence *)
 
 
 (** {2  Iterators} *)
 
-val mapi : (int -> int -> int) -> s -> s
-val map : (int -> int) -> s -> s
-val fold_left : ('a -> int -> 'a) -> 'a -> s -> 'a
-val foldi_left : ('a -> int -> int -> 'a) -> 'a -> s -> 'a
-val foldi_left_2 : ('a -> int -> int -> int -> 'a) -> 'a -> s -> s -> 'a
-val fold_right : (int -> 'a -> 'a) -> 'a -> s -> 'a
-val foldi_right : (int -> int -> 'a -> 'a) -> 'a -> s -> 'a
-val iter : (int -> 'a) -> s -> unit
+val mapi : (int -> elt -> elt) -> s -> s
+val map : (elt -> elt) -> s -> s
+val fold_left : ('a -> elt -> 'a) -> 'a -> s -> 'a
+val foldi_left : ('a -> int -> elt -> 'a) -> 'a -> s -> 'a
+val foldi_left_2 : ('a -> int -> elt -> elt -> 'a) -> 'a -> s -> s -> 'a
+val fold_right : (elt -> 'a -> 'a) -> 'a -> s -> 'a
+val foldi_right : (int -> elt -> 'a -> 'a) -> 'a -> s -> 'a
+val iter : (elt -> 'a) -> s -> unit
 
 
 (** {2 Useful Modifiers.} *)
 
-val remove_base : ?prependbase:bool -> s -> int -> s
+val remove_base : ?prependbase:bool -> s -> elt -> s
 (** [remoce_base ?p s i] remove all instances of [i] in [s] and then optionally
     prepend the sequence with [i]; [p] is false by default. *)
 
@@ -80,13 +104,10 @@ val reverse_ip : s -> unit
 val reverse : s -> s
 (** [reverse s] reverse sequence and return new instance (do not complement) *)
 
-val concat : s list -> s
-(** [concat ss] concat a list of sequences; in-order. *)
-
 val sub : s -> int -> int -> s
 (** [sub s l h] return a new sequence of [s] from element [l] to [h]. *)
 
-val sub_ignore_base : int -> s -> int -> int -> s * int
+val sub_ignore_base : elt -> s -> int -> int -> s * int
 (** [sub_ignore_base i s l h] return a new sequence of [l] to [h] excluding any
     elements of base [i] --this is usually the gap character in the alphabet. *)
 
@@ -102,10 +123,10 @@ val copy : s -> s -> unit
 val to_array : s -> int array
 (** [to_array s] convert a sequence to an array. *)
 
-val of_list : int list -> s
+val of_list : elt list -> s
 (** [of_list s] convert a list of states to a sequence. *)
 
-val of_array : int array -> s
+val of_array : elt array -> s
 (** [of_array s] convert an array to a sequence. *)
 
 val of_string : string -> Alphabet.t -> s
@@ -161,15 +182,12 @@ val unique_elements : s -> Alphabet.t -> bool
 
 this are not included in the interface until their utility is determined.
 
-val of_code_arr : int array -> int -> s
 val cmp_num_all : s -> Alphabet.t -> int
 val cmp_num_not_gap : s -> Alphabet.t -> int
 val count : int -> int -> s -> int
 val contains_code : int -> s -> bool
 val length_without_gap : int -> s -> int
-val split : (int * int) list -> s -> Alphabet.t -> s list
 val resize : s -> int -> s
-val safe_reverse : s -> s
 
 *)
 

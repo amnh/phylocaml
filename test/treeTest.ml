@@ -61,6 +61,11 @@ let test_4 () =
     (Tree.get_all_edges tree);
   ()
 
+let test_5 () = ()
+
+
+let test_6 () = ()
+
 
 let local_tests = 
   [
@@ -69,6 +74,8 @@ let local_tests =
     "Disjoint Tree property cardinalites" >:: test_2; 
     "Iterative Tree Construction"         >:: test_3;
     "Partition Tree Edges"                >:: test_4;
+    "Break and Join functions"            >:: test_5;
+    "ReRoot Function"                     >:: test_6;
   ]
 
 let tests = "Tree" >::: local_tests

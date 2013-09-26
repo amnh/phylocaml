@@ -17,8 +17,10 @@ let assert_equal_seq a b =
   assert_equal ~cmp ~printer:Sequence.to_raw_string a b
 
 let test_0 () =
-  let s1_1 = Sequence.of_array s1_1 and s1_2 = Sequence.of_string s1_2 a
-  and s1_3 = Sequence.of_list s1_3 and s1_4 = Sequence.of_state_list s1_4 a in
+  let s1_1 = Sequence.of_array s1_1 in
+  let s1_2 = Sequence.of_string s1_2 a in
+  let s1_3 = Sequence.of_list s1_3 in
+  let s1_4 = Sequence.of_state_list s1_4 a in
   assert_equal_seq s1_1 s1_2;
   assert_equal_seq s1_1 s1_3;
   assert_equal_seq s1_1 s1_4;
@@ -53,19 +55,23 @@ let test_4 () =
   let s_len = Sequence.length s in
   let s_clone = Sequence.clone s in
   assert_equal_seq s s_clone;
-  Sequence.prepend s_clone 16;
-  assert_equal (s_len+1) (Sequence.length s_clone);
-  assert_equal (s_len) (Sequence.length s);
+  assert_raises Sequence.ReachedCapacity (fun () -> Sequence.prepend s_clone 16);
   ()
 
+let test_5 () = 
+  let s = Sequence.of_array s1_1 in
+  let ss= Sequence.split [0;10;15;25] s in
+  assert_equal_seq s (Sequence.concat ss);
+  ()
 
 let local_tests =
   [
-    "Sequence Generation Functions"  >:: test_0;
-    "Sequence Reverse/Compare"       >:: test_1;
-    "Remove/Append Characters"       >:: test_2;
-    "Sequence Concat"                >:: test_3;
-    "Sequence Clone"                 >:: test_4;
+    "Sequence generation functions"  >:: test_0;
+    "Sequence reverse/compare"       >:: test_1;
+    "Remove/Append characters"       >:: test_2;
+    "Sequence concat"                >:: test_3;
+    "Sequence prepend at capacity"   >:: test_4;
+    "Sequence concat/split"          >:: test_5;
   ]
 
 let tests = "Sequence" >::: local_tests

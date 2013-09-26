@@ -8,11 +8,12 @@
 /* Macro to retrieve and cast a pointer to a seq structure from the Ocaml custom
  * type. */
 #define Seq_pointer(a) ((struct seq *) Data_custom_val(a))
+#define Seq_custom_val(to_asgn,a)  to_asgn = Seq_pointer(a)
 
-#define Seq_custom_val(to_asgn,a)  to_asgn = Seq_pointer(a); \
-    to_asgn->head = (SEQT *) ((seqt) (to_asgn + 1)); \
-    to_asgn->end = to_asgn->head + to_asgn->cap - 1; \
-    to_asgn->begin = to_asgn->end - to_asgn->len + 1;
+/* #define Seq_custom_val(to_asgn,a)  to_asgn = Seq_pointer(a) */
+/*  to_asgn->head = (SEQT *) ((seqt) (to_asgn + 1)); */
+/*  to_asgn->end = to_asgn->head + to_asgn->cap - 1; */
+/*  to_asgn->begin = to_asgn->end - to_asgn->len + 1 */
 
 /** This will allow us to later create more efficient implementations by
  * scripting the indexes of the data (INDEXSIZE) and width of data (SEQT). */
