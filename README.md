@@ -19,11 +19,11 @@ Table of Contents
 
 + Dependencies
 + Configure, Install, and Uninstall
++ Test Framework
 + Quick Start
   + Overview of Diagnosis Modules
   + Overview of Search Modules
   + Overview of Utility Modules
-+ Test Framework
 + Design Choices and Rationale
 + Contact/Location Information
 
@@ -32,8 +32,9 @@ Dependencies
 ============
 + [OCaml](http://caml.inria.fr/ocaml/) (4.00.1+)
 + [Pareto](http://github.com/superbobry/pareto/)
++ [GSL](https://bitbucket.org/mmottl/gsl-ocaml)
 + [Findlib](http://projects.camlcity.org/projects/findlib.html)
-
++ [oUnit](http://ounit.forge.ocamlcore.org/) (optional)
 
 Configure, Install, and Uninstall
 =====================
@@ -44,6 +45,12 @@ To compile and install phylocaml run,
 
 To uninstall phylocaml run,
     make uninstall
+
+
+Testing Framework
+=================
+
+We use oUnit. See the test/ directory for details.
 
 
 Quick Start
@@ -201,10 +208,6 @@ purposes.
 + LikelihoodModel - General storage for a likelihood model.
 
 
-Test Framework
-==============
-...
-
 Design Choices and Rationale
 ============================
 
@@ -241,9 +244,9 @@ Design Choices and Rationale
 
 Contact/Location Information
 ===================
-+ [Nicholas Lucaroni](mailto:nlucaroni@amnh.org)
-+ [Ward Wheeler](mailto:wheeler@amnh.org)
-+ [Lavanya Kannan] (mailto:lkannan@amnh.org)
++ Nicholas Lucaroni (nlucaroni at amnh dot org)
++ Ward Wheeler(wheeler at amnh dot org)
++ [Lavanya Kannan] (lkannan at amnh dot org)
 + [Support Forum](https://groups.google.com/forum/?fromgroups#!forum/poy4)
 + [Site on AMNH](http://research.amnh.org/scicomp/research/projects/invertebrate-zoology/poy?q=projects/poy.php)
 
