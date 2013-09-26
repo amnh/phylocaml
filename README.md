@@ -245,8 +245,8 @@ Design Choices and Rationale
 Contact/Location Information
 ===================
 + Nicholas Lucaroni (nlucaroni at amnh dot org)
-+ Ward Wheeler(wheeler at amnh dot org)
-+ [Lavanya Kannan] (lkannan at amnh dot org)
++ Ward Wheeler (wheeler at amnh dot org)
++ Lavanya Kannan (lkannan at amnh dot org)
 + [Support Forum](https://groups.google.com/forum/?fromgroups#!forum/poy4)
 + [Site on AMNH](http://research.amnh.org/scicomp/research/projects/invertebrate-zoology/poy?q=projects/poy.php)
 
