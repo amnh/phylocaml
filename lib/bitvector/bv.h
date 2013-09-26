@@ -1,5 +1,4 @@
 /** Pre-processing arguments for file:
- *      ARCH64 - defined if the archecture is 64bit
  *      WIDTH  - defines the size of each container (in bits) */
 
 #include <stdio.h>

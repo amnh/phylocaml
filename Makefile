@@ -35,7 +35,7 @@ docs :
 clean :
 	$(BUILD) -clean
 
-install : native byte
+install :
 	$(OFIND) install phylocaml META $(INST_BYT) $(INST_NAT) $(INST_OTH)
 
 uninstall :

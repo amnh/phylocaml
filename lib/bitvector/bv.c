@@ -1,5 +1,4 @@
-/** This file requires the value WIDTH defined to be 8,16,32,64. See below. */
-/** This file uses the value ARCH64 defined or not .*/
+/** This file requires the value WIDTH defined to be 8,16,32,64. See bv.h */
 
 #include <caml/alloc.h>     /* copy_double, et cetera    */
 #include <caml/memory.h>    /* caml_param, et cetera     */
@@ -18,14 +17,14 @@
 #include "bv_neon.h"
 #endif
 
-/** deconstruct OCaml values; y=Val_vect(x) will be Vect_val(y)=x, see above. */
+/** deconstruct OCaml values; y=Val_vect(x) will be Vect_val(y)=x */
 #define Vect_val(v) (*((vect**)Data_custom_val(v)))
 #define bv_alloc_val(v,d) v=caml_alloc_custom(&bv_custom_ops,sizeof(vect),1,bv_freq); Vect_val(v)=d
 
 
 /** code generation global */
-long bv_magic_number = 0;
-long bv_next_code() { return bv_magic_number++; }
+long bv_magic_number=0;
+long bv_next_code(){return bv_magic_number++;}
 
 /** Native Implementations for functions */
 
@@ -179,7 +178,6 @@ vect* bv_copy( const vect* a, const int fill )
 }
 
 
-
 /** OCaml Abstract Type Functions */
 
 void bv_CAML_free(value v)
@@ -232,10 +230,10 @@ static struct custom_operations bv_custom_ops  = {
     "AMNH/bitvector/0.1",       /* identifier */
     (&bv_CAML_free),            /* finalize */
     (&bv_CAML_compare_values),  /* compare */
-    custom_hash_default,        /* hash */
+    custom_hash_default,        /* hash : TODO? */
     (&bv_CAML_serialize),       /* serialize */
     (&bv_CAML_deserialize),     /* deserialize */
-    custom_compare_ext_default  /* compare_ext (default returns Failure) */
+    custom_compare_ext_default  /* compare_ext (default returns Failure) : TODO? */
 };
 
 value bv_CAML_register (value u)
