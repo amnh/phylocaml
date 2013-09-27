@@ -44,16 +44,16 @@ let empty =
   }
 
 
-let debug_print t =
-  Printf.printf "Edges : ";
-  EdgeSet.iter (fun (a,b) -> Printf.printf "(%d,%d) " a b) t.edges;
+let debug_print t chan =
+  Printf.fprintf chan "Edges : ";
+  EdgeSet.iter (fun (a,b) -> Printf.fprintf chan "(%d,%d) " a b) t.edges;
   print_newline ();
-  Printf.printf "Nodes : ";
+  Printf.fprintf chan "Nodes : ";
   IDMap.iter
     (fun _ -> function
-      | Leaf (a,b) -> Printf.printf "L(%d,%d) " a b
-      | Interior (a,b,c,d) -> Printf.printf "N(%d,%d,%d,%d) " a b c d
-      | Single a -> Printf.printf "S(%d) " a)
+      | Leaf (a,b) -> Printf.fprintf chan "L(%d,%d) " a b
+      | Interior (a,b,c,d) -> Printf.fprintf chan "N(%d,%d,%d,%d) " a b c d
+      | Single a -> Printf.fprintf chan "S(%d) " a)
     t.nodes;
   print_newline ();
   ()
@@ -77,11 +77,10 @@ let set_name x t = {t with name = Some x}
 let get_name t = t.name
 
 let get_other_two p a b c =
-  if p = a then b,c
+       if p = a then b,c
   else if p = b then a,c
-  else
-    let () = assert (p = c) in
-    a,b
+  else if p = c then a,b
+                else assert false
 
 let remove_replace node o_id n_id = match node with
   | Leaf (a,b)         when b = o_id -> Leaf (a,n_id)
@@ -121,7 +120,7 @@ let get_neighbors x t = match get_node x t with
   | Leaf (_,x) -> [x]
   | Interior (_,x,y,z) -> [x;y;z]
 
-let compare a b = failwith "TODO"
+let compare _ _ = failwith "TODO"
 
 let holes_and_max ids : int * int list =
   let rec holesmax holes max xxs = match xxs with
@@ -349,7 +348,7 @@ let break (x,y) t =
   | (Single _, _ | _, Single _) -> assert false
   (* a -- x ---> a + x *)
   | Leaf (a,b), Leaf (x,y) ->
-    assert( (a = y) && (b = x));
+    assert((a = y) && (b = x));
     let nodes =
       t.nodes
         |> IDMap.add a (Single a)
@@ -377,9 +376,10 @@ let break (x,y) t =
       t.handles
         |> HandleSet.remove h
         |> HandleSet.add x
-        |> HandleSet.add b (* or c *)
+        |> HandleSet.add b (* or c, choice is arbitrary *)
     in
-    {t with nodes; handles; }, () 
+    let t = add_code a {t with nodes; handles;} in
+    t,() 
   (* b       x     b   x
    *  \     /      |   |
    *   a---w  ---> | + |
@@ -394,10 +394,11 @@ let break (x,y) t =
     let handles =
       t.handles
         |> HandleSet.remove h
-        |> HandleSet.add b (* or c *)
-        |> HandleSet.add x (* or y *)
+        |> HandleSet.add b (* or c, choice is arbitrary *)
+        |> HandleSet.add x (* or y, choice is arbitrary *)
     in
-    {t with handles; },()
+    let t = add_code a @@ add_code w {t with handles; } in
+    t,()
    
 
 (* TODO: deal with DELTA *)
@@ -501,6 +502,9 @@ let random lst =
     List.fold_left add_node tree xs
   | _::[] | [] -> t
 
+
+(** {2 Fusing Functions} *)
+
 type 'a fuse_location = 'a * id * t
 type 'a fuse_locations = 'a fuse_location list
 
@@ -508,17 +512,21 @@ let fuse_locations _ _ = failwith "TODO"
 let fuse_all_locations _ = failwith "TODO"
 let fuse _ _ = failwith "TODO"
 
-let to_string _ = failwith "TODO"
-let print _ = failwith "TODO"
 
+(** {2 I/O Functions} *)
+
+type 'a parsed = [ `Node of 'a * 'a parsed list | `Leaf of 'a ]
+type data = unit (* TODO: float? string? ...? *)
+
+let to_string _ = failwith "TODO"
 let of_parsed _ = failwith "TODO"
 let to_parsed _ = failwith "TODO"
 
 
 (** {2 Math Functions} *)
 
-let num_edges n = failwith "TODO"
+let num_edges _ = failwith "TODO"
 
-let num_nodes n = failwith "TODO"
+let num_nodes _ = failwith "TODO"
 
-let num_trees n = failwith "TODO"
+let num_trees _ = failwith "TODO"

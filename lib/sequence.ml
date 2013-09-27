@@ -128,6 +128,17 @@ let init f len =
   done;
   seq
 
+let sub s st len =
+  init (fun x -> get s (x+st)) len
+
+let safe_sub s st len =
+  if (length s) < (st+len) then
+    raise ReachedCapacity
+  else
+    sub s st len
+
+let sub = if safe then safe_sub else sub
+
 (* unused currently
 let resize s ns =
   let v = create ns in
@@ -271,8 +282,6 @@ let of_array code_arr =
   let len = Array.length code_arr in
   init (fun idx -> code_arr.(idx)) len
 
-let sub s st len =
-  init (fun x -> get s (x + st)) len
 
 let sub_ignore_base base s st len =
   let idx = ref st in
@@ -343,30 +352,19 @@ let select_one ?(how=`Min) s alph =
   map selects s
 
 let split positions s =
-  let len = (length s) - 1 in
+  let len = length s in
   let positions =
     match List.sort Pervasives.compare positions with
     | (0::_) as xs -> xs
     | xs -> 0 :: xs
   in
-  let do_one_pair a b acc =
-    let first = a
-    and last = b in
-    let total = 1 + (last - first) in
-    let seq = create (total + 1)  in
-    for i = (last - 1) downto first do
-      prepend seq (get s i);
-    done;
-    seq :: acc
-  in
+  let sub_wrapper first last acc = (sub s first (last-first))::acc in
   let rec splitter acc = function
-    | a :: ((c :: _) as t) ->
-      splitter (do_one_pair a c acc) t
-    | a :: [] ->
-      List.rev (do_one_pair a (len + 1) acc)
-    | [] -> []
+    | a::((c::_) as t) -> splitter (sub_wrapper a c acc) t
+    | a::[]            -> sub_wrapper a len acc
+    | []               -> []
   in
-  splitter [] positions
+  List.rev @@ splitter [] positions
 
 let complement a s =
   let aux_complement start a s =

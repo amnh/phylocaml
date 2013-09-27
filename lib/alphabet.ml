@@ -78,7 +78,7 @@ let print a =
     print_header ();
     print_code_names true a.code_name;
     ()
-  | CombinationLevels l ->
+  | CombinationLevels _ ->
     Printf.printf "Combination Level %d:\n%!" a.comb_data.level;
     print_header ();
     IntMap.iter
@@ -86,13 +86,6 @@ let print a =
         Printf.printf "\t%d -- {%a} -- comp:{}\n" k pp_ilst (IntSet.elements vset))
       a.comb_data.comb_set;
     ()
-
-let kind_to_string = function
-  | Sequential          -> "sequential"
-  | BitFlag             -> "bitflag"
-  | Continuous          -> "continuous"
-  | CombinationLevels l -> "level:" ^ string_of_int l
-
 
 
 (** {2 Error Module} *)
@@ -207,32 +200,47 @@ let verify_alphabet a : unit =
   | Continuous          -> ()
 
 let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
-  let name_code,code_name = (* add all states and equates *)
-    let combine_equates name_code = match kind with
-      | Sequential ->
-        (function [x] -> StringMap.find x name_code 
-                 | xs -> raise (Error `Polymorphisms_In_Sequential_Alphabet))
-      | Continuous ->
-        (fun _ -> raise (Error `Polymorphisms_In_Continuous_Alphabet))
-      | CombinationLevels n ->
-        failwith "TODO"
-      | BitFlag ->
-        (fun xs -> List.fold_left (fun x y -> (StringMap.find y name_code) lor x) 0 xs)
+  let combine_equates comb_data name_code = match kind with
+    | Sequential ->
+      (function [x] -> StringMap.find x name_code 
+               | _  -> raise (Error `Polymorphisms_In_Sequential_Alphabet))
+    | Continuous ->
+      (fun _ -> raise (Error `Polymorphisms_In_Continuous_Alphabet))
+    | CombinationLevels _ ->
+      (fun xs ->
+        let set =
+          List.fold_left
+            (fun acc x -> CodeSet.add (StringMap.find x name_code) acc)
+            CodeSet.empty
+            xs
+        in
+        CodeSetMap.find set comb_data.set_comb)
+    | BitFlag ->
+      (fun xs -> List.fold_left (fun x y -> (StringMap.find y name_code) lor x) 0 xs)
+  in
+  let add_one cincrfn ((cname,ncode),code) (name,_) =
+    let name = if case then name else String.uppercase name in
+    (StringMap.add name code cname,CodeMap.add code name ncode),cincrfn code
+  in
+  let (name_code,code_name),_ = (* add all states and equates *)
+    let icode,cincr = match kind with
+      | CombinationLevels _ | Sequential -> 0,(fun x -> x+1)
+      | BitFlag                          -> 1,(fun x -> x lsl 1)
+      | Continuous                       -> 0,(fun _ -> assert false)
     in
-    let (name_code,code_name),_ = (* add states *)
-      let add_one cincrfn ((cname,ncode),code) (name,_) =
-        let name = if case then name else String.uppercase name in
-        ((StringMap.add name code cname,IntMap.add code name ncode),cincrfn code)
-      and icode,cincr = match kind with
-        | CombinationLevels _ | Sequential -> 0,(fun x -> x+1)
-        | BitFlag                          -> 1,(fun x -> x lsl 1)
-        | Continuous                       -> 0,(fun _ -> assert false)
-      in
-      List.fold_left (add_one cincr) ((StringMap.empty,IntMap.empty),icode) states
-    in
+    List.fold_left (add_one cincr) ((StringMap.empty,CodeMap.empty),icode) states
+  in
+  let comb_data = match kind with
+    | CombinationLevels level ->
+        let comb,lists = generate_combinational_elements ~level code_name in
+        {comb_set = comb; set_comb = lists; level; }
+    | Sequential | Continuous -> empty_comb_data false
+    | BitFlag                 -> empty_comb_data true
+  in
+  let name_code,code_name =
     List.fold_left (* add equates *)
       (fun (name_code,code_name) (k,vs) ->
-        let v = combine_equates name_code vs in
+        let v = combine_equates comb_data name_code vs in
         let name_code = StringMap.add k v name_code
         and code_name =
           if IntMap.mem v code_name
@@ -255,13 +263,6 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
           IntMap.add k x (IntMap.add x k acc))
       IntMap.empty
       states
-  in
-  let comb_data = match kind with
-    | CombinationLevels level ->
-        let comb,lists = generate_combinational_elements ~level code_name in
-        {comb_set = comb; set_comb = lists; level; }
-    | Sequential | Continuous -> empty_comb_data false
-    | BitFlag                 -> empty_comb_data true
   in
   let gap = match gap with
     | None   -> None

@@ -52,7 +52,6 @@ let test_3 () =
 
 let test_4 () =
   let s = Sequence.of_array s1_1 in
-  let s_len = Sequence.length s in
   let s_clone = Sequence.clone s in
   assert_equal_seq s s_clone;
   assert_raises Sequence.ReachedCapacity (fun () -> Sequence.prepend s_clone 16);
@@ -60,7 +59,7 @@ let test_4 () =
 
 let test_5 () = 
   let s = Sequence.of_array s1_1 in
-  let ss= Sequence.split [0;10;15;25] s in
+  let ss= Sequence.split [0;20;15;] s in
   assert_equal_seq s (Sequence.concat ss);
   ()
 

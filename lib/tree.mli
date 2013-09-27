@@ -186,10 +186,14 @@ val fuse : 'a -> 'b -> 'c
 
 (** {2 I/O Functions} *)
 
-val to_string : 'a -> 'b
-val print : 'a -> 'b
-val of_parsed : 'a -> 'b
-val to_parsed : 'a -> 'b
+type 'a parsed = [ `Node of 'a * 'a parsed list | `Leaf of 'a ]
+type data = unit (* TODO: float? string? ...? *)
+
+val to_string : t -> string
+val of_parsed : data parsed -> t
+val to_parsed : t -> data parsed
+
+val debug_print : t -> out_channel -> unit
 
 
 (** {2 Math Functions} 

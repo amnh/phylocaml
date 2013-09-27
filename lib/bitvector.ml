@@ -1,3 +1,5 @@
+open Internal
+
 module type BV = sig
   type t
   type elt
@@ -56,6 +58,10 @@ let fold_right (module BVN : BV) f acc t =
   !acc
 *)
 
+let random_elt_of max_width width =
+  assert( max_width >= width );
+  Random.int (1 lsl width)
+
 module BV8 : BV with type elt = int = struct
   external register : unit -> unit = "bv8_CAML_register"
   let () = register ()
@@ -86,7 +92,7 @@ module BV8 : BV with type elt = int = struct
   external distance : t -> t -> int          = "bv8_CAML_distance2"
   external fitch_median_2 : t -> t -> t * int= "bv8_CAML_fitch_median2"
 
-  let random_elt _ = failwith "TODO"
+  let random_elt w : elt = random_elt_of 8 w
   let elt_of_ints _ = failwith "TODO"
   let ints_of_elt _ = failwith "TODO"
   let elt_of_int _ = failwith "TODO"
@@ -125,7 +131,7 @@ module BV16 : BV with type elt = int = struct
   external distance : t -> t -> int          = "bv16_CAML_distance2"
   external fitch_median_2 : t -> t -> t * int= "bv16_CAML_fitch_median2"
   
-  let random_elt _ = failwith "TODO"
+  let random_elt w : elt = random_elt_of 16 w
   let elt_of_ints _ = failwith "TODO"
   let ints_of_elt _ = failwith "TODO"
   let elt_of_int _ = failwith "TODO"

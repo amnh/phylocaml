@@ -171,7 +171,6 @@ void seq_CAML_free_seq (value v) {
   Seq_custom_val(s,v);
   free (s->head);
   free (s);
-  return;
 }
 
 /** Compare two sequence */
@@ -246,12 +245,13 @@ long seq_CAML_hash (value v)
 }
 
 static struct custom_operations sequence_custom_operations  = {
-    "http://www.amnh.org/poy/seq/seq.0.2",
-    custom_finalize_default,
-    (&seq_CAML_compare), 
-    (&seq_CAML_hash), 
+    "AMNH/seq/0.1",
+    (&seq_CAML_free_seq),
+    (&seq_CAML_compare),
+    (&seq_CAML_hash),
     (&seq_CAML_serialize),
-    (&seq_CAML_deserialize)
+    (&seq_CAML_deserialize),
+    custom_compare_ext_default  /* compare_ext (default returns Failure) : TODO? */
 };
 
 value seq_CAML_register (value u) {
