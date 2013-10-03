@@ -18,6 +18,7 @@ sig
 
   val median_1 : t option -> t -> t
   val median_2 : t option -> t -> t -> t
+  val median_3 : t option -> t -> t -> t -> t
   val median_n : t option -> t -> t list -> t
 
   val adjust_3 : IntSet.t option -> t -> t -> t -> t -> t * IntSet.t

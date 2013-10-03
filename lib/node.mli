@@ -32,7 +32,7 @@ module type R =
 
     (** [filter_codes c n] removes codes contained in [c] from [n], the result
         may be empty, which can be checked from [is_empty n] function. *)
-    val filter_codes : Internal.IntSet.t -> n -> n option
+    val filter_codes : Internal.IntSet.t -> n -> n
 
     (** [compare a b] compare [a] and [b] nodes data by comparing the data. *)
     val compare : n -> n -> int
@@ -79,6 +79,9 @@ module type R =
     (** Calculate the ancestor of two node elements. *)
     val median_2 : Topology.id -> n option -> n -> n -> n
     
+    (** Calculate the ancestor of three node elements. *)
+    val median_3 : Topology.id -> n option -> n -> n -> n -> n
+
     (** Calculate the ancestor of [n] node elements. *)
     val median_n : Topology.id -> n option -> n list -> n
 
