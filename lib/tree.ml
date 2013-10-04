@@ -525,8 +525,29 @@ let to_parsed _ = failwith "TODO"
 
 (** {2 Math Functions} *)
 
-let num_edges _ = failwith "TODO"
+let num_edges = function
+  | n when n < 0 -> assert false (* raise proper exception *)
+  | 0 | 1 -> 0
+  | n     -> 2 * n - 3
 
-let num_nodes _ = failwith "TODO"
+let num_nodes n = match n with
+  | _ when n < 0 -> assert false (* raise proper exception *)
+  | 0 | 1 -> n
+  | n     -> 2 * n - 2
 
-let num_trees _ = failwith "TODO"
+let num_trees n =
+  let d_fact n =
+    let rec d_fact final acc n =
+      if n = final then acc
+      else d_fact final (acc*.n) (n-.2.0)
+    in
+    if n mod 2 = 0
+      then (* d_fact 2.0 1.0 (float_of_int n) *)
+           assert false (* since 2n-5 is always odd *)
+      else d_fact 1.0 1.0 (float_of_int n)
+  in
+  match n with
+  | _ when n < 0 -> assert false (* raise proper exception *)
+  | 0            -> 0.0
+  | 1 | 2 | 3    -> 1.0
+  | n            -> d_fact (2*n - 5)

@@ -197,13 +197,17 @@ val debug_print : t -> out_channel -> unit
 
 
 (** {2 Math Functions} 
-    Useful mathematical and combinatorial functions on binary unrooted trees. *)
+    Useful mathematical and combinatorial functions on binary unrooted trees. We
+  use floating point results where exponential explosions can result. *)
 
-(** Calculate the number of edges of a binary unrooted tree with [n] leaves. *)
+(** Calculate the number of edges of a binary unrooted tree with [n] leaves.
+    The exact formula is, 2*n-3. Add an additional edge for rooted trees. *)
 val num_edges : int -> int
 
-(** Calculate the number of nodes in a binary unrooted tree with [n] leaves. *)
+(** Calculate the number of nodes in a binary unrooted tree with [n] leaves. The
+    number of nodes are 2*n-2. *)
 val num_nodes : int -> int
 
-(** Calculate the number of binary unrooted trees that can be produced from with [n] leaves. *)
-val num_trees : int -> int
+(** Calculate the number of binary unrooted trees that can be produced from with
+    [n] leaves. (2n-5)!! *)
+val num_trees : int -> float
