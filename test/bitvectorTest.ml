@@ -74,8 +74,8 @@ let local_tests =
         "Set/Get Elements/Converstion:"^ws  >:: (test_2 (module BV) w);
         "Set/Get Bits Set:"^ws              >:: (test_3 (module BV) w);
         "Union/Intersection:"^ws            >:: (test_4 (module BV) w);
-        "Fitch/Sankoff/Distance:"^ws        >:: (test_5 (module BV) w);
-        "Saturation/Poly-Saturation:"^ws    >:: (test_6 (module BV) w);
+(*         "Fitch/Sankoff/Distance:"^ws        >:: (test_5 (module BV) w); *)
+(*         "Saturation/Poly-Saturation:"^ws    >:: (test_6 (module BV) w); *)
       ])
     [ (module Bitvector.BV8); (module Bitvector.BV16); (module Bitvector.BV32);
       (module Bitvector.BV64); (module Bitvector.BVGen) ]

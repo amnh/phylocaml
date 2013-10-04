@@ -2,9 +2,10 @@ open OUnit
 
 let tests = [
   AlphabetTest.tests;
-  BitvectorTest.tests;
+(*   BitvectorTest.tests; *)
   SequenceTest.tests;
   TreeTest.tests;
+  MlmodelTest.tests;
 ]
 
 let () =
