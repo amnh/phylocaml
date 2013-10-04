@@ -2,8 +2,7 @@ IFDEF COMPATIBILITY THEN
 
   let compatibility = true
 
-  let (@@) a b = a b
-
+  external (@@) : ('a -> 'b) -> 'a -> 'b = "%apply"
   external (|>) : 'a -> ('a -> 'b) -> 'b = "%revapply"
 
 ELSE
