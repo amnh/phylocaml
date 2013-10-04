@@ -98,8 +98,9 @@ let () = dispatch begin function
         then [A"-pp";A"camlp4of -DCOMPATIBILITY"]
         else [A"-pp";A"camlp4of -UCOMPATIBILITY"]
     in
-    flag ["ocaml";"use_compatibility"; "ocamldep"] (S compatibility_options);
-    flag ["ocaml";"use_compatibility"; "compile" ] (S compatibility_options);
+    flag ["ocaml";"use_compatibility";"ocamldoc"] (S compatibility_options);
+    flag ["ocaml";"use_compatibility";"ocamldep"] (S compatibility_options);
+    flag ["ocaml";"use_compatibility";"compile" ] (S compatibility_options);
 
     (* define rules for a library named phylocaml *)
     ocaml_lib "phylocaml";
