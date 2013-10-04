@@ -33,6 +33,8 @@ val take : int -> 'a llist -> 'a list
 (** Filter a list by values that match the predicate. *)
 val filter : ('a -> bool) -> 'a llist -> 'a llist
 
+(** alias. filter *)
+val (//) : 'a llist -> ('a -> bool) -> 'a llist
 
 (** Continually accesses elements of the list and returns the first matching the
  * criteria defined in the predicate funciton. *)

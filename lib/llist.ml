@@ -59,6 +59,8 @@ let rec filter f xs = match xs with
   | Cons (x,xs) when f x -> Cons (x, lazy (filter f !$xs))
   | Cons (_,xs) -> filter f !$xs
 
+let (//) a b = filter b a
+
 let rec thread f t xs = match xs with
   | Nil -> Nil
   | Cons (x,xs) ->
