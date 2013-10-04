@@ -354,12 +354,16 @@ let break (x,y) t =
         |> IDMap.add a (Single a)
         |> IDMap.add x (Single x)
     and edges = EdgeSet.remove (a,x) t.edges
-    and handles =
+    and handles,h =
       if a = (handle_of a t)
-        then HandleSet.add x t.handles
-        else HandleSet.add a t.handles
+        then HandleSet.add x t.handles,x
+        else HandleSet.add a t.handles,a
     in
-    {t with nodes; edges; handles;}, ()
+    let delta =
+      { created = {empty_side with d_handles = [h]; };
+        removed = {empty_side with d_edges = [(a,x);];} }
+    in
+    {t with nodes; edges; handles;},delta
   (*       b           b
    *      /            |
    * x---a   --->  x + |
@@ -379,7 +383,13 @@ let break (x,y) t =
         |> HandleSet.add b (* or c, choice is arbitrary *)
     in
     let t = add_code a {t with nodes; handles;} in
-    t,() 
+    let delta =
+      let add_hs = if h = x then [b] else if h = b then [x] else [x;b]
+      and rem_hs = if h = x || h = b then [] else [h] in
+      { created = {d_nodes = []; d_edges = [(b,c)]; d_handles = add_hs;};
+        removed = {d_nodes = [a];d_edges = [(a,x);(a,b);(a,c)]; d_handles = rem_hs;}; }
+    in
+    t,delta
   (* b       x     b   x
    *  \     /      |   |
    *   a---w  ---> | + |
@@ -398,10 +408,16 @@ let break (x,y) t =
         |> HandleSet.add x (* or y, choice is arbitrary *)
     in
     let t = add_code a @@ add_code w {t with handles; } in
-    t,()
+    let delta =
+      let add_hs = if h = b then [x] else if h = x then [b] else [x;b]
+      and rem_hs = if h = b || h = x then [] else [h] in
+      { created = {d_nodes = []; d_edges = [(b,c);(x,y)]; d_handles = add_hs;};
+        removed = {d_nodes = [a;w]; d_edges = [(a,b);(a,c);(w,x);(w,y);(a,w)];
+                   d_handles = rem_hs;};}
+    in
+    t,delta
    
 
-(* TODO: deal with DELTA *)
 let join j1 j2 t =
   match j1, j2 with
   (* x + y ---> x -- y *)
@@ -417,7 +433,11 @@ let join j1 j2 t =
     and handles =
       HandleSet.remove x t.handles
     in
-    {t with edges; nodes; handles;}, ()
+    let delta =
+      { created = {empty_side with d_edges = [(x,y)];};
+        removed = {empty_side with d_handles = [x];} }
+    in
+    {t with edges; nodes; handles;},delta
   (*     y            y
    *     |           /
    * x + | ---> x---a
@@ -444,7 +464,12 @@ let join j1 j2 t =
     and handles =
       HandleSet.remove x t.handles
     in
-    {t with edges; nodes; handles;}, ()
+    let delta =
+      { created = { d_edges = [(n_id,x);(n_id,y);(n_id,z)];
+                    d_nodes = [n_id]; d_handles = []; };
+        removed = { d_nodes = []; d_edges = [(y,z)]; d_handles = [x]; }; }
+    in
+    {t with edges; nodes; handles;}, delta
   (*  w   y    w       y
    *  |   |     \     /
    *  | + | ---> a---b
@@ -453,30 +478,35 @@ let join j1 j2 t =
   | `Edge (w,x), `Edge (y,z) ->
     assert( is_edge w x t );
     assert( is_edge y z t );
-    let n_id1,t = next_code t in
-    let n_id2,t = next_code t in
+    let a, t = next_code t in
+    let b, t = next_code t in
     let nodes =
       t.nodes
-        |> IDMap.add w (remove_replace (get_node w t) x n_id1)
-        |> IDMap.add x (remove_replace (get_node x t) w n_id1)
-        |> IDMap.add y (remove_replace (get_node y t) z n_id2)
-        |> IDMap.add z (remove_replace (get_node z t) y n_id2)
-        |> IDMap.add n_id1 (Interior (n_id1,x,w,n_id2))
-        |> IDMap.add n_id2 (Interior (n_id2,y,z,n_id1))
+        |> IDMap.add w (remove_replace (get_node w t) x a)
+        |> IDMap.add x (remove_replace (get_node x t) w a)
+        |> IDMap.add y (remove_replace (get_node y t) z b)
+        |> IDMap.add z (remove_replace (get_node z t) y b)
+        |> IDMap.add a (Interior (a,x,w,b))
+        |> IDMap.add b (Interior (b,y,z,a))
     and edges =
       t.edges
         |> EdgeSet.remove (w,x)
         |> EdgeSet.remove (y,z)
-        |> EdgeSet.add (n_id1, w)
-        |> EdgeSet.add (n_id1, x)
-        |> EdgeSet.add (n_id2, y)
-        |> EdgeSet.add (n_id2, z)
-        |> EdgeSet.add (n_id1, n_id2)
+        |> EdgeSet.add (a,w)
+        |> EdgeSet.add (a,x)
+        |> EdgeSet.add (b,y)
+        |> EdgeSet.add (b,z)
+        |> EdgeSet.add (a,b)
     and handles =
       let x = handle_of x t in
       HandleSet.remove x t.handles
     in
-    {t with edges; nodes; handles; }, ()
+    let delta =
+      { created = { d_edges = [(a,w);(a,x);(a,b);(b,y);(b,z);];
+                    d_nodes = [a;b]; d_handles = []; };
+        removed = { d_nodes = []; d_edges = [(y,z);(w,x)]; d_handles = [x]; }; }
+    in
+    {t with edges; nodes; handles; }, delta
 
 let move_handle n t =
   let h = handle_of n t in

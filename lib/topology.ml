@@ -12,19 +12,24 @@ module EdgeMap = UnorderedTupleMap
 
 type jxn = [ `Single of id | `Edge of (id * id) ]
 
+type side_delta =
+  { d_nodes : id list; d_edges : edge list; d_handles : id list }
+
+let empty_side =
+  { d_nodes = []; d_edges = []; d_handles =[]; }
+
 type general_delta =
-  { reroot : id list;
-    removed_nodes : id list;
-    removed_edges : edge list;
-    added_nodes : id list;
-    added_edges : edge list; }
+  { removed : side_delta;
+    created : side_delta; }
 
-type reroot_delta = unit
-type break_delta  = unit
-type join_delta   = unit
+type reroot_delta= id list
 
-type delta =
-  [ `Reroot of edge | `Join of jxn * jxn | `Break of edge ] list
+type join_delta = general_delta
+
+type break_delta= general_delta
+
+type topology_delta =
+  [`Reroot of edge | `Join of jxn * jxn | `Break of edge] list
 
 module type NodeComparator = 
   sig
