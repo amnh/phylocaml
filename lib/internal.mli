@@ -1,11 +1,10 @@
 (** Internal "Standard" Library. This module is not meant to be exposed in the
-   external API. It contains composed modules from other libraries that are used
-   in the library, and a few functions that are used in our coding practices.
-   This module is subject to change at any time and is not a replacement for
-   standard library extensions like Core or Batteries. This module is also used
-   to store modules that may need a final home or exported to an external
-   library. *)
+   external API. This module is subject to change at any time and is not a
+   replacement for standard library extensions like Core or Batteries. This
+   module is also used to store modules that need a final home or waiting for a
+   proper external library replacement during development. *)
 
+(** The compatibility module allows backwards support to Stdlib changes. *)
 include module type of Compatibility
 
 (** {6 Shorthands} *)
@@ -13,7 +12,7 @@ include module type of Compatibility
 (** [failwithf format] pass a format string to [failwith]. *)
 val failwithf : ('a, unit, string, 'b) format4 -> 'a
 
-(** [!$a] forces a lazy value [a]. This is from Okasaki. *)
+(** [!$a] forces a lazy value [a]. *)
 val ( !$ ) : 'a Lazy.t -> 'a
 
 (** [!$$a] forces a lazy list of values [a]. *)
@@ -49,6 +48,7 @@ val rand_select : int -> 'a list -> 'a list
 
 (** [random_of_pair a b] Select a random value of two choices [a] and [b]. *)
 val random_choice : 'a -> 'a -> 'a
+
 
 (** {6 Array Functions} *)
 
