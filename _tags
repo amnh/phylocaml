@@ -14,11 +14,12 @@
 
 true : debug
 
+# for basic c file pre-processing
 "lib/bitvector/bv8.c"  : use_bv8
 "lib/bitvector/bv16.c" : use_bv16
 "lib/bitvector/bv32.c" : use_bv32
 "lib/bitvector/bv64.c" : use_bv64
-
+# for vectorized c file pre-processing
 "lib/bitvector/bv8_sse.c"  : use_bv8
 "lib/bitvector/bv16_sse.c" : use_bv16
 "lib/bitvector/bv32_sse.c" : use_bv32
@@ -35,3 +36,15 @@ true : debug
 "lib/bitvector/bv16_avx.c" : use_bv16
 "lib/bitvector/bv32_avx.c" : use_bv32
 "lib/bitvector/bv64_avx.c" : use_bv64
+
+# for Phylocaml Library
+"lib/internal.cmx"  : for-pack(Phylocaml)
+"lib/topology.cmx"  : for-pack(Phylocaml)
+"lib/tree.cmx"      : for-pack(Phylocaml)
+"lib/alphabet.cmx"  : for-pack(Phylocaml)
+"lib/sequence.cmx"  : for-pack(Phylocaml)
+"lib/llist.cmx"     : for-pack(Phylocaml)
+"lib/bitvector.cmx" : for-pack(Phylocaml)
+"lib/mlModel.cmx"   : for-pack(Phylocaml)
+
+

@@ -29,7 +29,7 @@ phyloc :
 	$(BUILD) libphyloc.a
 
 clean :
-	$(BUILD) -clean && cd test/
+	$(BUILD) -clean
 
 # -----------------------------------
  
