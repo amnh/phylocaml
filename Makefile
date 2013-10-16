@@ -6,8 +6,8 @@ BUILD=ocamlbuild -use-ocamlfind
 OFIND=ocamlfind
 
 INST_BYT=_build/phylocaml.cma _build/dllphyloc.so
-INST_NAT=_build/phylocaml.cmxa _build/libphyloc.a _build/phylocaml.a
-INST_OTH=_build/lib/*.mli _build/lib/*.cm[iox]
+INST_NAT=_build/phylocaml.cmxa _build/libphyloc.a _build/phylocaml.a _build/phylocaml.cmx
+INST_OTH=_build/lib/*.mli _build/phylocaml.cm[io]
 
 # -----------------------------------
 
