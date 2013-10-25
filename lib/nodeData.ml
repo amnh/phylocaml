@@ -4,6 +4,7 @@ module type S =
 sig
 
   type t
+  type m
 
   type spec
 

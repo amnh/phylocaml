@@ -7,14 +7,16 @@ module type S =
   sig
   
     (** {2 Types} *)
+    
+    type t
 
-    type a  (** Node Data type *)
-
-    type b  (** Root Node Data type *)
+    type n  (** Node Data type *)
 
     type r  (** Topology type *)
 
-    type t  (* Ptopology type *)
+    type s  (** Minimal Specification of Data for Parallelism *)
+
+    type d  (** Heuristic Cost Function Residiual Information *) 
 
 
     (** {2 Accessors} *)
@@ -28,17 +30,17 @@ module type S =
     (** Remove the edge from the topology; this may not produce two disjoint
         sets, this is the case in network topologies. This can be determined
         from the break-delta also returned with the updated topology. *)
-    val break_fn : Topology.edge -> t -> t * (a,b) Ptopology.break_delta
+    val break_fn : Topology.edge -> t -> t * Topology.break_delta
 
     (** Reroot the topology to the provided edge - used for printing and
         diagnosis of the topology. *)
-    val reroot_fn : Topology.edge -> t -> t * (a,b) Ptopology.reroot_delta
+    val reroot_fn : Topology.edge -> t -> t * Topology.reroot_delta
 
     (** Find the added cost of joining the two jxn points *)
     val cost_fn : Topology.jxn -> Topology.jxn -> t -> float
 
     (** Join the two jxn points in the topology *)
-    val join_fn : Topology.jxn -> Topology.jxn -> t -> t * (a,b) Ptopology.join_delta
+    val join_fn : Topology.jxn -> Topology.jxn -> t -> t * Topology.join_delta
 
     (** Optimize the assignment of states at nodes *)
     val assign_fn : t -> t
@@ -46,42 +48,41 @@ module type S =
     (** Optimize the model that defines the evolutionary aspects of the nodes *)
     val model_fn: t -> t
 
-    (** Perform a post-order traversal of the topology filling in initial
-        unoptimized states to the components of the topology. *)
-    val downpass: t -> t
-
-    (** Perform a pre-order traversal of the topology filling in single
-        assignment and parent-oriented information into nodes of the topology. *)
-    val uppass  : t -> t
-
     (** Perform a full-analysis on the topology; this calls the downpass
         then uppass, then model and assignment functions until convergence *)
     val diagnose: t -> t
 
 
+    (** {2 Load Data / Creation Functions} *)
+
+    val load_data : n list -> r -> t
+
+    val replace_data : n list -> t -> t
+
+
     (** {2 Delta Functions for Search} *)
 
     (** Apply a topology delta to the topology *)
-    val heuristic_delta : Topology.delta -> t -> float
+    val heuristic_delta : Topology.topology_delta -> t -> float * d
 
     (** Apply a topology delta to the topology *)
-    val apply_delta : Topology.delta -> t -> t
+    val apply_delta : Topology.topology_delta -> d -> t -> t
 
 
     (** {2 Higher-Order Functions on Data} *)
 
     (** Perform a direct map of the elememts of the topology *)
-    val map : (a -> a) -> (b -> b) -> t -> t
+    val map : (n -> n) -> (n -> n) -> t -> t
 
     (** Perform a map of the elements in a diagnosis fashion, via downpass,
         then an uppass, with functions passed for each node *)
     val map_diagnosis :
-        (a option -> a -> a) -> (a -> a -> b -> b) -> t -> t
+        (n option -> n -> n) -> (n -> n -> n -> n) -> t -> t
 
     (** Perform a post_order traversal of the topology folding over elements
         of the nodes and edges accumulating the result *)
     val fold_diagnosis :
-        (a option -> b option -> a -> 'a -> 'a) -> Topology.edge -> t -> 'a
+        (n option -> n option -> n -> 'a -> 'a) -> Topology.edge -> t -> 'a
 
 
     (** {2 Cost Functions} *)
@@ -100,6 +101,17 @@ module type S =
 
     (** Return the cost of the model of the data. *)
     val model_cost : t -> float
+
+
+    (** {2 Encoding / Decoding} *)
+
+    (** Encode a tree to a specification that can more easily be transfered over
+        a channel. *)
+    val encode : t -> s
+
+    (** Decode a specification to a topology. *)
+    val decode : n list -> s -> t
+
 
     (** {2 Debugging and I/O} *)
 

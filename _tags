@@ -1,50 +1,58 @@
-<lib>            : include
-<lib/bitvector>  : include
+true : debug, annot, bin_annot
 
-<**/*.{byte,native}> : package(pareto), package(bigarray), package(str), use_phyloc
-<**/*.cm{x,}a>       : package(pareto), package(bigarray), package(str), use_phyloc
-<**/*.top>           : package(pareto), package(bigarray), package(str), use_phyloc
+# sub-directories
+ <lib>            : include
+ <lib/bitvector>  : include
 
-<lib/compatibility.*> : use_compatibility
+# external libraries and c-library linking
+ <**/*.{byte,native}> : package(pareto), package(bigarray), package(str), use_phyloc
+ <**/*.cm{x,}a>       : package(pareto), package(bigarray), package(str), use_phyloc
+ <**/*.top>           : package(pareto), package(bigarray), package(str), use_phyloc
+ "lib/bitvector.ml"   : use_phyloc
+ "lib/Sequence_c.ml"  : use_phyloc, package(str)
+ "lib/mlModel.ml"     : use_phyloc, package(pareto)
+ "lib/internal.ml"    : package(bigarray)
 
-"lib/bitvector.ml"  : use_phyloc
-"lib/Sequence_c.ml" : use_phyloc, package(str)
-"lib/mlModel.ml"    : use_phyloc, package(pareto)
-"lib/internal.ml"   : package(bigarray)
-
-true : debug
+# for identifying pre-processing
+ <lib/compatibility.*> : use_compatibility
 
 # for basic c file pre-processing
-"lib/bitvector/bv8.c"  : use_bv8
-"lib/bitvector/bv16.c" : use_bv16
-"lib/bitvector/bv32.c" : use_bv32
-"lib/bitvector/bv64.c" : use_bv64
+ "lib/bitvector/bv8.c"  : use_bv8
+ "lib/bitvector/bv16.c" : use_bv16
+ "lib/bitvector/bv32.c" : use_bv32
+ "lib/bitvector/bv64.c" : use_bv64
 # for vectorized c file pre-processing
-"lib/bitvector/bv8_sse.c"  : use_bv8
-"lib/bitvector/bv16_sse.c" : use_bv16
-"lib/bitvector/bv32_sse.c" : use_bv32
-"lib/bitvector/bv64_sse.c" : use_bv64
-"lib/bitvector/bv8_alti.c" : use_bv8
-"lib/bitvector/bv16_alti.c": use_bv16
-"lib/bitvector/bv32_alti.c": use_bv32
-"lib/bitvector/bv64_alti.c": use_bv64
-"lib/bitvector/bv8_neon.c" : use_bv8
-"lib/bitvector/bv16_neon.c": use_bv16
-"lib/bitvector/bv32_neon.c": use_bv32
-"lib/bitvector/bv64_neon.c": use_bv64
-"lib/bitvector/bv8_avx.c"  : use_bv8
-"lib/bitvector/bv16_avx.c" : use_bv16
-"lib/bitvector/bv32_avx.c" : use_bv32
-"lib/bitvector/bv64_avx.c" : use_bv64
+ "lib/bitvector/bv8_sse.c"  : use_bv8
+ "lib/bitvector/bv16_sse.c" : use_bv16
+ "lib/bitvector/bv32_sse.c" : use_bv32
+ "lib/bitvector/bv64_sse.c" : use_bv64
+ "lib/bitvector/bv8_alti.c" : use_bv8
+ "lib/bitvector/bv16_alti.c": use_bv16
+ "lib/bitvector/bv32_alti.c": use_bv32
+ "lib/bitvector/bv64_alti.c": use_bv64
+ "lib/bitvector/bv8_neon.c" : use_bv8
+ "lib/bitvector/bv16_neon.c": use_bv16
+ "lib/bitvector/bv32_neon.c": use_bv32
+ "lib/bitvector/bv64_neon.c": use_bv64
+ "lib/bitvector/bv8_avx.c"  : use_bv8
+ "lib/bitvector/bv16_avx.c" : use_bv16
+ "lib/bitvector/bv32_avx.c" : use_bv32
+ "lib/bitvector/bv64_avx.c" : use_bv64
 
 # for Phylocaml Library
-"lib/internal.cmx"  : for-pack(Phylocaml)
-"lib/topology.cmx"  : for-pack(Phylocaml)
-"lib/tree.cmx"      : for-pack(Phylocaml)
-"lib/alphabet.cmx"  : for-pack(Phylocaml)
-"lib/sequence.cmx"  : for-pack(Phylocaml)
-"lib/llist.cmx"     : for-pack(Phylocaml)
-"lib/bitvector.cmx" : for-pack(Phylocaml)
-"lib/mlModel.cmx"   : for-pack(Phylocaml)
-
+ "lib/internal.cmx"  : for-pack(Phylocaml)
+ "lib/topology.cmx"  : for-pack(Phylocaml)
+ "lib/tree.cmx"      : for-pack(Phylocaml)
+ "lib/alphabet.cmx"  : for-pack(Phylocaml)
+ "lib/sequence.cmx"  : for-pack(Phylocaml)
+ "lib/llist.cmx"     : for-pack(Phylocaml)
+ "lib/bitvector.cmx" : for-pack(Phylocaml)
+ "lib/mlModel.cmx"   : for-pack(Phylocaml)
+ "lib/ptopology.cmx" : for-pack(Phylocaml)
+ "lib/diagnosis.cmx" : for-pack(Phylocaml)
+ "lib/node.cmx"      : for-pack(Phylocaml)
+ "lib/nodeData.cmx"  : for-pack(Phylocaml)
+ "lib/network.cmx"   : for-pack(Phylocaml)
+ "lib/basicDiagnosis.cmx" : for-pack(Phylocaml)
+ "lib/model.cmx"     : for-pack(Phylocaml)
 

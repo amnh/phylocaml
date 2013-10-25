@@ -40,20 +40,50 @@ val is_nan : float -> bool
 val proportion : int -> int -> float
 
 
+(** {6 Set/Map Implementations} *)
+
+module OrderedInt : Set.OrderedType with type t = int
+module OrderedTuple : Set.OrderedType with type t = int * int
+module OrdString : Set.OrderedType with type t = string
+module UnorderedTuple : Set.OrderedType with type t = int * int
+
+module IntSet : Set.S with type elt = int
+module IntMap : Map.S with type key = int
+
+module PairSet : Set.S with type elt = int * int
+module PairMap : Map.S with type key = int * int
+
+module UnorderedTupleSet : Set.S with type elt = int * int
+module UnorderedTupleMap : Map.S with type key = int * int
+
+module StringSet : Set.S with type elt = string
+module StringMap : Map.S with type key = string
+
+module IntSetSet : Set.S with type elt = IntSet.t
+module IntSetMap : Map.S with type key = IntSet.t
+
+
 (** {6 Random Selection Functions} *)
 
 (** [rand_select n xs] Randomly select [n] elements from a list [xs] using
  * resevoir sampling. *)
-val rand_select : int -> 'a list -> 'a list
+val random_select : int -> 'a list -> 'a list
 
 (** [random_of_pair a b] Select a random value of two choices [a] and [b]. *)
 val random_choice : 'a -> 'a -> 'a
 
+val random_elt_intmap  : 'a IntMap.t -> int * 'a
 
-(** {6 Array Functions} *)
+val random_elt_intset  : IntSet.t -> int
+
+val random_elt_pairset : UnorderedTupleSet.t -> int * int
+
+
+(** {6 Array/List Functions} *)
 
 val array_fold_left2 : ('a -> 'b -> 'c -> 'a) -> 'a -> 'b array -> 'c array -> 'a
 
+val over_path : ('a -> 'b -> 'b -> 'a) -> 'a -> 'b list -> 'a
 
 (** {6 BigArray(1,2) Functions on Floats} *)
 
@@ -78,29 +108,6 @@ val ba_to_array1 : ('a, 'b, 'c) Bigarray.Array1.t -> 'a array
 
 (** [ba_to_array2] convert a bigarray1 to an array array. *)
 val ba_to_array2 : ('a, 'b, 'c) Bigarray.Array2.t -> 'a array array
-
-
-(** {6 Set/Map Implementations} *)
-
-module OrderedInt : Set.OrderedType with type t = int
-module OrderedTuple : Set.OrderedType with type t = int * int
-module OrdString : Set.OrderedType with type t = string
-module UnorderedTuple : Set.OrderedType with type t = int * int
-
-module IntSet : Set.S with type elt = int
-module IntMap : Map.S with type key = int
-
-module PairSet : Set.S with type elt = int * int
-module PairMap : Map.S with type key = int * int
-
-module UnorderedTupleSet : Set.S with type elt = int * int
-module UnorderedTupleMap : Map.S with type key = int * int
-
-module StringSet : Set.S with type elt = string
-module StringMap : Map.S with type key = string
-
-module IntSetSet : Set.S with type elt = IntSet.t
-module IntSetMap : Map.S with type key = IntSet.t
 
 
 (** {6 Modules} *)

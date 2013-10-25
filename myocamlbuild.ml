@@ -1,12 +1,14 @@
 open Ocamlbuild_plugin
 open Command
 
+let warning_as_error = false
+
 (** Modifiable parameters *)
 let cc      = "gcc"
 let cflags  = ["-O2"; "-Wall"; "-pedantic";"-Wextra"]
 let clibs   = ["-llapack";"-lblas";"-lgfortran"]
 let static  = true
-let mlflags = ["-w"; "@a"; "-warn-error"; "-a"]
+let mlflags = if warning_as_error then ["-w"; "@a";] else [ "-warn-error"; "-a"]
 let vectorization = None
 
 let major,minor =
@@ -38,35 +40,39 @@ let headers =
     let base = "lib/bitvector/bv"^w^".h" in
     match vectorization with
     | None          -> [base]
+    | Some `SSE4a
     | Some `SSE4_2
     | Some `SSE4_1
+    | Some `SSE4
+    | Some `SSSE3_0
     | Some `SSE3_0
     | Some `SSE2_0  -> ["lib/bitvector/bv"^w^"_sse.h"; base]
     | Some `AVX     -> ["lib/bitvector/bv"^w^"_avx.h"; base]
     | Some `Altivec -> ["lib/bitvector/bv"^w^"_alti.h"; base]
     | Some `Neon    -> ["lib/bitvector/bv"^w^"_neon.h"; base]
+    | Some `Auto    -> failwith "CURRENTLY CANNOT AUTODETECT VECTOR LIBRARY"
   in
   List.rev_append headers (List.flatten (List.map bv_ bv_width))
 
 let () = dispatch begin function
   | Before_options ->
-     let ocamlfind x = S[A"ocamlfind";arg x] in
-     Options.ocamlmktop := ocamlfind "ocamlmktop";
+    let ocamlfind x = S[A"ocamlfind";arg x] in
+    Options.ocamlmktop := ocamlfind "ocamlmktop"; (* fixed in >=4.1.0 *)
     ()
   | After_rules ->
-    (* generate rules for scripted C and header files *)
-    let bitvector_rule filename extension dep_ext width =
-      let dep  = "lib/bitvector/bv"^filename^extension
-      and prod = "lib/bitvector/bv"^width^filename^extension in
-      let deps = match dep_ext with
-        | Some x -> [dep;"lib/bitvector/bv"^width^filename^x]
-        | None   -> [dep]
+    (* generate all rules for scripted C and header files *)
+    let bitvector_rule vectype extension dep_extension width =
+      let dep  = "lib/bitvector/bv"^vectype^extension
+      and prod = "lib/bitvector/bv"^width^vectype^extension in
+      let deps = match dep_extension with
+        | Some d_ext -> [dep;"lib/bitvector/bv"^width^vectype^d_ext]
+        | None       -> [dep]
       in
       rule ("Generate "^prod) ~prod ~deps
         begin fun _ _ ->
-          Cmd (S [A "sed"; A"-e"; A("s/bv\\.h/bv"^width^".h/g");
-                           A"-e"; A("s/bv_/bv"^width^"_/g");
-                           Sh ("< "^dep); Sh("> "^prod)])
+          Cmd (S [A "sed"; A"-e"; A("s/bv\\.h/bv"^width^".h/g"); (* replace refrences to bv.h -> bvW.h *)
+                           A"-e"; A("s/bv_/bv"^width^"_/g");     (* replace bv_* with bvW_* *)
+                           Sh ("< "^dep); Sh("> "^prod)])        (* pass in dep, pipe to prod *)
         end
     in
     List.iter
@@ -80,8 +86,12 @@ let () = dispatch begin function
       let cflags = ["-DWIDTH="^width] in
       let cflags = match vectorization with
         | None          -> cflags
+        | Some `Auto    -> "-march=native"::cflags
+        | Some `SSE4a   -> "-msse4a"::cflags
         | Some `SSE4_2  -> "-msse4.2"::cflags
         | Some `SSE4_1  -> "-msse4.1"::cflags
+        | Some `SSE4    -> "-msse4"::cflags
+        | Some `SSSE3_0 -> "-mssse3"::cflags
         | Some `SSE3_0  -> "-msse3"::cflags
         | Some `SSE2_0  -> "-msse2"::cflags
         | Some `AVX     -> "-mavx"::cflags
@@ -92,8 +102,8 @@ let () = dispatch begin function
     in
     List.iter (fun w -> flag ["c";"use_bv"^w] (S (bv_cflags w))) bv_width;
 
-    (* pre-process / compile compatibility module *)
-    let compatibility_options = 
+    (* pre-process compatibility module *)
+    let compatibility_options =
       if major < 4 || ((major = 4) && minor <= 0)
         then [A"-pp";A"camlp4of -DCOMPATIBILITY"]
         else [A"-pp";A"camlp4of -UCOMPATIBILITY"]
@@ -101,9 +111,6 @@ let () = dispatch begin function
     flag ["ocaml";"use_compatibility";"ocamldoc"] (S compatibility_options);
     flag ["ocaml";"use_compatibility";"ocamldep"] (S compatibility_options);
     flag ["ocaml";"use_compatibility";"compile" ] (S compatibility_options);
-
-    (* define rules for a library named phylocaml *)
-    ocaml_lib "phylocaml";
 
     (* dependencies for c-stubs *)
     dep ["link"; "ocaml"; "use_phyloc"] ["libphyloc.a"];

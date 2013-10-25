@@ -1,4 +1,4 @@
-open Internal
+(* open Internal (* Unused currently *)*)
 
 module type BV = sig
   type t

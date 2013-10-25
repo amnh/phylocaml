@@ -39,12 +39,17 @@ Dependencies
 Configure, Install, and Uninstall
 =====================
 
-To compile and install phylocaml run,
-    make
-    make install
+Currently, there is no configuration step.
 
-To uninstall phylocaml run,
-    make uninstall
+Typing 'make' will initiate native and bytecode compilation of the Phylocaml
+library.  After building, 'make install' will do a findlib installation.  To
+generate the ocamldoc API documentation, use 'make docs'.
+
+To removing Phylocaml type 'make uninstall' or it can be done directly via the
+findlib command, 'ocamlfind remove phylocaml'.
+
+Installation via OPAM is available by including our opam-repo. This can be added
+via, 'opam repository add AMNH git://github.com/amnh/opam-amnh.git'.
 
 
 Testing Framework
@@ -77,28 +82,32 @@ issues with networks or more complex topologies in optimizing states.
        +------------+----------+-------------+----------+-------+      |
                                                                        |
           +--------------+-----------+         +--------+----------+   |
-          |              | Node      |-------->|        | NodeData |---+
-          |              +-----------+         | Node   +----------+
-          | Diagnosis    | Root      |-------->|        | Compare  |
-          |              +-----------+         +--------+----------+
-          |              | PTopology |----+    +----------+   |
-          +--------------+-----------+    +--->| Topology |<--+
-                                               +----------+
+          |              < Node      |-------->|        | NodeData |---+
+          |              +-----------+         | Node/  +----------+
+          | Diagnosis    | Topo      |----+    |  Root  | Compare  |
+          |              +-----------+    |    +--------+----------+
+          |              | Model     |--+ |    +----------+   |
+          +--------------+-----------+  | +--->| Topology |<--+
+                                        |      +----------+
+                                        |      +----+----+-------+
+                                        +----->| ML | MP | Kolmo |
+                                               +----+----+-------+
 
            Figure 1. Basic Module dependency diagram of a Diagnosis
 
 
-In Figure 1, the diagnosis module is a functor about a node, root, and ptopo.
+In Figure 1, the diagnosis module is a functor about a model and topology.
 The topology designates a way to traverse the topology, and ptopology attaches
 data to the nodes and roots. This allows separation between structure and gives
-a common and basic interface to attach data to a topology. Topology additionally
+a common and basic interface to attach data to any topology. Topology additionally
 contains a compare module for traversing a topology in a consistent way[^1].
 
-The Node/Root module is a functor itself to apply a previously mentioned compare
-module and a data module that contains all the functions in the optimality
-criteria (Likelihood, Additive, Chromosome, Genome, Sankoff, et cetera) all
-share a common module interface (NodeData). Very close to what we have now with
-some added components. 
+The diagnosis module is dependent on a specific type of Node type because it
+manages the data through the topological manipulations. The Node/Root module is
+a functor itself to apply a previously mentioned compare module and a data
+module that contains all the functions in the optimality criteria (Likelihood,
+Additive, Chromosome, Genome, Sankoff, et cetera) all share a common module
+interface (NodeData). Very close to what we have now with some added components.
 
 Nodes can also be abstracted to contain further features --laziness has been
 important, as well as a directional node for un-rooted trees in selecting the
@@ -108,10 +117,8 @@ You can see these implementations in the Node module.
 
 Example code to diagnose a tree with known data taxon data and tree file,
 
-    module Root = Node.Make1D (Tree.NodeComparator) (SequenceData)
     module Node = Node.Make3D (Tree.NodeComparator) (SequenceData)
-    module PTree= Ptopology.Make (Tree)
-    module Diag = Diagnosis.Make (PTree) (Root) (Node)
+    module Diag = Diagnosis.Make (Node) (Tree) (MPModel)
     let diagnose_tree taxa_data edges =
         let nodes = List.map (fun x -> Node.of_data (SequenceData.of_string x)) taxa_data in
         let tree = PTree.of_parsed edges nodes in

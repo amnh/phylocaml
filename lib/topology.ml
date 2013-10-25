@@ -6,6 +6,7 @@ type edge = id * id
 
 module IDSet = IntSet
 module HandleSet = IntSet
+module HandleMap = IntMap
 module IDMap = IntMap
 module EdgeSet = UnorderedTupleSet
 module EdgeMap = UnorderedTupleMap
@@ -31,6 +32,12 @@ type break_delta= general_delta
 type topology_delta =
   [`Reroot of edge | `Join of jxn * jxn | `Break of edge] list
 
+
+let random_edgeset = random_elt_pairset
+let random_nodeset = random_elt_intset
+let random_nodemap = random_elt_intmap
+let random_handleset = random_elt_intset
+
 module type NodeComparator = 
   sig
     type t
@@ -46,6 +53,7 @@ module type NodeComparator =
 
 module type S =
   sig
+
     type node
 
     type t =
@@ -55,6 +63,8 @@ module type S =
         handles : HandleSet.t;
     avail_codes : int * int list; }
 
+    module Comparator : NodeComparator
+
     exception InvalidNodeID of id
     exception InvalidEdge of edge
     exception InvalidHandle of handle
@@ -63,6 +73,8 @@ module type S =
     val random : id list -> t
     val create : id list -> t
     val disjoint : t -> t
+
+    val compare : t -> t -> int
 
     val is_edge : id -> id -> t -> bool
     val is_node : id -> t -> bool
@@ -97,14 +109,14 @@ module type S =
     val join : jxn -> jxn -> t -> t * join_delta
     val reroot : edge -> t -> t * reroot_delta
  
+    val traverse_path :
+      ('a -> id -> id -> 'a) -> id list -> 'a -> 'a
+
     val pre_order_nodes :
       (id option -> id -> 'a -> 'a) -> id -> t -> 'a -> 'a
 
     val pre_order_edges :
       (edge -> 'a -> 'a) -> edge -> t -> 'a -> 'a
-
-    val pre_order_edges_root :
-      (edge -> 'a -> 'a) -> (edge -> 'a -> 'a) -> edge -> t -> 'a -> 'a
 
     val post_order_edges :
       (id -> id -> 'a -> 'a) -> (id -> id -> 'a -> 'a -> 'a) -> edge -> t -> 'a -> 'a * 'a
@@ -114,10 +126,4 @@ module type S =
 
     val of_parsed : EdgeSet.t -> t
     val to_parsed : t -> EdgeSet.t
-
-    type 'a fuse_location
-    type 'a fuse_locations = 'a fuse_location list
-    val fuse_locations : ('a * t) list -> ('a * t) -> 'a fuse_locations
-    val fuse_all_locations : ('a * t) list -> 'a fuse_locations
-    val fuse : 'a fuse_location -> 'a fuse_location -> t
   end

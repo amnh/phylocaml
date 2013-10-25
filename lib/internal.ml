@@ -32,7 +32,17 @@ let is_nan x = match classify_float x with
 
 (** Additional List functions *)
 
-let rand_select n list =
+let over_path f acc lst =
+  let rec consume acc x = function
+    | y::ys -> consume (f acc x y) y ys
+    | []    -> acc
+  in
+  match lst with
+  | x::y::xs -> consume (f acc x y) y xs
+  | [_] | [] -> acc
+  
+
+let random_select n list =
   let rec take i acc = function
     | lst when i = 0 -> rand_select (n+1) (Array.of_list acc) lst
     | [] -> acc
@@ -61,12 +71,6 @@ let array_fold_left2 f acc aray bray =
 (** Additional Math functions *)
 
 let proportion a b = (float_of_int a) /. (float_of_int b)
-
-
-(** Additional Random functions *)
-
-let random_choice x y =
-  if Random.bool () then x else y
 
 
 (** Modules for Sets/Maps *)
@@ -116,6 +120,46 @@ module StringMap = Map.Make (OrdString)
 
 module IntSetSet = Set.Make (IntSet)
 module IntSetMap = Map.Make (IntSet)
+
+
+(** Additional Random functions *)
+
+let random_choice x y =
+  if Random.bool () then x else y
+
+let random_elt_intmap (type t) (m: t IntMap.t) : IntMap.key * t =
+  let n = IntMap.cardinal m in
+  let i = Random.int n in
+  let module M = struct exception E of IntMap.key * t end in
+  try 
+    IntMap.fold
+      (fun k v j -> if i = j then raise (M.E (k,v)) else succ j) m 0
+        |> ignore;
+    assert false
+  with M.E (k,v) -> k,v
+
+let random_elt_intset (s: IntSet.t) =
+  let n = IntSet.cardinal s in
+  let i = Random.int n in
+  let module M = struct exception E of IntSet.elt end in
+  try 
+    IntSet.fold
+      (fun k j -> if i = j then raise (M.E k) else succ j) s 0
+        |> ignore;
+    assert false
+  with M.E k -> k
+
+let random_elt_pairset (s: UnorderedTupleSet.t) =
+  let n = UnorderedTupleSet.cardinal s in
+  let i = Random.int n in
+  let module M = struct exception E of UnorderedTupleSet.elt end in
+  try
+    UnorderedTupleSet.fold
+      (fun k j -> if i = j then raise (M.E k) else succ j) s 0
+        |> ignore;
+    assert false
+  with M.E k -> k
+
 
 (** int / bitset functions : TODO move to own module // find a nice bitset *)
 module BitSet =

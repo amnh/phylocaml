@@ -1,8 +1,15 @@
 lib/Internal
 lib/Topology
+lib/Ptopology
 lib/Tree
+lib/Network
 lib/Alphabet
 lib/Sequence
 lib/Llist
 lib/Bitvector
 lib/MlModel
+lib/Diagnosis
+lib/BasicDiagnosis
+lib/Node
+lib/NodeData
+lib/Model
