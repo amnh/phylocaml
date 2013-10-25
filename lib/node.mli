@@ -167,3 +167,4 @@ module Make3D   : functor (Ordering : Topology.NodeComparator) -> R
     parents. This allows unrestricted analysis for general topologies, but the
     implementation of the functions behind the use are slow. *)
 module MakeND   : functor (Ordering : Topology.NodeComparator) -> R
+

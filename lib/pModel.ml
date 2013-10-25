@@ -14,12 +14,12 @@
 type tcm =
   | Const  of int             (** A single cost between differing states. *)
   | Linear of int * int       (** A cost between states is equal, except indel. *)
-  | Affine of s * int         (** A recursive type for adding affine costs. *)
+  | Affine of tcm * int       (** A recursive type for adding affine costs. *)
   | TCM    of int array array (** General TCM contains a full matrix. *)
 
 (** Define options on defining assignments and other details of the cost-matrix. *)
 type options =
-  { tie_breaker = [`First; `Last; `Random; ];
+  { tie_breaker : [ `First | `Last | `Random ];
     (** The tie-breaker defines how assignments are choosen when the level is
         less than the total number of optimal assignments. *)
   }
@@ -28,7 +28,7 @@ type options =
     is a one to one relationship to a cost-matrix. *)
 type s =
   { tcm : tcm;
-      a : Alphabet.a;
+      a : Alphabet.t;
     opt : options;
   }
 
@@ -36,5 +36,5 @@ type s =
 type t =
   {
     spec : s;
-    cm : CostMatrix.t;
+    cm : int;
   }

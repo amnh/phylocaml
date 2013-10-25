@@ -1,25 +1,23 @@
-(* open Internal *)
+open Internal
 
 (** Defines a dianosis as a pre-order traversal of the space and a post-order
     traversal of the space. *)
 
-module Make (Node : Node.R) (Topo : Topology.S) = struct
+module Make (Node : Node.S) (Topo : Topology.S) : Diagnosis.S = struct
 
   (** {2 Types} *)
   type n = Node.n
   type r = Topo.t
-
-  type m = MlModel.t * 
+  type m = PModel.t
 
   type t =
     {
-      data : (Node.n,Node.r) Ptopology.t;
+      data : (Node.n, Node.r) Ptopology.t;
       topo : Topo.t;
-      model: Mlodel.t;
+      model: PModel.t;
     }
 
-  type s = Topo.t * Model.t
-
+  type s = Topo.t * PModel.t
   type d = unit
 
 
@@ -36,7 +34,8 @@ module Make (Node : Node.R) (Topo : Topology.S) = struct
     Topology.(t.data
       |> List.fold_right Ptopology.remove_node_data delta.removed.d_nodes
       |> List.fold_right Ptopology.remove_root_data delta.removed.d_edges
-      |> List.fold_right Ptopology.remove_comp_root delta.removed.d_handles)
+      |> List.fold_right Ptopology.remove_comp_root delta.removed.d_handles
+      |> (fun x -> {t with data = x;}))
 
   let create_component_root _ = failwith "TODO" 
 
