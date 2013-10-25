@@ -152,23 +152,23 @@ struct
   let distance_1 m a b =
     let a,b = Ordering.order get_topot a b in
     IntMap.fold
-      (fun k av acc -> acc +. (NodeData.distance_1 av (IntMap.find k b.prelim)))
+      (fun k av acc -> acc +. (NodeData.distance_1 m av (IntMap.find k b.prelim)))
       a.prelim
       0.0
 
   let distance_2 m a b c =
     IntMap.fold
       (fun k av acc ->
-        acc +. (NodeData.distance_2 av (IntMap.find k b.prelim) (IntMap.find k c.prelim)))
+        acc +. (NodeData.distance_2 m av (IntMap.find k b.prelim) (IntMap.find k c.prelim)))
       a.prelim
       0.0
 
   let median_1 m id o a =
     let prelim = match o with
-      | None   -> IntMap.map (NodeData.median_1 None) a.prelim
+      | None   -> IntMap.map (NodeData.median_1 m None) a.prelim
       | Some x ->
         assert( x.code = id );    
-        map_map2 (fun o -> NodeData.median_1 (Some o)) x.prelim a.prelim
+        map_map2 (fun o -> NodeData.median_1 m (Some o)) x.prelim a.prelim
     in
     let cost = accum_over_map NodeData.cost (+.) 0.0 prelim in
     { prelim = prelim;
@@ -182,10 +182,10 @@ struct
   let median_2 m id o a b =
     let a,b = Ordering.order get_topot a b in
     let prelim = match o with
-      | None   -> map_map2 (NodeData.median_2 None) a.prelim b.prelim
+      | None   -> map_map2 (NodeData.median_2 m None) a.prelim b.prelim
       | Some x ->
         assert( x.code = id );    
-        map_map3 (fun o -> NodeData.median_2 (Some o)) x.prelim a.prelim b.prelim
+        map_map3 (fun o -> NodeData.median_2 m (Some o)) x.prelim a.prelim b.prelim
     in
     let cost = accum_over_map NodeData.cost (+.) 0.0 prelim in
     { prelim = prelim;
@@ -203,11 +203,11 @@ struct
     in
     let prelim = match o with
       | None   ->
-        map_map3 (NodeData.median_3 None)
+        map_map3 (NodeData.median_3 m None)
                  a.prelim b.prelim c.prelim
       | Some x ->
         assert( x.code = id );
-        map_map4 (fun o -> NodeData.median_3 (Some o))
+        map_map4 (fun o -> NodeData.median_3 m (Some o))
                  x.prelim a.prelim b.prelim c.prelim
     in
     let cost = accum_over_map NodeData.cost (+.) 0.0 prelim in
@@ -244,7 +244,7 @@ struct
       IntMap.fold
         (fun k _ (t,s) ->
           let nv,ns =
-            NodeData.adjust_3 codes (get_val k n) (get_val k a)
+            NodeData.adjust_3 m codes (get_val k n) (get_val k a)
                                     (get_val k b) (get_val k c) in
           IntMap.add k nv t, IntSet.union ns s)
         n.prelim

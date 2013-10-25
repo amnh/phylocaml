@@ -1,14 +1,12 @@
 open Ocamlbuild_plugin
 open Command
 
-let warning_as_error = false
-
 (** Modifiable parameters *)
 let cc      = "gcc"
 let cflags  = ["-O2"; "-Wall"; "-pedantic";"-Wextra"]
 let clibs   = ["-llapack";"-lblas";"-lgfortran"]
 let static  = true
-let mlflags = if warning_as_error then ["-w"; "@a";] else [ "-warn-error"; "-a"]
+let mlflags = ["-w"; "@a";"-warn-error";"-a"]
 let vectorization = None
 
 let major,minor =
