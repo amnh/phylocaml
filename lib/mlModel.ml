@@ -4,7 +4,7 @@ exception ModelError of string
 
 let errorf format = Printf.ksprintf (fun x -> ModelError x) format
 
-(* Minimum value for things when 0 is numerically unstable. *)
+(* Minimum value for things when 0 and min_float are too numerically unstable *)
 let minimum = 1e-13
 
 type site_var =
@@ -24,6 +24,8 @@ type subst_model =
   | Const  of float array array
   | Custom of (int IntMap.t * float array)
 
+let default_rate = 1.0
+
 type priors = 
   | Empirical of float array
   | Equal
@@ -37,7 +39,8 @@ type spec = {
   substitution : subst_model;
   site_variation : site_var;
   base_priors : priors;
-  alphabet : Alphabet.t * gap;
+  alphabet : Alphabet.t;
+  gap : gap;
 }
 
 let default_alpha = 0.1
@@ -95,15 +98,15 @@ let gamma_rates a b len =
     |> ba_of_array1
 
 (** Return the alphabet for the characters *)
-let get_alphabet s = fst s.alphabet
+let get_alphabet s = s.alphabet
 
 (** Return the size of the alphabet for analysis;  *)
-let alphabet_size s =
-  let g = match snd s.alphabet with
+let alphabet_size spec =
+  let g = match spec.gap with
     | Missing -> 0
     | Coupled _  | Independent -> 1
   in
-  g + (Alphabet.size @@ fst s.alphabet)
+  g + (Alphabet.size spec.alphabet)
 
 (** Compare two models; not to be used for a total ordering (ret neg or zero) *)
 let compare a b =
@@ -148,7 +151,7 @@ let compare a b =
     | DiscreteCustom a, DiscreteCustom b ->
       array_fold_left2 (fun acc (a,b) (c,d) -> (a =. c) && (b =. d) && acc) true a b
     | (DiscreteGamma _|DiscreteCustom _ |DiscreteTheta _|Constant), _ -> false
-  and g_compare = match snd a.spec.alphabet,snd b.spec.alphabet with
+  and g_compare = match a.spec.gap,b.spec.gap with
     | Missing, Missing
     | Independent, Independent -> true
     | Coupled x, Coupled y when x=y-> true
@@ -584,8 +587,8 @@ let compose model t = match model.ui with
 
 
 let substitution_matrix model topt =
-  let _gapr = match snd model.spec.alphabet with
-    | Coupled x   -> Some (Alphabet.get_gap (fst model.spec.alphabet), x)
+  let _gapr = match model.spec.gap with
+    | Coupled x   -> Some (Alphabet.get_gap model.spec.alphabet, x)
     | Independent -> None
     | Missing     -> None
   and a_size = alphabet_size model.spec
@@ -614,7 +617,7 @@ let substitution_matrix model topt =
 
 (** [compose_model] compose a substitution probability matrix from branch length
     and substitution rate matrix. *)
-let compose_model sub_mat t = 
+let compose_matrix sub_mat t = 
   let a_size = Bigarray.Array2.dim1 sub_mat in
   let (u_,d_,ui_) = 
     let n_d = Bigarray.Array2.create Bigarray.float64 Bigarray.c_layout a_size a_size
@@ -657,27 +660,13 @@ let integerized_model ?(sigma=4) model t =
 let model_to_cm model t =
   let input = let t = max minimum t in integerized_model model t in
   let llst = Array.to_list (Array.map Array.to_list input) in
-  let res = Cost_matrix.Two_D.of_list ~suppress:true llst (snd model.spec.alphabet) in
+  let res = Cost_matrix.Two_D.of_list ~suppress:true llst (model.spec.gap) in
   res *)
-
-(** check the rates so SUM(r_k*p_k) == 1 and SUM(p_k) == 1 |p| == |r| *)
-let verify_rates probs rates =
-  let p1 = (Bigarray.Array1.dim probs) = (Bigarray.Array1.dim rates)
-  and p2 =
-    let rsps = ref 0.0 and ps = ref 0.0 in
-    for i = 0 to (Bigarray.Array1.dim probs) - 1 do
-      rsps := !rsps +. (probs.{i} *.  rates.{i});
-      ps := !ps +. probs.{i};
-    done;
-    !rsps =. 1.0 && !ps =. 1.0
-  in
-  p1 && p2
 
 
 (** create a model based on a specification and an alphabet *)
 let create lk_spec = 
   let a_size = alphabet_size lk_spec in
-  let (alph,gap) = lk_spec.alphabet in
   (* set up all the probability and rates *)
   let rates,probs,pinvar =
     match lk_spec.site_variation with
@@ -702,7 +691,6 @@ let create lk_spec =
         r,p,Some z
       end
   in
-  assert( verify_rates probs rates );
   (* extract the prior probability *)
   let priors =
     let p = match lk_spec.base_priors with 
@@ -720,8 +708,8 @@ let create lk_spec =
     else
       ba_of_array1 p
   in
-  let _gapr = match gap with
-    | Coupled x   -> Some (Alphabet.get_gap alph, x)
+  let _gapr = match lk_spec.gap with
+    | Coupled x   -> Some (Alphabet.get_gap lk_spec.alphabet, x)
     | Independent -> None
     | Missing     -> None
   in
@@ -734,7 +722,7 @@ let create lk_spec =
     | HKY85 t -> false, m_hky85 priors t a_size _gapr, lk_spec.substitution
     | TN93 (ts,tv) -> false, m_tn93 priors ts tv a_size _gapr, lk_spec.substitution
     | GTR c ->
-      let c = match gap, (Array.length c) with
+      let c = match lk_spec.gap, (Array.length c) with
         | Coupled _, 0 -> Array.make ((a_size*(a_size-3))/2) 1.0
         | (Independent | Missing), 0 -> Array.make (((a_size-2)*(a_size+1))/2) 1.0
         | (Coupled _ | Independent | Missing), _ -> c
@@ -766,12 +754,13 @@ let replace_rates model rates =
 (** Enumerate models based on some set of criteria. for Multimodel Inference  *)
 let enum_models ?(site_var=[`DiscreteGamma 4;`DiscreteTheta 4;`Constant])
                 ?(subst_model=[`JC69;`F81;`K2P;`F84;`HKY85;`TN93;`GTR])
-                ?(priors=[]) : model -> model option =
-  let apply_model_delta substitution base_priors site_variation model =
-    let base_priors = match base_priors with
-      | `Empirical x -> Empirical x
-      | `Equal       -> Equal
-      | `None        -> model.spec.base_priors
+                ?(priors=[`Empirical;`Equal]) ?(gap=`Missing)
+            empirical_priors alphabet : (unit -> spec option) =
+  let apply_model_delta gap substitution base_priors site_variation =
+    let base_priors = match base_priors,empirical_priors with
+      | `Empirical, Some x -> Empirical x
+      | `Empirical, None   -> assert false (** todo: add better error message *)
+      | `Equal, _          -> Equal
     in
     let substitution,base_priors = match substitution with
       | `JC69  -> JC69,Equal
@@ -780,35 +769,41 @@ let enum_models ?(site_var=[`DiscreteGamma 4;`DiscreteTheta 4;`Constant])
       | `F84   -> F84 default_tstv,base_priors
       | `HKY85 -> HKY85 default_tstv,base_priors
       | `TN93  -> TN93 (default_tstv,default_tstv),base_priors
-      | `GTR   -> GTR (Array.create (alphabet_size model.spec) 1.0),base_priors
+      | `GTR   -> GTR [||],base_priors
       | `Custom x -> Custom x,base_priors
-      | `None  -> model.spec.substitution,base_priors
     and site_variation = match site_variation with
       | `DiscreteGamma s      -> DiscreteGamma (s,default_alpha)
       | `DiscreteTheta s      -> DiscreteTheta (s,default_alpha,default_invar)
       | `Constant             -> Constant
       | `DiscreteCustom data  -> DiscreteCustom data
-      | `None                 -> model.spec.site_variation
     in
-    create {model.spec with substitution; base_priors; site_variation;}
+    {substitution; base_priors; site_variation; gap; alphabet;}
   in
-  let next_models =
-    let site_var = match site_var with [] -> [`None] | x -> x in
-    let subst_model = match subst_model with [] -> [`None] | x -> x in
-    let priors = match priors with [] -> [`None] | x -> x in
+  let next_specs =
+    let gaps = match gap with
+      | `Missing     -> [Missing]
+      | `Independent -> [Independent]
+      | `Coupled     -> [Coupled default_rate]
+      | `Indel       -> [Independent; Coupled default_rate]
+    and priors = match empirical_priors with
+      | None   -> [`Equal]
+      | Some _ -> priors
+    in
     let cp =
-      List.fold_left (fun acc x ->
-        List.fold_left (fun acc y ->
-          List.fold_left (fun acc z -> (x,y,z)::acc) acc priors)
-          acc site_var)
-        [] subst_model
+      List.fold_left (fun acc w ->
+        List.fold_left (fun acc x ->
+          List.fold_left (fun acc y ->
+            List.fold_left (fun acc z -> (w,x,y,z)::acc) acc priors)
+            acc site_var)
+          acc subst_model)
+        [] gaps
     in
     ref cp
   in
-  (fun pmodel -> match !next_models with
-    | (subst,vari,prior)::ms ->
-        next_models := ms;
-        Some (apply_model_delta subst prior vari pmodel)
+  (fun () -> match !next_specs with
+    | (gap,subst,vari,prior)::ms ->
+        next_specs := ms;
+        Some (apply_model_delta gap subst prior vari)
     | [] -> None)
 
 
@@ -837,11 +832,11 @@ let compute_priors (alph,u_gap) freq_ (count,gcount) lengths : float array =
 
 (* Develop a model from a classification of alignment pairs on edges. *)
 let process_classification spec (comp_map,pis) =
-  let ugap = match snd spec.alphabet with
+  let ugap = match spec.gap with
     | Missing      -> false
     | Independent  -> true
     | Coupled _    -> true
-  and alph = fst spec.alphabet in
+  and alph = spec.alphabet in
   let f_priors,a_size = match spec.base_priors with
     | Equal when ugap -> Equal,1+Alphabet.size alph
     | Equal           -> Equal,  Alphabet.size alph
@@ -899,7 +894,7 @@ let process_classification spec (comp_map,pis) =
     s1 /. a, s2 /. a, v /. a, a
   in
   (* build the model *)
-  let gap = snd spec.alphabet in
+  let gap = spec.gap in
   let m,gap = match spec.substitution with
     | JC69 -> JC69,gap
     | F81  -> F81,gap
@@ -1040,7 +1035,8 @@ let process_classification spec (comp_map,pis) =
     substitution = m;
     site_variation = v;
     base_priors = f_priors;
-    alphabet = alph, gap;
+    alphabet = alph;
+    gap;
   }
 
 

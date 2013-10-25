@@ -87,7 +87,8 @@ type spec = {
   substitution : subst_model;
   site_variation : site_var;
   base_priors : priors;
-  alphabet : Alphabet.t * gap;
+  alphabet : Alphabet.t;
+  gap : gap;
 }
 
 
@@ -170,16 +171,16 @@ val compose :
   model -> float ->
     (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
 
-(** [subst_matrix m t?] return a substitution rate matrix optionally multiplied
-    against a branch length [t]. This is the matrix Q in, [P=e^Q*t], or [Q*t] if
-        [t] is optionally supplied. *)
+(** [substitution_matrix m t?] return a substitution rate matrix optionally
+    multiplied against a branch length [t]. This is the matrix Q in, [P=e^Q*t],
+    or [Q*t] if [t] is optionally supplied. *)
 val substitution_matrix :
   model -> float option ->
     (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
 
-(** [compose_model Q t] compose the construction of a probability rate matrix
+(** [compose_matrix Q t] compose the construction of a probability rate matrix
     directly from a substitution rate matrix and time period/branch length. *) 
-val compose_model :
+val compose_matrix :
   (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
     float -> (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
 
@@ -208,13 +209,17 @@ val replace_subst : model -> subst_model -> model
 (** Generate a function that enumerates the combinations of substitution models
     and site-rate-variation through lists of variants given and generate a new
     model from a previous model. Empirical priors are required if the given model
-    does not have them (under JC69, K80), else priors will always be equal. *)
+    does not have them (under JC69, K80), else priors will always be equal.
+    
+    TODO:: Convert this to Batteries.Enum.t // Core.???  *)
 val enum_models :
-  ?site_var:[`DiscreteGamma of int | `DiscreteTheta of int | `Constant | `None
-            | `DiscreteCustom of (float * float) array ] list -> 
-    ?subst_model:[`F81 | `F84 | `GTR | `HKY85 | `JC69 | `K2P | `TN93 | `None
+  ?site_var:[`DiscreteGamma of int | `DiscreteTheta of int | `Constant
+            | `DiscreteCustom of (float * float) array ] list ->
+    ?subst_model:[`F81 | `F84 | `GTR | `HKY85 | `JC69 | `K2P | `TN93
                  | `Custom of int Internal.IntMap.t * float array ] list ->
-      ?priors:[`Empirical of float array | `Equal | `None ] list -> (model -> model option)
+      ?priors:[`Empirical | `Equal ] list ->
+        ?gap:[`Missing | `Independent | `Coupled | `Indel ] ->
+          float array option -> Alphabet.t -> (unit -> spec option)
 
 (** [compuate_priors (a,g) f (c,gc) ls] compute the priors of data from an array
     of base frequencies [f], but predicated on gap being an additional state we
