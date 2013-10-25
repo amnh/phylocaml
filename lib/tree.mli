@@ -1,10 +1,13 @@
-(** Tree
+(** {0 Tree}
+    Defines the topology of a binary unrooted tree and the functions to
+    manipulate the topology. *)
 
-Defines the topology of a binary unrooted tree and the functions to manipulate
-the topology. *)
+(** {1 Node Comparator} *)
 
 (** A NodeComparator for a tree, for traversal ordering. *)
 module NodeComparator : Topology.NodeComparator
+
+(** {1 Topology Implementation} *)
 
 (** {2 Types} *)
 
@@ -93,7 +96,7 @@ val get_node : Topology.id -> t -> node
 val get_neighbors : Topology.id -> t -> Topology.id list
 
 (** Compare two trees. *)
-val compare : t -> t -> bool
+val compare : t -> t -> int
 
 (** Move the handle of a tree to a location, return the path between nodes. *)
 val move_handle : Topology.id -> t -> t * Topology.id list
@@ -140,8 +143,6 @@ val pre_order_nodes :
 val pre_order_edges :
   (Topology.edge -> 'a -> 'a) -> Topology.edge -> t -> 'a -> 'a
 
-val pre_order_edges_root : 'a -> 'b -> 'c -> 'd -> 'e -> 'f
-
 (** [post_order_edges f g e t a] perform a post-order traversal applying [f] to
     leaf nodes with the first argument being the parent and next being the
     current node, and [g] to internal nodes where the two accumulators come from
@@ -157,6 +158,8 @@ val post_order_edges :
 val partition_edge :
   Topology.edge -> t -> Topology.IDSet.t * Topology.IDSet.t * bool
 
+val traverse_path :
+      ('a -> Topology.id -> Topology.id -> 'a) -> Topology.id list -> 'a -> 'a
 
 (** {2 Topological Functions} *)
 
@@ -172,33 +175,37 @@ val join : Topology.jxn -> Topology.jxn -> t -> t * Topology.join_delta
 
 (** Reroot a topology. This is relavent in rooted trees, only returns exact
     topology in this case. *)
-val reroot : Topology.id -> t -> t
+val reroot : Topology.id -> t -> t * Topology.reroot_delta
 
 
-(** {2 Fusing Functions} *)
 
-type 'a fuse_location = 'a * Topology.id * t
-type 'a fuse_locations = 'a fuse_location list
-val fuse_locations : 'a -> 'b -> 'c
-val fuse_all_locations : 'a -> 'b
-val fuse : 'a -> 'b -> 'c
-
+(** {1 Tree Specific Functions}
+    These functions are not members of the Topology module and thus cannot be
+    accessed if the module implementation is abstracted. *)
 
 (** {2 I/O Functions} *)
 
-type 'a parsed = [ `Node of 'a * 'a parsed list | `Leaf of 'a ]
-type data = unit (* TODO: float? string? ...? *)
+(** Define the data on the nodes and leaves of the tree structure. *)
+type data =
+  [ `BranchLength of float | `Name of string | `Support of float ] list
+
+(** Type for a tree from a parsed source. This is not binary, so it can be used
+    for collapsed branches in output, or unresolved topologies in input. *)
+type parsed = [`Node of data * parsed list | `Leaf of data ]
 
 val to_string : t -> string
-val of_parsed : data parsed -> t
-val to_parsed : t -> data parsed
+val of_parsed : parsed -> t
+val to_parsed :
+  (Topology.id -> Topology.id -> [>`Name of string]) ->
+    (Topology.id -> Topology.id -> [>`Support of float]) ->
+      (Topology.id -> Topology.id -> [<`BranchLength of float]) -> t -> parsed
 
 val debug_print : t -> out_channel -> unit
 
 
 (** {2 Math Functions} 
     Useful mathematical and combinatorial functions on binary unrooted trees. We
-  use floating point results where exponential explosions can result. *)
+    use floating point results where exponential explosions can result. *)
 
 (** Calculate the number of edges of a binary unrooted tree with [n] leaves.
     The exact formula is, 2*n-3. Add an additional edge for rooted trees. *)

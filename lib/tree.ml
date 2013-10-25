@@ -146,61 +146,23 @@ let disjoint t =
   let nodes =
     IDSet.fold (fun i acc -> IDMap.add i (Single i) acc) leaves IDMap.empty
   and edges = EdgeSet.empty
-  and handles = leaves
+  and handles = 
+    IDSet.fold (fun i acc -> HandleSet.add i acc) leaves HandleSet.empty
   and avail_codes = holes_and_max (IDSet.elements leaves) in
   {t with
     edges; nodes; handles; avail_codes; }
 
-let random_elt_nodemap (type t) (m: t IDMap.t) : IDMap.key * t =
-  let n = IDMap.cardinal m in
-  let i = Random.int n in
-  let module M = struct exception E of IDMap.key * t end in
-  try 
-    IDMap.fold
-      (fun k v j -> if i = j then raise (M.E (k,v)) else succ j) m 0
-        |> ignore;
-    assert false
-  with M.E (k,v) -> k,v
+let random_edge t = Topology.random_edgeset t.edges
 
-let random_elt_nodeset (s: IDSet.t) =
-  let n = IDSet.cardinal s in
-  let i = Random.int n in
-  let module M = struct exception E of IDSet.elt end in
-  try 
-    IDSet.fold
-      (fun k j -> if i = j then raise (M.E k) else succ j) s 0
-        |> ignore;
-    assert false
-  with M.E k -> k
+let random_node t = fst @@ Topology.random_nodemap t.nodes
 
-let random_elt_edgeset (s: EdgeSet.t) : edge =
-  let n = EdgeSet.cardinal s in
-  let i = Random.int n in
-  let module M = struct exception E of EdgeSet.elt end in
-  try
-    EdgeSet.fold (fun k j -> if i = j then raise (M.E k) else succ j) s 0
-      |> ignore;
-    assert false
-  with M.E k -> k
+let random_leaf t = Topology.random_nodeset @@ get_leaves t
 
-let random_edge t =
-  random_elt_edgeset t.edges
+let random_single t = Topology.random_nodeset @@ get_singles t
 
-let random_node t =
-  fst (random_elt_nodemap t.nodes)
+let is_leaf x t = is_leaf @@ IDMap.find x t.nodes
 
-let random_leaf t =
-  get_leaves t |> random_elt_nodeset
-
-let random_single t =
-  let single,_ = IDMap.partition (fun _ v -> is_single v) t.nodes in
-  fst (random_elt_nodemap single)
-
-let is_leaf x t =
-  is_leaf (IDMap.find x t.nodes)
-
-let is_single x t =
-  is_single (IDMap.find x t.nodes)
+let is_single x t = is_single @@ IDMap.find x t.nodes
 
 let pre_order_nodes f h t acc =
   let rec processor prev curr acc =
@@ -242,8 +204,6 @@ let pre_order_edges f ((a,b) as e) t acc =
     |> each_edge a b
     |> each_edge b a
 
-let pre_order_edges_root _ _ _ _ _ = failwith "TODO"
-
 let post_order_edges f g (a, b) bt accum =
   let rec processor prev curr accum =
     match get_node curr bt with
@@ -262,16 +222,7 @@ let post_order_edges f g (a, b) bt accum =
   and b = processor a b accum in
   a, b
 
-let get_edges h t = match get_node h t with
-  | Single _ -> EdgeSet.empty
-  | Leaf (a,b)
-  | Interior (a,b,_,_) ->
-    pre_order_edges_root
-      (fun e acc -> EdgeSet.add e acc)
-      (fun e acc -> EdgeSet.add e acc)
-      (a,b)
-      t
-      EdgeSet.empty
+let get_edges _ _ = failwith "TODO"
 
 let get_all_edges t = t.edges
 
@@ -320,12 +271,39 @@ let handle_of n t =
       | _ , _, _ -> assert false
     end
 
-let path_of _ _ _ = failwith "TODO"
+let path_of a b t =
+  let rec build_path acc a = match get_node a t with
+    | Leaf     (_,x)     when x = b -> x :: acc
+    | Interior (_,x,_,_) when x = b -> x :: acc
+    | Interior (_,_,x,_) when x = b -> x :: acc
+    | Interior (_,_,_,x) when x = b -> x :: acc
+    | Interior (_,x,y,z) ->
+      begin
+        try build_path (a::acc) x with Not_found ->
+        try build_path (a::acc) y with Not_found ->
+            build_path (a::acc) z
+      end
+    | Leaf _   -> raise Not_found
+    | Single _ -> assert false
+  in
+  let rev_path = match get_node a t with
+    | Leaf (_,b) -> build_path [a] b
+    | Single _   -> raise Not_found
+    | Interior (_,b,c,d) ->
+      begin
+        try build_path [a] b with Not_found ->
+        try build_path [a] c with Not_found ->
+            build_path [a] d
+      end
+  in
+  List.rev rev_path
+
+
+let traverse_path _ _ _ = failwith "TODO"
 
 let disjoint_edge _ _ = true
 
 
-(* TODO: deal with DELTA *)
 let break (x,y) t =
   (* Fix a and b with x; leave c up to call. *)
   let clean_up_nodes a b c x t =
@@ -510,7 +488,7 @@ let join j1 j2 t =
 
 let move_handle n t =
   let h = handle_of n t in
-  let p = path_of t h n in
+  let p = path_of h n t in
   let handles =
     t.handles
       |> HandleSet.remove h
@@ -518,7 +496,13 @@ let move_handle n t =
   in
   {t with handles;},p
 
-let reroot _ t = t
+let reroot x t =
+  let handle = handle_of x t in
+  let delta  = path_of x handle t in
+  t.handles
+    |> HandleSet.remove handle
+    |> HandleSet.add x
+    |> fun x -> {t with handles=x;},delta
 
 let random lst =
   let add_node t x =
@@ -533,24 +517,34 @@ let random lst =
   | _::[] | [] -> t
 
 
-(** {2 Fusing Functions} *)
-
-type 'a fuse_location = 'a * id * t
-type 'a fuse_locations = 'a fuse_location list
-
-let fuse_locations _ _ = failwith "TODO"
-let fuse_all_locations _ = failwith "TODO"
-let fuse _ _ = failwith "TODO"
-
-
 (** {2 I/O Functions} *)
 
-type 'a parsed = [ `Node of 'a * 'a parsed list | `Leaf of 'a ]
-type data = unit (* TODO: float? string? ...? *)
+(** Define the data on the nodes and leaves of the tree structure. *)
+type data =
+  [ `BranchLength of float | `Name of string | `Support of float ] list
 
-let to_string _ = failwith "TODO"
+(** Type for a tree from a parsed source. This is not binary, so it can be used
+    for collapsed branches in output, or unresolved topologies in input. *)
+type parsed = [`Node of data * parsed list | `Leaf of data ]
+
+(** Generate a tree from a parsed tree; we return a tree, and a table of id's to
+    the data for future diagnosis. *)
 let of_parsed _ = failwith "TODO"
-let to_parsed _ = failwith "TODO"
+
+(** Generate a parsed tree from a tree and functions that generate a branch
+    length, name and support values for the edges or sub-tree. The root(s) are
+    set to the handle(s) of the tree.
+    
+    [b ida idb] - Return branch-length of ida and idb.
+    [s ida idb] - Return the support of the clade below ida with parent idb.
+    [n ida idb] - Return the name of the clade defined at ida with parent idb.
+                  Often this will be a single taxa, but clades can be labled for
+                  generality. *)
+let to_parsed _ _ _ _ = failwith "TODO"
+
+(** Generate a string from the parsed tree; see to_parsed tree for how to
+    generate details. *)
+let to_string _ = failwith "TODO"
 
 
 (** {2 Math Functions} *)
