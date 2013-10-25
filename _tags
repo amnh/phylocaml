@@ -53,6 +53,7 @@ true : debug, annot, bin_annot
  "lib/node.cmx"      : for-pack(Phylocaml)
  "lib/nodeData.cmx"  : for-pack(Phylocaml)
  "lib/network.cmx"   : for-pack(Phylocaml)
- "lib/basicDiagnosis.cmx" : for-pack(Phylocaml)
+ "lib/pDiagnosis.cmx": for-pack(Phylocaml)
  "lib/model.cmx"     : for-pack(Phylocaml)
+ "lib/pModel.cmx"    : for-pack(Phylocaml)
 
