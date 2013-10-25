@@ -1,19 +1,21 @@
 (* open Internal *)
 
 (** Defines a dianosis as a pre-order traversal of the space and a post-order
-    traversal of the space.
+    traversal of the space. *)
 
-module Make (Model : Model.S) (Node : Node.R) (Topo : Topology.S) = struct
+module Make (Node : Node.R) (Topo : Topology.S) = struct
 
   (** {2 Types} *)
   type n = Node.n
   type r = Topo.t
 
+  type m = MlModel.t * 
+
   type t =
     {
       data : (Node.n,Node.r) Ptopology.t;
       topo : Topo.t;
-      model: Model.t;
+      model: Mlodel.t;
     }
 
   type s = Topo.t * Model.t
@@ -150,4 +152,4 @@ module Make (Model : Model.S) (Node : Node.R) (Topo : Topology.S) = struct
   (** Debugging function for printing the topology and node states *)
   let print _ = failwith "TODO"
 
-end *)
+end
