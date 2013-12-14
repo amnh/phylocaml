@@ -34,6 +34,7 @@ Dependencies
 + [Pareto](http://github.com/superbobry/pareto/)
 + [GSL](https://bitbucket.org/mmottl/gsl-ocaml)
 + [Findlib](http://projects.camlcity.org/projects/findlib.html)
++ [ctypes] (https://github.com/ocamllabs/ocaml-ctypes)
 + [oUnit](http://ounit.forge.ocamlcore.org/) (optional)
 
 Configure, Install, and Uninstall
@@ -45,11 +46,12 @@ Typing 'make' will initiate native and bytecode compilation of the Phylocaml
 library.  After building, 'make install' will do a findlib installation.  To
 generate the ocamldoc API documentation, use 'make docs'.
 
-To removing Phylocaml type 'make uninstall' or it can be done directly via the
+To remove Phylocaml type 'make uninstall' or it can be done directly via the
 findlib command, 'ocamlfind remove phylocaml'.
 
 Installation via OPAM is available by including our opam-repo. This can be added
-via, 'opam repository add AMNH git://github.com/amnh/opam-amnh.git'.
+via, 'opam repository add AMNH git://github.com/amnh/opam-amnh.git' and then
+installing the provided package.
 
 
 Testing Framework
@@ -129,67 +131,9 @@ Example code to diagnose a tree with known data taxon data and tree file,
 Overview of Search Modules
 --------------------------
 
-The search framework will require thoughtfulness to be able to encompass a wide
-range of known search heuristics, as well as unknown situations in regard to
-networks and other topologies. We would also like to spin this part off into a
-general library if possible. Our problem, dealing with two NP-Hard problems
-requires some extra thought that other packages do not often address. We can
-look to current meta-heuristic literature to design a general library. Most of
-these algorithms are dependent on a local search. At minimum this requires,
-
-+ Solution - A topology.
-+ Neighborhood- A way to generate solutions using local modifications
-+ Choose - A method to choose a single member of a neighborhood for
-  successive neighborhood searches.
-
-Full search procedures, like branch and bound will also have to be employed as
-well to round out an exhaustive approach to search on small data-sets.
-
-    type local_search =
-      choose : (t -> t -> bool) ->
-        (module Neighborhood.S with type t = Diagnosis.t) ->
-          (module LocalTabu.S with type t = Diagnosis.t) -> t -> t
-
-    Figure 2. type definition for a local search
-
-It is currently under consideration that the neighborhood be generated from a
-lazy-list. In this way, we believe a wide range of options and strategies can be
-employed. The local search modules Neighborhood and LocalTabu are specialized to
-the type of the topology. This allows multiple diagnosis modules to use the same
-Neighborhood for the same topology. This is important in Variable Neighborhood
-Search especially and in general.
-
-This local-search procedure can be used to build up a more global search
-procedure that includes perturbations, a more robust tabu-search, and other
-functionalities for global optimization and meta-heuristics. These procedures
-can be defined separately instead of a single all encompassing search function,
-and be parameterized about the specific requirements of the topology. In general
-meta-heuristics can be separated into two categories:
-
-Iterative Methods
-+ Simulated Annealing (with restart)
-+ Tabu-Search
-+ Greedy Randomized Adaptive Search Procedure (GRASP)
-+ Variable Neighborhood Search
-+ Guided Local Search
-+ Iterated Local Search
-
-Population Based Methods
-+ Scatter Search / Path Relinking
-+ Evolutionary Computation (eg, GA)
-+ Ant Colony Optimization
-+ Firefly Optimization
-
-The potential to compose these methods into hyper-heuristics is still a
-question, but at the very least these methods encompass a wide range of ways
-to vary the degrees of Intensification and Diversification. Some questions
-remain regarding the search procedures,
-
-+ Will this design be robust enough for parallel computation and other types
-  of neighborhoods?
-+ Does the first-class module cause speed issues?
-+ Can neighborhoods be partitioned effectively with the scheme we have?
-+ Can the frame-work be generalized into its own library?
+We provide module implementations that support the [OCamion](https://github.com/AMNH/ocamion)
+project, although we do not directly depend on that library --it is thus highly
+recommended to install though.
 
 
 Overview of Utility Modules
