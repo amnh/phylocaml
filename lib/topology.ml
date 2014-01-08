@@ -23,7 +23,7 @@ type general_delta =
   { removed : side_delta;
     created : side_delta; }
 
-type reroot_delta= id list
+type reroot_delta = id list
 
 type join_delta = general_delta
 
@@ -32,11 +32,38 @@ type break_delta= general_delta
 type topology_delta =
   [`Reroot of edge | `Join of jxn * jxn | `Break of edge] list
 
-
 let random_edgeset = random_elt_pairset
+
 let random_nodeset = random_elt_intset
+
 let random_nodemap = random_elt_intmap
+
 let random_handleset = random_elt_intset
+
+module CodeManager =
+  struct
+
+    type t = int * int list
+
+    let empty = 0,[]
+
+    let pop = function
+      | y,x::xs -> x, (y, xs)
+      | y,[]    -> y, (y+1, [])
+
+    let push i = function
+      | y,x when i = (y-1) -> (y-1, x)
+      | y,x -> (y, i::x)
+
+    let of_list ids : int * int list =
+      let rec holesmax holes max xxs = match xxs with
+        | [] -> max,holes
+        | x::xs when x = max -> holesmax holes (max+1) xs
+        | _ -> holesmax (max::holes) (max+1) xxs
+      in
+    holesmax [] 0 (List.sort Pervasives.compare ids)
+
+  end
 
 module type NodeComparator = 
   sig
@@ -61,7 +88,7 @@ module type S =
           nodes : node IDMap.t;
           edges : EdgeSet.t;
         handles : HandleSet.t;
-    avail_codes : int * int list; }
+    avail_codes : CodeManager.t; }
 
     module Comparator : NodeComparator
 
@@ -110,7 +137,7 @@ module type S =
     val reroot : edge -> t -> t * reroot_delta
  
     val traverse_path :
-      ('a -> id -> id -> 'a) -> id list -> 'a -> 'a
+      ('a -> id -> id -> 'a) -> id list -> t -> 'a -> 'a
 
     val pre_order_nodes :
       (id option -> id -> 'a -> 'a) -> id -> t -> 'a -> 'a

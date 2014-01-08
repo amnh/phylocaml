@@ -158,8 +158,11 @@ val post_order_edges :
 val partition_edge :
   Topology.edge -> t -> Topology.IDSet.t * Topology.IDSet.t * bool
 
+(** [traverse_path] Traverse a path of nodes in a topology applying a function
+    on each, and accumulating the result. No calls to function are made on an
+    empty list or a single element in the list. *)
 val traverse_path :
-      ('a -> Topology.id -> Topology.id -> 'a) -> Topology.id list -> 'a -> 'a
+      ('a -> Topology.id -> Topology.id -> 'a) -> Topology.id list -> t -> 'a -> 'a
 
 (** {2 Topological Functions} *)
 
@@ -178,30 +181,18 @@ val join : Topology.jxn -> Topology.jxn -> t -> t * Topology.join_delta
 val reroot : Topology.id -> t -> t * Topology.reroot_delta
 
 
-
 (** {1 Tree Specific Functions}
     These functions are not members of the Topology module and thus cannot be
     accessed if the module implementation is abstracted. *)
 
-(** {2 I/O Functions} *)
+(** {2 Enumeration Functions}
+    Functions to aid in the enumeration of topologies.
 
-(** Define the data on the nodes and leaves of the tree structure. *)
-type data =
-  [ `BranchLength of float | `Name of string | `Support of float ] list
+(** Create a binary unrooted tree from an index. See {ref ...} *)
+val of_index : int -> t
 
-(** Type for a tree from a parsed source. This is not binary, so it can be used
-    for collapsed branches in output, or unresolved topologies in input. *)
-type parsed = [`Node of data * parsed list | `Leaf of data ]
-
-val to_string : t -> string
-val of_parsed : parsed -> t
-val to_parsed :
-  (Topology.id -> Topology.id -> [>`Name of string]) ->
-    (Topology.id -> Topology.id -> [>`Support of float]) ->
-      (Topology.id -> Topology.id -> [<`BranchLength of float]) -> t -> parsed
-
-val debug_print : t -> out_channel -> unit
-
+(** Convert a tree to its index. See {ref ...} *)
+val to_index : t -> int *)
 
 (** {2 Math Functions} 
     Useful mathematical and combinatorial functions on binary unrooted trees. We

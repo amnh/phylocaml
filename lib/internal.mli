@@ -26,6 +26,9 @@ val ( -- ) : int -> int -> int list
     better control with combinators above. *)
 val some : 'a -> 'a option
 
+(** [flip f a b] flips the arguments of a binary function *)
+val flip : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
+
 
 (** {6 Floating Point Operations} *)
 

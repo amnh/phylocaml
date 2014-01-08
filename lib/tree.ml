@@ -26,7 +26,7 @@ type t =
     nodes : node IDMap.t;
     edges : EdgeSet.t;
     handles : HandleSet.t;
-    avail_codes : int * int list;
+    avail_codes : CodeManager.t;
   }
 
 exception InvalidNodeID of id
@@ -40,11 +40,11 @@ let empty =
     nodes = IDMap.empty;
     edges = EdgeSet.empty;
     handles = HandleSet.empty;
-    avail_codes = 0,[];
+    avail_codes = CodeManager.empty;
   }
 
 
-let debug_print t chan =
+let dump t chan =
   Printf.fprintf chan "Edges : ";
   EdgeSet.iter (fun (a,b) -> Printf.fprintf chan "(%d,%d) " a b) t.edges;
   print_newline ();
@@ -57,14 +57,6 @@ let debug_print t chan =
     t.nodes;
   print_newline ();
   ()
-
-let next_code t : int * t = match t.avail_codes with
-  | y,x::xs -> x, {t with avail_codes =y,xs; }
-  | y,[]    -> y, {t with avail_codes =y+1,[]; }
-
-let add_code i t : t = match t.avail_codes with
-  | y,x when i = (y-1) -> {t with avail_codes = y-1,x; }
-  | y,x -> {t with avail_codes = y,i::x; }
 
 let is_edge x y t = EdgeSet.mem (x,y) t.edges
 
@@ -120,16 +112,6 @@ let get_neighbors x t = match get_node x t with
   | Leaf (_,x) -> [x]
   | Interior (_,x,y,z) -> [x;y;z]
 
-let compare _ _ = failwith "TODO"
-
-let holes_and_max ids : int * int list =
-  let rec holesmax holes max xxs = match xxs with
-    | [] -> max,holes
-    | x::xs when x = max -> holesmax holes (max+1) xs
-    | _ -> holesmax (max::holes) (max+1) xxs
-  in
-  holesmax [] 0 (List.sort Pervasives.compare ids)
-
 let create ids =
   let nodes,handles =
     List.fold_left
@@ -137,7 +119,7 @@ let create ids =
       (IDMap.empty,HandleSet.empty)
       (ids)
   and edges = EdgeSet.empty
-  and avail_codes = holes_and_max ids in
+  and avail_codes = CodeManager.of_list ids in
   {empty with
     edges; nodes; handles; avail_codes; }
 
@@ -148,7 +130,7 @@ let disjoint t =
   and edges = EdgeSet.empty
   and handles = 
     IDSet.fold (fun i acc -> HandleSet.add i acc) leaves HandleSet.empty
-  and avail_codes = holes_and_max (IDSet.elements leaves) in
+  and avail_codes = CodeManager.of_list (IDSet.elements leaves) in
   {t with
     edges; nodes; handles; avail_codes; }
 
@@ -222,7 +204,13 @@ let post_order_edges f g (a, b) bt accum =
   and b = processor a b accum in
   a, b
 
-let get_edges _ _ = failwith "TODO"
+let get_edges h t = match get_node h t with
+  (* choice of edge does not defined *)
+  | Interior (a,b,_,_) | Leaf (a,b) ->
+    assert(a = h);
+    pre_order_edges EdgeSet.add (a,b) t EdgeSet.empty
+  | Single _ ->
+    EdgeSet.empty
 
 let get_all_edges t = t.edges
 
@@ -236,6 +224,23 @@ let partition_edge edge t =
       IDSet.empty
   in
   aset,bset,true
+
+let compare_topology t1 t2 =
+  let extract_set t x acc =
+    let x,_,_ = partition_edge x t in
+    IntSetSet.add x acc
+  in
+  let t1s =
+    List.fold_right (extract_set t1) (EdgeSet.elements t1.edges) IntSetSet.empty
+  and t2s =
+    List.fold_right (extract_set t2) (EdgeSet.elements t1.edges) IntSetSet.empty
+  in
+  IntSetSet.compare t1s t2s
+
+let compare t1 t2 =
+  if t1.nodes = t2.nodes && t1.edges = t2.edges
+    then 0
+    else compare_topology t1 t2
 
 (* we can do better if we assume the second element in the interior tuple is
  * pointing to the parent/handle. should we? this should be a traversal call. *)
@@ -298,11 +303,11 @@ let path_of a b t =
   in
   List.rev rev_path
 
-
-let traverse_path _ _ _ = failwith "TODO"
+let rec traverse_path f ids t acc = match ids with
+  | [] | [_] -> acc
+  | x1::((x2::_) as xs) -> traverse_path f xs t (f acc x1 x2)
 
 let disjoint_edge _ _ = true
-
 
 let break (x,y) t =
   (* Fix a and b with x; leave c up to call. *)
@@ -360,7 +365,7 @@ let break (x,y) t =
         |> HandleSet.add x
         |> HandleSet.add b (* or c, choice is arbitrary *)
     in
-    let t = add_code a {t with nodes; handles;} in
+    let t = {t with nodes; handles; avail_codes = CodeManager.push a t.avail_codes; } in
     let delta =
       let add_hs = if h = x then [b] else if h = b then [x] else [x;b]
       and rem_hs = if h = x || h = b then [] else [h] in
@@ -385,7 +390,7 @@ let break (x,y) t =
         |> HandleSet.add b (* or c, choice is arbitrary *)
         |> HandleSet.add x (* or y, choice is arbitrary *)
     in
-    let t = add_code a @@ add_code w {t with handles; } in
+    let avail_codes = CodeManager.push a @@ CodeManager.push w t.avail_codes in
     let delta =
       let add_hs = if h = b then [x] else if h = x then [b] else [x;b]
       and rem_hs = if h = b || h = x then [] else [h] in
@@ -393,9 +398,8 @@ let break (x,y) t =
         removed = {d_nodes = [a;w]; d_edges = [(a,b);(a,c);(w,x);(w,y);(a,w)];
                    d_handles = rem_hs;};}
     in
-    t,delta
+    {t with avail_codes; handles; },delta
    
-
 let join j1 j2 t =
   match j1, j2 with
   (* x + y ---> x -- y *)
@@ -425,7 +429,7 @@ let join j1 j2 t =
   | `Edge (y,z), `Single x ->
     assert( is_single x t );
     assert( is_edge y z t );
-    let n_id,t = next_code t in
+    let n_id, avail_codes = CodeManager.pop t.avail_codes in
     let n = Interior (n_id, x, y, z) in
     let nodes =
       t.nodes
@@ -447,7 +451,7 @@ let join j1 j2 t =
                     d_nodes = [n_id]; d_handles = []; };
         removed = { d_nodes = []; d_edges = [(y,z)]; d_handles = [x]; }; }
     in
-    {t with edges; nodes; handles;}, delta
+    {t with edges; nodes; handles; avail_codes;}, delta
   (*  w   y    w       y
    *  |   |     \     /
    *  | + | ---> a---b
@@ -456,8 +460,8 @@ let join j1 j2 t =
   | `Edge (w,x), `Edge (y,z) ->
     assert( is_edge w x t );
     assert( is_edge y z t );
-    let a, t = next_code t in
-    let b, t = next_code t in
+    let a, avail_codes = CodeManager.pop t.avail_codes in
+    let b, avail_codes = CodeManager.pop avail_codes in
     let nodes =
       t.nodes
         |> IDMap.add w (remove_replace (get_node w t) x a)
@@ -484,7 +488,7 @@ let join j1 j2 t =
                     d_nodes = [a;b]; d_handles = []; };
         removed = { d_nodes = []; d_edges = [(y,z);(w,x)]; d_handles = [x]; }; }
     in
-    {t with edges; nodes; handles; }, delta
+    {t with avail_codes; edges; nodes; handles; }, delta
 
 let move_handle n t =
   let h = handle_of n t in
@@ -517,35 +521,7 @@ let random lst =
   | _::[] | [] -> t
 
 
-(** {2 I/O Functions} *)
-
-(** Define the data on the nodes and leaves of the tree structure. *)
-type data =
-  [ `BranchLength of float | `Name of string | `Support of float ] list
-
-(** Type for a tree from a parsed source. This is not binary, so it can be used
-    for collapsed branches in output, or unresolved topologies in input. *)
-type parsed = [`Node of data * parsed list | `Leaf of data ]
-
-(** Generate a tree from a parsed tree; we return a tree, and a table of id's to
-    the data for future diagnosis. *)
-let of_parsed _ = failwith "TODO"
-
-(** Generate a parsed tree from a tree and functions that generate a branch
-    length, name and support values for the edges or sub-tree. The root(s) are
-    set to the handle(s) of the tree.
-    
-    [b ida idb] - Return branch-length of ida and idb.
-    [s ida idb] - Return the support of the clade below ida with parent idb.
-    [n ida idb] - Return the name of the clade defined at ida with parent idb.
-                  Often this will be a single taxa, but clades can be labled for
-                  generality. *)
-let to_parsed _ _ _ _ = failwith "TODO"
-
-(** Generate a string from the parsed tree; see to_parsed tree for how to
-    generate details. *)
-let to_string _ = failwith "TODO"
-
+(** {1 Tree Specific Functions} *)
 
 (** {2 Math Functions} *)
 
