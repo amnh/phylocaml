@@ -500,13 +500,7 @@ let move_handle n t =
   in
   {t with handles;},p
 
-let reroot x t =
-  let handle = handle_of x t in
-  let delta  = path_of x handle t in
-  t.handles
-    |> HandleSet.remove handle
-    |> HandleSet.add x
-    |> fun x -> {t with handles=x;},delta
+let reroot = move_handle
 
 let random lst =
   let add_node t x =
