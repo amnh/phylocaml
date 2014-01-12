@@ -1,4 +1,5 @@
 open OUnit
+open Phylocaml
 open Internal
 
 let a = Alphabet.dna
