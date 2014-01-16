@@ -1,6 +1,5 @@
 open OUnit
-open Phylocaml
-open Internal
+open TestInternal
 
 let dna = Alphabet.dna
 let aminoacids = Alphabet.aminoacids

@@ -3,11 +3,16 @@ true : debug, annot, bin_annot
 # sub-directories
  <lib>            : include
  <lib/bitvector>  : include
+ <test>           : include
 
 # external libraries and c-library linking
  <**/*.{byte,native}> : package(pareto), package(bigarray), package(str), use_phyloc
  <**/*.cm{x,}a>       : package(pareto), package(bigarray), package(str), use_phyloc
  <**/*.top>           : package(pareto), package(bigarray), package(str), use_phyloc
+# of testing suite
+ <test/**.*>          : package(oUnit)
+ <test/testInternal.*>: test
+# of specific files
  "lib/bitvector.ml"   : use_phyloc
  "lib/Sequence_c.ml"  : use_phyloc, package(str)
  "lib/mlModel.ml"     : use_phyloc, package(pareto)

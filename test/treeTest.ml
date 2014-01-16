@@ -1,6 +1,5 @@
 open OUnit
-open Phylocaml
-open Internal
+open TestInternal
 open Topology
 
 let tests = "Tree" >:::
