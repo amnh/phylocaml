@@ -22,18 +22,13 @@ opam --version
 opam --git-version
 opam init 
 
-opam remote add biorepo git://github.com/amnh/amnh-opaml.git
 opam update
 opam install ${OPAM_DEPENDS}
 eval `opam config env`
 
 echo "==== LIBRARY ===="
 make 
-echo "==== TESTS ===="
-make tests
-echo "==== INSTALL LIBRARY ===="
+echo "==== INSTALL ===="
 make install
-echo "==== EXTERNAL LIBRARY TESTS ===="
+echo "===== TESTS ====="
 make extests
-echo "==== Doc ===="
-make docs
