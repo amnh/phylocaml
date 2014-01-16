@@ -1,5 +1,5 @@
 open OUnit
-open Internal
+open TestInternal
 
 let test_0 (module BV : Bitvector.BV) width () =
   let b1 = BV.create width 100 in

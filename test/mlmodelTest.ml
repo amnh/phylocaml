@@ -1,5 +1,5 @@
 open OUnit
-open Internal
+open TestInternal
 
 (* A list of branch length to compose a model for *)
 let bls = [ min_float; ~-.1.0;  0.0;  1.0; 100.0; max_float ]

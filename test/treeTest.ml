@@ -1,5 +1,5 @@
 open OUnit
-open Internal
+open TestInternal
 open Topology
 
 let test_0 () =
