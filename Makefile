@@ -11,14 +11,6 @@ INST_OTH=_build/lib/*.mli _build/phylocaml.cm[io]
 
 # -----------------------------------
 
-extests :
-	cd test && $(MAKE)
-
-tests :
-	$(BUILD) test.native
-
-# -----------------------------------
-
 all : phyloc native byte
 
 native :
@@ -32,6 +24,14 @@ top :
 
 phyloc :
 	$(BUILD) libphyloc.a
+
+# -----------------------------------
+
+extests :
+	cd test && $(MAKE)
+
+tests :
+	$(BUILD) test.native
 
 # -----------------------------------
 
