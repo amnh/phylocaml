@@ -1,10 +1,5 @@
 open OUnit
-<<<<<<< HEAD
-open Phylocaml
-open Internal
-=======
 open TestInternal
->>>>>>> 418c003da5a91cf207b3d9bf6e76fcfbfcaf8aa4
 
 let generate_for_module (module BV : Bitvector.BV) =
   let max_random_int = (1 lsl 30)-1 in
