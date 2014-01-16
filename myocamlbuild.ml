@@ -110,8 +110,12 @@ let () = dispatch begin function
     flag ["ocaml";"use_compatibility";"ocamldep"] (S compatibility_options);
     flag ["ocaml";"use_compatibility";"compile" ] (S compatibility_options);
 
+    (* testing pre-process flags *)
+    let testing_options = [A"-pp";A"camlp4of -UUSE_EXTERNAL_LINKING"] in
+    flag ["ocaml";"test";"compile" ] (S testing_options);
+    flag ["ocaml";"test";"ocamldep" ] (S testing_options);
+
     (* dependencies for c-stubs *)
-    dep ["link"; "ocaml"; "use_phyloc"] ["libphyloc.a"];
     dep ["c"; "compile"] headers;
 
     (* flags for c compilation/linking *)

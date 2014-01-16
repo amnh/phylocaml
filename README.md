@@ -56,8 +56,28 @@ installing the provided package.
 
 Testing Framework
 =================
+[![Build Status](https://travis-ci.org/amnh/phylocaml.png?branch=master)](https://travis-ci.org/amnh/phylocaml)
 
-We use oUnit. See the test/ directory for details.
+The tests can be built by installing the package and linking, or by compiling it
+directly together. Doing both ensures everything is packaged and installed
+properly. This switch is done with USE\_EXTERNAL\_LINKING pre-processor flag.
+
+The externally linked tests are compiled by,
+
+    make extests
+    ./tests/tests.native
+
+and the locally linked build is done by,
+
+    make tests
+    ./tests.native
+
+Documentation
+=================
+
+The documentation is built using ocamlbuild and can be built from,
+
+    make docs
 
 
 Quick Start
@@ -87,12 +107,12 @@ issues with networks or more complex topologies in optimizing states.
           |              < Node      |-------->|        | NodeData |---+
           |              +-----------+         | Node/  +----------+
           | Diagnosis    | Topo      |----+    |  Root  | Compare  |
-          |              +-----------+    |    +--------+----------+
-          |              | Model     |--+ |    +----------+   |
-          +--------------+-----------+  | +--->| Topology |<--+
-                                        |      +----------+
-                                        |      +----+----+-------+
-                                        +----->| ML | MP | Kolmo |
+          |   of Model   +-----------+    |    +--------+----------+
+          |              |           |    |    +----------+   |
+          +--------------+-----------+    +--->| Topology |<--+
+                    |                          +----------+
+                    |                          +----+----+-------+
+                    +------------------------->| ML | MP | Kolmo |
                                                +----+----+-------+
 
            Figure 1. Basic Module dependency diagram of a Diagnosis
@@ -120,7 +140,7 @@ You can see these implementations in the Node module.
 Example code to diagnose a tree with known data taxon data and tree file,
 
     module Node = Node.Make3D (Tree.NodeComparator) (SequenceData)
-    module Diag = Diagnosis.Make (Node) (Tree) (MPModel)
+    module Diag = MPDiagnosis.Make (Node) (Tree)
     let diagnose_tree taxa_data edges =
         let nodes = List.map (fun x -> Node.of_data (SequenceData.of_string x)) taxa_data in
         let tree = PTree.of_parsed edges nodes in
@@ -199,9 +219,6 @@ Contact/Location Information
 + Ward Wheeler (wheeler at amnh dot org)
 + Lavanya Kannan (lkannan at amnh dot org)
 + [Support Forum](https://groups.google.com/forum/?fromgroups#!forum/poy4)
-+ [Site on AMNH](http://research.amnh.org/scicomp/research/projects/invertebrate-zoology/poy?q=projects/poy.php)
-
++ [Site on AMNH](http://www.amnh.org/our-research/computational-sciences/)
 
 -------------------------------------------------------------------------------
-
-

@@ -1,4 +1,4 @@
-.PHONY: clean byte native phyloc docs top install uninstall tests all dot
+.PHONY: clean byte native phyloc docs top install uninstall tests all dot extests
 
 .DEFAULT: all
 
@@ -11,10 +11,15 @@ INST_OTH=_build/lib/*.mli _build/phylocaml.cm[io]
 
 # -----------------------------------
 
-all : native byte
+extests :
+	cd test && $(MAKE)
 
 tests :
-	cd test && $(MAKE)
+	$(BUILD) test.native
+
+# -----------------------------------
+
+all : phyloc native byte
 
 native :
 	$(BUILD) phylocaml.cmxa
@@ -28,7 +33,10 @@ top :
 phyloc :
 	$(BUILD) libphyloc.a
 
+# -----------------------------------
+
 clean :
+	cd test && $(MAKE) clean
 	$(BUILD) -clean
 
 # -----------------------------------
