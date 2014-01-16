@@ -243,7 +243,7 @@ let compare t1 t2 =
     else compare_topology t1 t2
 
 (* we can do better if we assume the second element in the interior tuple is
- * pointing to the parent/handle. should we? this should be a traversal call. *)
+ * pointing to the handle. should we? this should be a traversal call. *)
 let handle_of n t =
   let rec handle_of p n t =
     if is_handle n t then
