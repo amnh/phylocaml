@@ -10,7 +10,7 @@ true : debug, annot, bin_annot
  <**/*.cm{x,}a>       : package(pareto), package(bigarray), package(str), use_phyloc
  <**/*.top>           : package(pareto), package(bigarray), package(str), use_phyloc
 # of testing suite
- <test/**.*>          : package(oUnit)
+ <test/**.*>          : package(oUnit), use_phyloc
  <test/testInternal.*>: test
 # of specific files
  "lib/bitvector.ml"   : use_phyloc
