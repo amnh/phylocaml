@@ -100,6 +100,9 @@ let () = dispatch begin function
     in
     List.iter (fun w -> flag ["c";"use_bv"^w] (S (bv_cflags w))) bv_width;
 
+    (* declare use_phylocaml and include_phylocaml for the tests *)
+    ocaml_lib "phylocaml";
+
     (* pre-process compatibility module *)
     let compatibility_options =
       if major < 4 || ((major = 4) && minor <= 0)
@@ -117,6 +120,7 @@ let () = dispatch begin function
 
     (* dependencies for c-stubs *)
     dep ["c"; "compile"] headers;
+    (* dep  ["link"; "ocaml"; "use_phyloc"] ["libphyloc.a"]; *)
 
     (* flags for c compilation/linking *)
     flag ["ocaml"; "compile"] (S [A"-cc";A cc]);

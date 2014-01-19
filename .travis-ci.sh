@@ -35,3 +35,4 @@ echo "==== INSTALL ===="
 make install
 echo "===== TESTS ====="
 make extests
+./test/test.native
