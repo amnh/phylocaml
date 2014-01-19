@@ -1,6 +1,6 @@
 OPAM_DEPENDS="ocamlfind ocamlfind ounit pareto"
 GSL="gsl-bin libgsl0-dev"
-LAPACK="liblapack3 liblapack-dev"
+LAPACK="liblapack-dev libblas-dev gfortran"
 OCAML="ocaml ocaml-native-compilers camlp4-extra opam"
 
 case "$OCAML_VERSION,$OPAM_VERSION" in
