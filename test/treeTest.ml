@@ -16,6 +16,7 @@ let tests = "Tree" >:::
   (fun () ->
     let ids = 0 -- 9 in (* 10 leaves *)
     let tree = Tree.random ids in
+    assert_equal  1 (IDSet.cardinal   (Tree.get_handles tree));
     assert_equal 10 (IDSet.cardinal   (Tree.get_leaves tree));
     assert_equal  0 (IDSet.cardinal   (Tree.get_singles tree));
     assert_equal 17 (EdgeSet.cardinal (Tree.get_all_edges tree));
@@ -25,6 +26,7 @@ let tests = "Tree" >:::
   (fun () ->
     let ids = 0 -- 9 in (* 10 leaves *)
     let tree = Tree.random ids |> Tree.disjoint in
+    assert_equal 10 (IDSet.cardinal   (Tree.get_handles tree));
     assert_equal 10 (IDSet.cardinal   (Tree.get_leaves tree));
     assert_equal 10 (IDSet.cardinal   (Tree.get_singles tree));
     assert_equal  0 (EdgeSet.cardinal (Tree.get_all_edges tree));
@@ -67,6 +69,16 @@ let tests = "Tree" >:::
         (Tree.get_all_edges tree);
       ());
 
+    "Handle Of Functions" >::
+    (fun () ->
+      let tree = Tree.random (0 -- 9) in
+      let handles =
+        List.map (fun (x,_) -> Tree.handle_of x tree) @@ IDMap.bindings tree.Tree.nodes 
+      in
+      match handles with
+        | x::xs -> List.iter (fun y -> assert_equal x y) xs
+        | _ -> assert false);
+
     "Break and Join functions" >::
     (fun () -> ());
 
@@ -75,19 +87,28 @@ let tests = "Tree" >:::
       let t1 = Tree.random (0 -- 9) in
       let x = Tree.random_node t1 in
       let t2,p1 = Tree.reroot x t1 in
-      assert_equal x (Tree.handle_of 4 t2));
+      assert_equal x (Tree.handle_of 0 t2));
 
     "Compare Function" >::
-    (fun () -> ());
+    (fun () ->
+      let r_state = Random.get_state () in
+      let tree1 = Tree.random (0 -- 9) in
+      let () = Random.set_state r_state in
+      let tree2 = Tree.random (0 -- 9) in
+      "Compare Equal Trees" @? (0 = (Tree.compare tree1 tree2)));
 
     "Path Function" >::
     (fun () ->
       let tree = Tree.random (0 -- 9) in
-      let x = Tree.random_node tree
-      and y = Tree.random_node tree in
-      let p1 = Tree.path_of x y tree
-      and p2 = Tree.path_of y x tree in
-      assert_equal p1 (List.rev p2));
+      let rec test_once x =
+        let x = Tree.random_node tree
+        and y = Tree.random_node tree in
+        let p1 = Tree.path_of x y tree
+        and p2 = Tree.path_of y x tree in
+        assert_equal p1 (List.rev p2);
+        if x = 0 then test_once (x-1) else ()
+      in
+      test_once 10);
 
     "Post Order Edge Traversal Function" >::
     (fun () -> ());
@@ -99,6 +120,13 @@ let tests = "Tree" >:::
     (fun () -> ());
 
     "Partition Edge Function" >::
-    (fun () -> ());
+    (fun () ->
+      let tree = Tree.random (0 -- 9) in
+      EdgeSet.iter
+        (fun edge ->
+          let a,b,x = Tree.partition_edge edge tree in
+          assert_equal true x;
+          assert_equal IDSet.empty (IDSet.inter a b))
+        (Tree.get_all_edges tree));
 ]
 

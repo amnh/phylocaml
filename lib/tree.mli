@@ -74,6 +74,9 @@ val get_leaves : t -> Topology.IDSet.t
 (** Return the single nodes of the topology. *)
 val get_singles : t -> Topology.IDSet.t
 
+(** Of a tree, return the set of handles. *)
+val get_handles : t -> Topology.HandleSet.t
+
 (** Of a pair of node ids, return an edge. *)
 val get_edge : Topology.id -> Topology.id -> t -> Topology.edge
 

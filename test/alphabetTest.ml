@@ -58,8 +58,8 @@ let tests =
         (fun () ->
           let a = Alphabet.generate_seq_alphabet 35 in
           let a = Alphabet.to_level 3 a in
-          let () = assert_equal 3 (Alphabet.CodeSet.cardinal (Alphabet.get_combination 650 a)) in
-          let () = assert_equal 3 (Alphabet.CodeSet.cardinal (Alphabet.get_combination 700 a)) in
+          let () = assert_equal 3 (Alphabet.CodeSet.cardinal (Alphabet.get_combination 1950 a)) in
+          let () = assert_equal 3 (Alphabet.CodeSet.cardinal (Alphabet.get_combination 1500 a)) in
           let () = assert_equal 2 (Alphabet.CodeSet.cardinal (Alphabet.get_combination  70 a)) in
           let () = assert_equal 2 (Alphabet.CodeSet.cardinal (Alphabet.get_combination  40 a)) in
           let () = assert_equal 1 (Alphabet.CodeSet.cardinal (Alphabet.get_combination   5 a)) in

@@ -99,6 +99,8 @@ let get_singles t : IDSet.t =
   let leaves,_ = IDMap.partition (fun _ v -> (is_single v)) t.nodes in
   IDMap.fold (fun k _ t -> IDSet.add k t) leaves IDSet.empty
 
+let get_handles t = t.handles
+
 let get_edge a b t =
   if EdgeSet.mem (a,b) t.edges
     then (a,b)
@@ -149,7 +151,7 @@ let is_single x t = is_single @@ IDMap.find x t.nodes
 let pre_order_nodes f h t acc =
   let rec processor prev curr acc =
     match get_node curr t, prev with
-    | Single x, _ ->
+    | Single x, None ->
       assert(x=curr);
       f prev curr acc
     | Leaf (_,p), None ->
@@ -167,6 +169,7 @@ let pre_order_nodes f h t acc =
       f prev curr acc
         |> processor (Some curr) a
         |> processor (Some curr) b
+    | Single _, _ -> assert false
   in
   processor None h acc
 
@@ -242,66 +245,49 @@ let compare t1 t2 =
     then 0
     else compare_topology t1 t2
 
-(* we can do better if we assume the second element in the interior tuple is
- * pointing to the handle. should we? this should be a traversal call. *)
 let handle_of n t =
-  let rec handle_of p n t =
-    if is_handle n t then
-      Some n
-    else
-      match get_node n t with
-        | Single _ -> assert false (* should be a handle already *)
-        | Leaf (_,b) -> handle_of n b t
-        | Interior (_,a,b,c) ->
-          let a,b = get_other_two p a b c in
-          begin match handle_of n a t, handle_of n b t with
-            | ((Some _) as a, None)
-            | None, ((Some _) as a) -> a
-            | None, None -> None
-            | (Some _),(Some _) -> assert false (* only one handle valid *)
-          end
-  in
-  match get_node n t with
-  | Single x -> assert( is_handle x t ); n
-  | Leaf (_,b) ->
-    begin match handle_of n b t with
-      | Some x -> x
-      | None   -> assert false
-    end
-  | Interior (_,a,b,c) ->
-    begin match handle_of n a t, handle_of n b t, handle_of n c t with
-      | Some x, None, None
-      | None, Some x, None
-      | None, None, Some x -> x
-      | _ , _, _ -> assert false
-    end
+  let module M = struct exception Found of id end in
+  try
+    let () =
+      pre_order_nodes
+        (fun _ x () ->
+          if HandleSet.mem x t.handles then raise (M.Found x) else ()) n t ()
+    in
+    raise Not_found
+  with M.Found x -> x
 
 let path_of a b t =
-  let rec build_path acc a = match get_node a t with
+  let rec build_path acc prev a = match get_node a t with
     | Leaf     (_,x)     when x = b -> x :: acc
     | Interior (_,x,_,_) when x = b -> x :: acc
     | Interior (_,_,x,_) when x = b -> x :: acc
     | Interior (_,_,_,x) when x = b -> x :: acc
     | Interior (_,x,y,z) ->
-      begin
-        try build_path (a::acc) x with Not_found ->
-        try build_path (a::acc) y with Not_found ->
-            build_path (a::acc) z
+      let a = Some a in
+      begin match prev with
+        | None ->
+          begin
+            try build_path (x::acc) a x with Not_found ->
+            try build_path (y::acc) a y with Not_found ->
+                build_path (z::acc) a z
+          end
+        | Some p ->
+          begin
+            let x,y = get_other_two p x y z in
+            try build_path (x::acc) a x with Not_found ->
+                build_path (y::acc) a y
+          end
       end
-    | Leaf _   -> raise Not_found
-    | Single _ -> assert false
-  in
-  let rev_path = match get_node a t with
-    | Leaf (_,b) -> build_path [a] b
+    | Leaf (_,y) ->
+      begin match prev with
+        | None -> build_path (y::acc) (Some a) y
+        | Some _ -> raise Not_found
+      end
     | Single _   -> raise Not_found
-    | Interior (_,b,c,d) ->
-      begin
-        try build_path [a] b with Not_found ->
-        try build_path [a] c with Not_found ->
-            build_path [a] d
-      end
   in
-  List.rev rev_path
+  if a = b
+    then [a]
+    else List.rev @@ build_path [a] None a
 
 let rec traverse_path f ids t acc = match ids with
   | [] | [_] -> acc
