@@ -15,5 +15,6 @@ let tests_c = [
 ]
 
 let () =
+  let () = Random.self_init () in
   ignore (OUnit.run_test_tt_main ("OCaml" >::: tests));
   if run_tests_c then ignore (OUnit.run_test_tt_main ("OCaml<-->C" >::: tests_c));

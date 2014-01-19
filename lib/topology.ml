@@ -120,6 +120,7 @@ module type S =
     val get_node : id -> t -> node
     val get_neighbors : id -> t -> id list
     val get_leaves : t -> id list
+    val get_handles : t -> id list
     val get_singles : t -> id list
 
     val move_handle : id -> t -> t * id list

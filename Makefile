@@ -2,7 +2,7 @@
 
 .DEFAULT: all
 
-BUILD=ocamlbuild -use-ocamlfind
+BUILD=ocamlbuild -use-ocamlfind -classic-display
 OFIND=ocamlfind
 
 INST_BYT=_build/phylocaml.cma _build/dllphyloc.so
