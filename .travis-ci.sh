@@ -29,10 +29,8 @@ opam update
 opam install ${OPAM_DEPENDS}
 eval `opam config env`
 
-echo "==== LIBRARY ===="
+echo "==== CONFIGURATION DONE ===="
+
 make
-echo "==== INSTALL ===="
-make install
-echo "===== TESTS ====="
-make extests
-./test/test.native
+make test.native
+./test.native
