@@ -26,15 +26,18 @@ Table of Contents
   + Overview of Utility Modules
 + Design Choices and Rationale
 + Contact/Location Information
-
++ License
 
 Dependencies
 ============
+
+Required
 + [OCaml](http://caml.inria.fr/ocaml/) (4.00.1+)
 + [Pareto](http://github.com/superbobry/pareto/)
 + [GSL](https://bitbucket.org/mmottl/gsl-ocaml)
 + [Findlib](http://projects.camlcity.org/projects/findlib.html)
-+ [ctypes] (https://github.com/ocamllabs/ocaml-ctypes)
+
+Optional
 + [oUnit](http://ounit.forge.ocamlcore.org/) (optional)
 
 Configure, Install, and Uninstall
@@ -220,5 +223,11 @@ Contact/Location Information
 + Lavanya Kannan (lkannan at amnh dot org)
 + [Support Forum](https://groups.google.com/forum/?fromgroups#!forum/poy4)
 + [Site on AMNH](http://www.amnh.org/our-research/computational-sciences/)
+
+
+License Information
+===================
+Mozilla Public License, version 2.0
+
 
 -------------------------------------------------------------------------------
