@@ -505,29 +505,50 @@ let random lst =
 
 (** {2 Math Functions} *)
 
-let num_edges = function
-  | n when n < 0 -> assert false (* raise proper exception *)
-  | 0 | 1 -> 0
-  | n     -> 2 * n - 3
+let zero  = Num.num_of_int 0
+let one   = Num.num_of_int 1
+let two   = Num.num_of_int 2
+let three = Num.num_of_int 3
+let five  = Num.num_of_int 5
 
-let num_nodes n = match n with
-  | _ when n < 0 -> assert false (* raise proper exception *)
-  | 0 | 1 -> n
-  | n     -> 2 * n - 2
+let num_edges =
+  (fun n ->
+    if Num.lt_num n zero
+      then raise Not_found
+    else if Num.eq_num n zero
+      then n
+    else if Num.eq_num n one
+      then n
+    else
+      Num.sub_num (Num.mult_num two n) two)
+ 
+let num_nodes =
+  (fun n ->
+    if Num.lt_num n zero
+      then raise Not_found
+    else if Num.eq_num n zero
+      then zero
+    else if Num.eq_num n one
+      then n
+    else
+      Num.sub_num (Num.mult_num two n) two)
 
-let num_trees n =
+let num_trees =
   let d_fact n =
     let rec d_fact final acc n =
-      if n = final then acc
-      else d_fact final (acc*.n) (n-.2.0)
+      if Num.eq_num n final then acc
+      else d_fact final (Num.mult_num n acc)
+                        (Num.sub_num n two)
     in
-    if n mod 2 = 0
-      then (* d_fact 2.0 1.0 (float_of_int n) *)
-           assert false (* since 2n-5 is always odd *)
-      else d_fact 1.0 1.0 (float_of_int n)
+    d_fact one one n
   in
-  match n with
-  | _ when n < 0 -> assert false (* raise proper exception *)
-  | 0            -> 0.0
-  | 1 | 2 | 3    -> 1.0
-  | n            -> d_fact (2*n - 5)
+  (fun n ->
+    if Num.lt_num n zero
+      then raise Not_found
+    else if Num.eq_num n zero
+      then zero
+    else if Num.lt_num n three
+      then one
+    else
+      d_fact (Num.sub_num (Num.mult_num two n) five))
+

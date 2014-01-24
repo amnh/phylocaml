@@ -7,29 +7,29 @@ let tests = "Tree" >:::
   "Empty Tree property cardinalities" >::
   (fun () ->
     let tree = Tree.empty in
-    assert_equal 0 (IDSet.cardinal   (Tree.get_leaves tree));
-    assert_equal 0 (IDSet.cardinal   (Tree.get_singles tree));
-    assert_equal 0 (EdgeSet.cardinal (Tree.get_all_edges tree));
+    assert_equal_int 0 (IDSet.cardinal   (Tree.get_leaves tree));
+    assert_equal_int 0 (IDSet.cardinal   (Tree.get_singles tree));
+    assert_equal_int 0 (EdgeSet.cardinal (Tree.get_all_edges tree));
     ());
 
   "Tree property cardinalities" >::
   (fun () ->
     let ids = 0 -- 9 in (* 10 leaves *)
     let tree = Tree.random ids in
-    assert_equal  1 (IDSet.cardinal   (Tree.get_handles tree));
-    assert_equal 10 (IDSet.cardinal   (Tree.get_leaves tree));
-    assert_equal  0 (IDSet.cardinal   (Tree.get_singles tree));
-    assert_equal 17 (EdgeSet.cardinal (Tree.get_all_edges tree));
+    assert_equal_int  1 (IDSet.cardinal   (Tree.get_handles tree));
+    assert_equal_int 10 (IDSet.cardinal   (Tree.get_leaves tree));
+    assert_equal_int  0 (IDSet.cardinal   (Tree.get_singles tree));
+    assert_equal_int 17 (EdgeSet.cardinal (Tree.get_all_edges tree));
     ());
 
   "Disjoint Tree property cardinalites" >::
   (fun () ->
     let ids = 0 -- 9 in (* 10 leaves *)
     let tree = Tree.random ids |> Tree.disjoint in
-    assert_equal 10 (IDSet.cardinal   (Tree.get_handles tree));
-    assert_equal 10 (IDSet.cardinal   (Tree.get_leaves tree));
-    assert_equal 10 (IDSet.cardinal   (Tree.get_singles tree));
-    assert_equal  0 (EdgeSet.cardinal (Tree.get_all_edges tree));
+    assert_equal_int 10 (IDSet.cardinal   (Tree.get_handles tree));
+    assert_equal_int 10 (IDSet.cardinal   (Tree.get_leaves tree));
+    assert_equal_int 10 (IDSet.cardinal   (Tree.get_singles tree));
+    assert_equal_int  0 (EdgeSet.cardinal (Tree.get_all_edges tree));
     ());
 
   "Iterative Tree Construction" >::
@@ -45,12 +45,12 @@ let tests = "Tree" >:::
           tree
           xs
       | xs ->
-        assert_equal 10 (List.length xs); (* fails always *)
+        assert_equal_int 10 (List.length xs); (* fails always *)
         tree
     in
-    assert_equal 10 (IDSet.cardinal   (Tree.get_leaves tree));
-    assert_equal  0 (IDSet.cardinal   (Tree.get_singles tree));
-    assert_equal 17 (EdgeSet.cardinal (Tree.get_all_edges tree));
+    assert_equal_int 10 (IDSet.cardinal   (Tree.get_leaves tree));
+    assert_equal_int  0 (IDSet.cardinal   (Tree.get_singles tree));
+    assert_equal_int 17 (EdgeSet.cardinal (Tree.get_all_edges tree));
     ());
 
     "Partition Tree Edges" >::
@@ -64,7 +64,7 @@ let tests = "Tree" >:::
           let () = assert_bool errmsg d in
           let () = errmsg @? (IDSet.is_empty l_minus_r) in
           let () = errmsg @? (IDSet.is_empty r_minus_l) in
-          let () = assert_equal 10 (IDSet.cardinal (IDSet.union l r)) in
+          let () = assert_equal_int 10 (IDSet.cardinal (IDSet.union l r)) in
           ())
         (Tree.get_all_edges tree);
       ());
@@ -76,7 +76,7 @@ let tests = "Tree" >:::
         List.map (fun (x,_) -> Tree.handle_of x tree) @@ IDMap.bindings tree.Tree.nodes 
       in
       match handles with
-        | x::xs -> List.iter (fun y -> assert_equal x y) xs
+        | x::xs -> List.iter (fun y -> assert_equal_int x y) xs
         | _ -> assert false);
 
     "Break and Join functions" >::
@@ -87,7 +87,7 @@ let tests = "Tree" >:::
       let t1 = Tree.random (0 -- 9) in
       let x = Tree.random_node t1 in
       let t2,p1 = Tree.reroot x t1 in
-      assert_equal x (Tree.handle_of 0 t2));
+      assert_equal_int x (Tree.handle_of 0 t2));
 
     "Compare Function" >::
     (fun () ->
@@ -110,14 +110,14 @@ let tests = "Tree" >:::
       in
       test_once 10);
 
-    "Post Order Edge Traversal Function" >::
-    (fun () -> ());
-
-    "Pre Order Node Traversal Function" >::
-    (fun () -> ());
-
-    "Pre Order Edge Traversal Function" >::
-    (fun () -> ());
+    "Num Trees Function" >::
+    (fun () ->
+      let cmp = Num.eq_num in
+      let  input = List.map Num.num_of_int [0;1;2;3;4; 5; 6;   7;    8;     9;     10;      11]
+      and output = List.map Num.num_of_int [0;1;1;1;3;15;105;945;10395;135135;2027025;34459425] in
+      List.iter2
+        (fun i o -> assert_equal_num ~cmp o (Tree.num_trees i))
+        input output);
 
     "Partition Edge Function" >::
     (fun () ->

@@ -172,7 +172,7 @@ val traverse_path :
 (** Break an edge of a topology and return a new tree and a delta based on
     the new/removed nodes in the construction of the break. The number of
     handles will increase by one, always. *)
-val break : Topology.id * Topology.id -> t -> t * Topology.break_delta
+val break : Topology.edge -> t -> t * Topology.break_delta
 
 (** Join two jxn points of a topology and return a new tree and a delta based on
     the new/removed nodes in the construction of the join. The number of handles
@@ -198,17 +198,17 @@ val of_index : int -> t
 val to_index : t -> int *)
 
 (** {2 Math Functions} 
-    Useful mathematical and combinatorial functions on binary unrooted trees. We
-    use floating point results where exponential explosions can result. *)
+    Useful mathematical and combinatorial functions of binary trees. *)
 
 (** Calculate the number of edges of a binary unrooted tree with [n] leaves.
     The exact formula is, 2*n-3. Add an additional edge for rooted trees. *)
-val num_edges : int -> int
+val num_edges : Num.num -> Num.num
 
 (** Calculate the number of nodes in a binary unrooted tree with [n] leaves. The
     number of nodes are 2*n-2. *)
-val num_nodes : int -> int
+val num_nodes : Num.num -> Num.num
 
 (** Calculate the number of binary unrooted trees that can be produced from with
     [n] leaves. (2n-5)!! *)
-val num_trees : int -> float
+val num_trees : Num.num -> Num.num
+
