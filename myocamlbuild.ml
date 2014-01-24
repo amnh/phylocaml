@@ -20,7 +20,6 @@ let major,minor =
   let minor,_ = get_until n Sys.ocaml_version [] in
   int_of_string major, int_of_string minor
 
-
 (** Constants *)
 let bv_width = ["8";"16";"32";"64"]
 let headers  = ["lib/seq.h"; "lib/mlmodel.h"; "lib/phyloc.h"]
@@ -109,7 +108,7 @@ let () = dispatch begin function
         then [A"-pp";A"camlp4of -DCOMPATIBILITY"]
         else [A"-pp";A"camlp4of -UCOMPATIBILITY"]
     in
-    flag ["ocaml";"use_compatibility";"ocamldoc"] (S compatibility_options);
+    flag ["ocaml";"use_compatibility";"doc"]      (S compatibility_options);
     flag ["ocaml";"use_compatibility";"ocamldep"] (S compatibility_options);
     flag ["ocaml";"use_compatibility";"compile" ] (S compatibility_options);
 
