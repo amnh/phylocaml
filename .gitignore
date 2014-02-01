@@ -4,3 +4,4 @@
 *.byte
 *.native
 *_build/
+phylocaml.docdir/*
