@@ -1,4 +1,4 @@
-.PHONY: clean byte native phyloc docs top install uninstall tests all dot extests
+.PHONY: clean byte native phyloc docs top install uninstall all dot extests
 
 .DEFAULT: all
 
@@ -44,8 +44,16 @@ extests :
 test.byte : phyloc
 	$(BUILD) test.byte
 
+test.d.byte : phyloc
+	$(BUILD) test.d.byte
+
 test.native : phyloc
 	$(BUILD) test.native
+
+# -----------------------------------
+
+app :
+	cd app && $(MAKE)
 
 # -----------------------------------
 

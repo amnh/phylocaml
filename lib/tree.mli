@@ -27,18 +27,6 @@ type t = {
 }
 
 
-(** {2 Exceptions} *)
-
-(** Raised when a node is attempted to be accessed but not found. *)
-exception InvalidNodeID of Topology.id
-
-(** Raised if an edge is attempted to be accessed but not found. *)
-exception InvalidEdge of Topology.edge
-
-(** Raised if handle is attempted to the accessed but not found. *)
-exception InvalidHandle of Topology.handle
-
-
 (** {2 Tree Creation Functions} *)
 
 (** Create an empty topology. *)
@@ -173,21 +161,26 @@ val traverse_path :
 (** Break an edge of a topology and return a new tree and a delta based on
     the new/removed nodes in the construction of the break. The number of
     handles will increase by one, always. *)
-val break : Topology.edge -> t -> t * Topology.break_delta
+val break : Topology.edge -> t -> t * Topology.break Topology.tdelta
 
 (** Join two jxn points of a topology and return a new tree and a delta based on
     the new/removed nodes in the construction of the join. The number of handles
     will decrease by one, always. *)
-val join : Topology.jxn -> Topology.jxn -> t -> t * Topology.join_delta
+val join : Topology.jxn -> Topology.jxn -> t -> t * Topology.join Topology.tdelta
 
 (** Reroot a topology. This is relavent in rooted trees, only returns exact
     topology in this case. *)
 val reroot : Topology.id -> t -> t * Topology.reroot_delta
 
+(** Return the two jxn from a break. These can be further applied to rejoin the
+    tree, to use a tabu, et cetera. *)
+val jxn_of_delta : Topology.break Topology.tdelta -> Topology.jxn * Topology.jxn
+
 
 (** {1 Tree Specific Functions}
     These functions are not members of the Topology module and thus cannot be
     accessed if the module implementation is abstracted. *)
+
 
 (** {2 Enumeration Functions}
     Functions to aid in the enumeration of topologies.
