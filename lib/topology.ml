@@ -11,6 +11,10 @@ module IDMap = IntMap
 module EdgeSet = UnorderedTupleSet
 module EdgeMap = UnorderedTupleMap
 
+type break
+
+type join
+
 type jxn = [ `Single of id | `Edge of (id * id) ]
 
 type side_delta =
@@ -19,15 +23,12 @@ type side_delta =
 let empty_side =
   { d_nodes = []; d_edges = []; d_handles =[]; }
 
-type general_delta =
+type _ tdelta =
   { removed : side_delta;
-    created : side_delta; }
+    created : side_delta;
+     jxn_of : jxn list; }
 
 type reroot_delta = id list
-
-type join_delta = general_delta
-
-type break_delta= general_delta
 
 type topology_delta =
   [`Reroot of edge | `Join of jxn * jxn | `Break of edge] list
@@ -40,7 +41,7 @@ let random_nodemap = random_elt_intmap
 
 let random_handleset = random_elt_intset
 
-module CodeManager =
+module IDManager =
   struct
 
     type t = int * int list
@@ -88,7 +89,7 @@ module type S =
           nodes : node IDMap.t;
           edges : EdgeSet.t;
         handles : HandleSet.t;
-    avail_codes : CodeManager.t; }
+    avail_codes : IDManager.t; }
 
     module Comparator : NodeComparator
 
@@ -133,8 +134,8 @@ module type S =
     val path_of : id -> id -> t -> id list
     val disjoint_edge : edge -> t -> bool
 
-    val break : edge -> t -> t * break_delta
-    val join : jxn -> jxn -> t -> t * join_delta
+    val break : edge -> t -> t * break tdelta
+    val join : jxn -> jxn -> t -> t * join tdelta
     val reroot : edge -> t -> t * reroot_delta
  
     val traverse_path :
@@ -155,3 +156,4 @@ module type S =
     val of_parsed : EdgeSet.t -> t
     val to_parsed : t -> EdgeSet.t
   end
+

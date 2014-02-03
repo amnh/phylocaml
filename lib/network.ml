@@ -28,7 +28,7 @@ type t =
         nodes : node IDMap.t;
         edges : EdgeSet.t;
       handles : HandleSet.t;
-  avail_codes : CodeManager.t;
+  avail_codes : IDManager.t;
   }
 
 exception InvalidNodeID of id
@@ -40,7 +40,7 @@ let empty =
     nodes = IDMap.empty;
     edges = EdgeSet.empty;
     handles = HandleSet.empty;
-    avail_codes = CodeManager.empty;
+    avail_codes = IDManager.empty;
   }
 
 let random _ = failwith "TODO"

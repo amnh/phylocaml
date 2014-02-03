@@ -26,36 +26,32 @@ type t =
     nodes : node IDMap.t;
     edges : EdgeSet.t;
     handles : HandleSet.t;
-    avail_codes : CodeManager.t;
+    avail_codes : IDManager.t;
   }
-
-exception InvalidNodeID of id
-
-exception InvalidEdge of edge
-
-exception InvalidHandle of handle
 
 let empty =
   { name = None;
     nodes = IDMap.empty;
     edges = EdgeSet.empty;
     handles = HandleSet.empty;
-    avail_codes = CodeManager.empty;
+    avail_codes = IDManager.empty;
   }
 
 
-let dump t chan =
-  Printf.fprintf chan "Edges : ";
-  EdgeSet.iter (fun (a,b) -> Printf.fprintf chan "(%d,%d) " a b) t.edges;
-  print_newline ();
-  Printf.fprintf chan "Nodes : ";
+let dump output t =
+  let outputf format = Printf.ksprintf (output) format in
+  outputf "Handles : ";
+  HandleSet.iter (fun a -> outputf "H(%d) " a) t.handles;
+  outputf "\nEdges : ";
+  EdgeSet.iter (fun (a,b) -> outputf "(%d,%d) " a b) t.edges;
+  outputf "\nNodes : ";
   IDMap.iter
     (fun _ -> function
-      | Leaf (a,b) -> Printf.fprintf chan "L(%d,%d) " a b
-      | Interior (a,b,c,d) -> Printf.fprintf chan "N(%d,%d,%d,%d) " a b c d
-      | Single a -> Printf.fprintf chan "S(%d) " a)
+      | Leaf (a,b) -> outputf "L(%d,%d) " a b
+      | Interior (a,b,c,d) -> outputf "N(%d,%d,%d,%d) " a b c d
+      | Single a -> outputf "S(%d) " a)
     t.nodes;
-  print_newline ();
+  outputf "\n";
   ()
 
 let is_edge x y t = EdgeSet.mem (x,y) t.edges
@@ -68,7 +64,7 @@ let set_name x t = {t with name = Some x}
 
 let get_name t = t.name
 
-let get_other_two p a b c =
+let get_other_two n p a b c =
        if p = a then b,c
   else if p = b then a,c
   else if p = c then a,b
@@ -104,7 +100,7 @@ let get_handles t = t.handles
 let get_edge a b t =
   if EdgeSet.mem (a,b) t.edges
     then (a,b)
-    else raise Not_found
+    else raise Not_found (* TODO *)
 
 let get_node a t =
   IDMap.find a t.nodes
@@ -121,7 +117,7 @@ let create ids =
       (IDMap.empty,HandleSet.empty)
       (ids)
   and edges = EdgeSet.empty
-  and avail_codes = CodeManager.of_list ids in
+  and avail_codes = IDManager.of_list ids in
   {empty with
     edges; nodes; handles; avail_codes; }
 
@@ -132,7 +128,7 @@ let disjoint t =
   and edges = EdgeSet.empty
   and handles = 
     IDSet.fold (fun i acc -> HandleSet.add i acc) leaves HandleSet.empty
-  and avail_codes = CodeManager.of_list (IDSet.elements leaves) in
+  and avail_codes = IDManager.of_list (IDSet.elements leaves) in
   {t with
     edges; nodes; handles; avail_codes; }
 
@@ -165,11 +161,12 @@ let pre_order_nodes f h t acc =
         |> processor (Some curr) b
         |> processor (Some curr) c
     | Interior(_,a,b,c),Some x ->
-      let a,b = get_other_two x a b c in
+      let a,b = get_other_two curr x a b c in
       f prev curr acc
         |> processor (Some curr) a
         |> processor (Some curr) b
-    | Single _, _ -> assert false
+    | Single _, Some _ ->
+      assert false
   in
   processor None h acc
 
@@ -178,7 +175,7 @@ let pre_order_edges f ((a,b) as e) t acc =
     match get_node curr t with
     | Single _ -> assert false
     | Interior (_,a,b,c) ->
-      let a,b = get_other_two prev a b c in
+      let a,b = get_other_two curr prev a b c in
       f (curr,a) accum
         |> each_edge curr a
         |> f (curr,b)
@@ -197,20 +194,18 @@ let post_order_edges f g (a, b) bt accum =
       assert(curr = nd);
       f prev curr accum
     | Interior (nd, nbr1, nbr2, nbr3) ->
-      let a, b = get_other_two prev nbr1 nbr2 nbr3 in
+      let a, b = get_other_two nd prev nbr1 nbr2 nbr3 in
       let aacc = processor nd a accum
       and bacc = processor nd b accum in
       g prev curr aacc bacc
-    | Single _ -> accum
+    | Single _ -> assert false
   in
   let a = processor b a accum
   and b = processor a b accum in
   a, b
 
 let get_edges h t = match get_node h t with
-  (* choice of edge does not defined *)
   | Interior (a,b,_,_) | Leaf (a,b) ->
-    assert(a = h);
     pre_order_edges EdgeSet.add (a,b) t EdgeSet.empty
   | Single _ ->
     EdgeSet.empty
@@ -230,13 +225,13 @@ let partition_edge edge t =
 
 let compare_topology t1 t2 =
   let extract_set t x acc =
-    let x,_,_ = partition_edge x t in
-    IntSetSet.add x acc
+    let x,y,_ = partition_edge x t in
+    IntSetSet.add x acc |> IntSetSet.add y
   in
   let t1s =
     List.fold_right (extract_set t1) (EdgeSet.elements t1.edges) IntSetSet.empty
   and t2s =
-    List.fold_right (extract_set t2) (EdgeSet.elements t1.edges) IntSetSet.empty
+    List.fold_right (extract_set t2) (EdgeSet.elements t2.edges) IntSetSet.empty
   in
   IntSetSet.compare t1s t2s
 
@@ -263,19 +258,19 @@ let path_of a b t =
     | Interior (_,_,x,_) when x = b -> x :: acc
     | Interior (_,_,_,x) when x = b -> x :: acc
     | Interior (_,x,y,z) ->
-      let a = Some a in
+      let sa = Some a in
       begin match prev with
         | None ->
           begin
-            try build_path (x::acc) a x with Not_found ->
-            try build_path (y::acc) a y with Not_found ->
-                build_path (z::acc) a z
+            try build_path (x::acc) sa x with Not_found ->
+            try build_path (y::acc) sa y with Not_found ->
+                build_path (z::acc) sa z
           end
         | Some p ->
           begin
-            let x,y = get_other_two p x y z in
-            try build_path (x::acc) a x with Not_found ->
-                build_path (y::acc) a y
+            let x,y = get_other_two a p x y z in
+            try build_path (x::acc) sa x with Not_found ->
+                build_path (y::acc) sa y
           end
       end
     | Leaf (_,y) ->
@@ -295,6 +290,11 @@ let rec traverse_path f ids t acc = match ids with
 
 let disjoint_edge _ _ = true
 
+let jxn_of_delta (d : break tdelta) : jxn * jxn =
+  match d.jxn_of with
+  | [x;y] -> x,y
+  | _     -> assert false
+
 let break (x,y) t =
   (* Fix a and b with x; leave c up to call. *)
   let clean_up_nodes a b c x t =
@@ -312,9 +312,10 @@ let break (x,y) t =
     in
     {t with nodes; edges; }
   in
-  assert( is_edge x y t );
+  assert( is_edge x y t ); (* TODO *)
   match get_node x t, get_node y t with
-  | (Single _, _ | _, Single _) -> assert false
+  | (Single _, _ | _, Single _) ->
+    assert false
   (* a -- x ---> a + x *)
   | Leaf (a,b), Leaf (x,y) ->
     assert((a = y) && (b = x));
@@ -330,9 +331,11 @@ let break (x,y) t =
     in
     let delta =
       { created = {empty_side with d_handles = [h]; };
-        removed = {empty_side with d_edges = [(a,x);];} }
+        removed = {empty_side with d_edges = [(a,x)];};
+         jxn_of = [ `Single a; `Single x ]; }
     in
-    {t with nodes; edges; handles;},delta
+    let t = {t with nodes; edges; handles;} in
+    t,delta
   (*       b           b
    *      /            |
    * x---a   --->  x + |
@@ -341,7 +344,7 @@ let break (x,y) t =
   | Leaf (x,y), Interior(a,b,c,d)
   | Interior(a,b,c,d), Leaf (x,y) ->
     assert( y = a );
-    let b,c = get_other_two x b c d in
+    let b,c = get_other_two a x b c d in
     let h = handle_of a t in
     let t = clean_up_nodes b c x a t in
     let nodes = IDMap.add x (Single x) t.nodes
@@ -351,12 +354,13 @@ let break (x,y) t =
         |> HandleSet.add x
         |> HandleSet.add b (* or c, choice is arbitrary *)
     in
-    let t = {t with nodes; handles; avail_codes = CodeManager.push a t.avail_codes; } in
+    let t = {t with nodes; handles; avail_codes = IDManager.push a t.avail_codes; } in
     let delta =
       let add_hs = if h = x then [b] else if h = b then [x] else [x;b]
       and rem_hs = if h = x || h = b then [] else [h] in
       { created = {d_nodes = []; d_edges = [(b,c)]; d_handles = add_hs;};
-        removed = {d_nodes = [a];d_edges = [(a,x);(a,b);(a,c)]; d_handles = rem_hs;}; }
+        removed = {d_nodes = [a];d_edges = [(a,x);(a,b);(a,c)]; d_handles = rem_hs;};
+         jxn_of = [ `Single x; `Edge (b,c) ]; }
     in
     t,delta
   (* b       x     b   x
@@ -365,8 +369,8 @@ let break (x,y) t =
    *  /     \      |   |
    * c       y     c   y    *)
   | Interior (a,b,c,d), Interior (w,x,y,z) ->
-    let b,c = get_other_two w b c d
-    and x,y = get_other_two a x y z in
+    let b,c = get_other_two a w b c d
+    and x,y = get_other_two w a x y z in
     let h = handle_of a t in
     let t = clean_up_nodes b c w a t in
     let t = clean_up_nodes x y a w t in
@@ -376,22 +380,25 @@ let break (x,y) t =
         |> HandleSet.add b (* or c, choice is arbitrary *)
         |> HandleSet.add x (* or y, choice is arbitrary *)
     in
-    let avail_codes = CodeManager.push a @@ CodeManager.push w t.avail_codes in
+    let avail_codes = IDManager.push a @@ IDManager.push w t.avail_codes in
     let delta =
       let add_hs = if h = b then [x] else if h = x then [b] else [x;b]
       and rem_hs = if h = b || h = x then [] else [h] in
       { created = {d_nodes = []; d_edges = [(b,c);(x,y)]; d_handles = add_hs;};
         removed = {d_nodes = [a;w]; d_edges = [(a,b);(a,c);(w,x);(w,y);(a,w)];
-                   d_handles = rem_hs;};}
+                   d_handles = rem_hs;};
+         jxn_of = [`Edge (b,c); `Edge (x,y)];}
     in
-    {t with avail_codes; handles; },delta
+    let t = {t with avail_codes; handles; } in
+    t,delta
    
 let join j1 j2 t =
+  let jxn_of = [j1;j2] in
   match j1, j2 with
   (* x + y ---> x -- y *)
   | `Single x, `Single y ->
-    assert( is_single x t );
-    assert( is_single y t );
+    assert (is_single x t); (* TODO *)
+    assert (is_single y t); (* TODO *)
     let nodes =
       t.nodes
         |> IDMap.add x (Leaf (x,y))
@@ -403,7 +410,8 @@ let join j1 j2 t =
     in
     let delta =
       { created = {empty_side with d_edges = [(x,y)];};
-        removed = {empty_side with d_handles = [x];} }
+        removed = {empty_side with d_handles = [x];};
+         jxn_of; }
     in
     {t with edges; nodes; handles;},delta
   (*     y            y
@@ -413,9 +421,9 @@ let join j1 j2 t =
    *     z            z *)
   | `Single x, `Edge (y,z)
   | `Edge (y,z), `Single x ->
-    assert( is_single x t );
-    assert( is_edge y z t );
-    let n_id, avail_codes = CodeManager.pop t.avail_codes in
+    assert (is_single x t); (* TODO *)
+    assert (is_edge y z t); (* TODO *)
+    let n_id, avail_codes = IDManager.pop t.avail_codes in
     let n = Interior (n_id, x, y, z) in
     let nodes =
       t.nodes
@@ -435,7 +443,8 @@ let join j1 j2 t =
     let delta =
       { created = { d_edges = [(n_id,x);(n_id,y);(n_id,z)];
                     d_nodes = [n_id]; d_handles = []; };
-        removed = { d_nodes = []; d_edges = [(y,z)]; d_handles = [x]; }; }
+        removed = { d_nodes = []; d_edges = [(y,z)]; d_handles = [x]; };
+         jxn_of; }
     in
     {t with edges; nodes; handles; avail_codes;}, delta
   (*  w   y    w       y
@@ -444,10 +453,10 @@ let join j1 j2 t =
    *  |   |     /     \
    *  x   z    x       z *)
   | `Edge (w,x), `Edge (y,z) ->
-    assert( is_edge w x t );
-    assert( is_edge y z t );
-    let a, avail_codes = CodeManager.pop t.avail_codes in
-    let b, avail_codes = CodeManager.pop avail_codes in
+    assert (is_edge w x t); (* TODO *)
+    assert (is_edge y z t); (* TODO *)
+    let a, avail_codes = IDManager.pop t.avail_codes in
+    let b, avail_codes = IDManager.pop avail_codes in
     let nodes =
       t.nodes
         |> IDMap.add w (remove_replace (get_node w t) x a)
@@ -472,7 +481,8 @@ let join j1 j2 t =
     let delta =
       { created = { d_edges = [(a,w);(a,x);(a,b);(b,y);(b,z);];
                     d_nodes = [a;b]; d_handles = []; };
-        removed = { d_nodes = []; d_edges = [(y,z);(w,x)]; d_handles = [x]; }; }
+        removed = { d_nodes = []; d_edges = [(y,z);(w,x)]; d_handles = [x]; };
+         jxn_of; }
     in
     {t with avail_codes; edges; nodes; handles; }, delta
 
@@ -514,7 +524,7 @@ let five  = Num.num_of_int 5
 let num_edges =
   (fun n ->
     if Num.lt_num n zero
-      then raise Not_found
+      then raise Not_found (* TODO *)
     else if Num.eq_num n zero
       then n
     else if Num.eq_num n one
@@ -525,7 +535,7 @@ let num_edges =
 let num_nodes =
   (fun n ->
     if Num.lt_num n zero
-      then raise Not_found
+      then raise Not_found (* TODO *)
     else if Num.eq_num n zero
       then zero
     else if Num.eq_num n one
@@ -544,7 +554,7 @@ let num_trees =
   in
   (fun n ->
     if Num.lt_num n zero
-      then raise Not_found
+      then raise Not_found (* TODO *)
     else if Num.eq_num n zero
       then zero
     else if Num.lt_num n three
@@ -552,3 +562,9 @@ let num_trees =
     else
       d_fact (Num.sub_num (Num.mult_num two n) five))
 
+
+(** {2 Formatter/Printer Functions} *)
+
+let pp_node ppf n = assert false
+
+and pp_tree ppf t = assert false
