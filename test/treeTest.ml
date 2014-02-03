@@ -4,19 +4,18 @@ open Topology
 
 let verify_delta delta t =
   let assert_edge should_exist x y =
-    (Printf.sprintf "Edge should%s exist (%d,%d)"
-                    (if should_exist then "" else " not") x y)
-    @?  ((not should_exist) lxor (is_edge x y t))
+    assert_bool
+      (Printf.sprintf "Edge should%s exist (%d,%d)" (if should_exist then "" else " not") x y)
+      ((not should_exist) <> (Tree.is_edge x y t))
   and assert_node should_exist x =
-    (Printf.sprintf "Node should%s exist %d"
-                    (if should_exist then "" else " not") x)
-    @?  ((not should_exist) lxor (is_node x t))
-
+    assert_bool
+      (Printf.sprintf "Node should%s exist %d" (if should_exist then "" else " not") x)
+      ((not should_exist) <> (Tree.is_node x t))
   in
   List.iter (fun (x,y) -> assert_edge true x y) delta.created.d_edges;
   List.iter (fun (x,y) -> assert_edge false x y) delta.removed.d_edges;
-  List.iter (fun x -> assert_node true x t) delta.created.d_nodes;
-  List.iter (fun x -> assert_node false x t) delta.removed.d_nodes;
+  List.iter (fun x -> assert_node true x) delta.created.d_nodes;
+  List.iter (fun x -> assert_node false x) delta.removed.d_nodes;
   ()
 
 let tests = "Tree" >:::
@@ -80,7 +79,7 @@ let tests = "Tree" >:::
           let errmsg = Printf.sprintf "Non-Disjoint Partition from %d and %d)" a b in
           let l,r,d = Tree.partition_edge e tree in
           let () = assert_bool errmsg d in
-          let () = assert_eqaul_ids IDSet.empty (IDSet.inter l r) in
+          let () = assert_equal_ids IDSet.empty (IDSet.inter l r) in
           let () = assert_equal_ids l (IDSet.diff l r) in
           let () = assert_equal_ids r (IDSet.diff r l) in
           let () = assert_equal_int 10 (IDSet.cardinal (IDSet.union l r)) in
