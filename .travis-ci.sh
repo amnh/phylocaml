@@ -17,10 +17,10 @@ sudo apt-get update -qq
 sudo apt-get install -qq $APT_OCAML $APT_DEPENDS
 
 # setup OPAM
-opam -y init
+opam init -y
 eval `opam config env`
-opam -y update
-opam -y install ${OPAM_DEPENDS}
+opam update -y
+opam install ${OPAM_DEPENDS} -y
 
 # make/test application
 make
