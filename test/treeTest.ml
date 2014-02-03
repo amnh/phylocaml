@@ -2,6 +2,23 @@ open OUnit
 open TestInternal
 open Topology
 
+let verify_delta delta t =
+  let assert_edge should_exist x y =
+    (Printf.sprintf "Edge should%s exist (%d,%d)"
+                    (if should_exist then "" else " not") x y)
+    @?  ((not should_exist) lxor (is_edge x y t))
+  and assert_node should_exist x =
+    (Printf.sprintf "Node should%s exist %d"
+                    (if should_exist then "" else " not") x)
+    @?  ((not should_exist) lxor (is_node x t))
+
+  in
+  List.iter (fun (x,y) -> assert_edge true x y) delta.created.d_edges;
+  List.iter (fun (x,y) -> assert_edge false x y) delta.removed.d_edges;
+  List.iter (fun x -> assert_node true x t) delta.created.d_nodes;
+  List.iter (fun x -> assert_node false x t) delta.removed.d_nodes;
+  ()
+
 let tests = "Tree" >:::
 [
   "Empty Tree property cardinalities" >::
@@ -41,7 +58,9 @@ let tests = "Tree" >:::
         List.fold_left
           (fun tree n ->
             let e = Tree.random_edge tree in
-            fst @@ Tree.join (`Single n) (`Edge e) tree)
+            let x,d = Tree.join (`Single n) (`Edge e) tree in
+            let () = verify_delta d x in
+            x)
           tree
           xs
       | xs ->
@@ -60,10 +79,10 @@ let tests = "Tree" >:::
         (fun ((a,b) as e) ->
           let errmsg = Printf.sprintf "Non-Disjoint Partition from %d and %d)" a b in
           let l,r,d = Tree.partition_edge e tree in
-          let l_minus_r = IDSet.inter l r and r_minus_l = IDSet.inter r l in
           let () = assert_bool errmsg d in
-          let () = errmsg @? (IDSet.is_empty l_minus_r) in
-          let () = errmsg @? (IDSet.is_empty r_minus_l) in
+          let () = assert_eqaul_ids IDSet.empty (IDSet.inter l r) in
+          let () = assert_equal_ids l (IDSet.diff l r) in
+          let () = assert_equal_ids r (IDSet.diff r l) in
           let () = assert_equal_int 10 (IDSet.cardinal (IDSet.union l r)) in
           ())
         (Tree.get_all_edges tree);
@@ -79,8 +98,39 @@ let tests = "Tree" >:::
         | x::xs -> List.iter (fun y -> assert_equal_int x y) xs
         | _ -> assert false);
 
-    "Break and Join functions" >::
-    (fun () -> ());
+    "Break/Disjoint Functions" >::
+    (fun () ->
+      let t1 = Tree.random (0 -- 9) in
+      let rec break_all tree =
+        let all = Tree.get_all_edges tree in
+        if EdgeSet.is_empty all
+          then tree
+          else Tree.break (EdgeSet.choose all) tree |> fst |> break_all
+      in
+      "Compare fully broken and disjoint tree"
+        @? (0 == (Tree.compare (Tree.disjoint t1) (break_all t1))));
+
+    "Break and Join Function Consistency and Delta" >::
+    (fun () ->
+      let single_jxn () = function
+        | `Edge (a,b) -> Printf.sprintf "(%d,%d)" a b
+        | `Single x   -> Printf.sprintf "(%d)" x
+      in
+      let msg_of_jxn a b =
+        Printf.sprintf "Joining/Breaking %a and %a failed" single_jxn a single_jxn b
+      in
+      let t1 = Tree.random (0 -- 9) in
+      let break_and_join tree edge =
+        let t,d = Tree.break edge tree in
+        let () = verify_delta d t in
+        let x,y = Tree.jxn_of_delta d in
+        let t,d = Tree.join x y t in
+        let () = verify_delta d t in
+        let msg = msg_of_jxn x y in
+        assert_equal_tree ~msg tree t
+      in
+      EdgeSet.iter (break_and_join t1) (Tree.get_all_edges t1));
+
 
     "Reroot/Handle Functions" >::
     (fun () -> 
@@ -118,15 +168,5 @@ let tests = "Tree" >:::
       List.iter2
         (fun i o -> assert_equal_num ~cmp o (Tree.num_trees i))
         input output);
-
-    "Partition Edge Function" >::
-    (fun () ->
-      let tree = Tree.random (0 -- 9) in
-      EdgeSet.iter
-        (fun edge ->
-          let a,b,x = Tree.partition_edge edge tree in
-          assert_equal true x;
-          assert_equal IDSet.empty (IDSet.inter a b))
-        (Tree.get_all_edges tree));
 ]
 

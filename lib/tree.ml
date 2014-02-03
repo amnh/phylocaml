@@ -44,20 +44,6 @@ let empty =
   }
 
 
-let dump t chan =
-  Printf.fprintf chan "Edges : ";
-  EdgeSet.iter (fun (a,b) -> Printf.fprintf chan "(%d,%d) " a b) t.edges;
-  print_newline ();
-  Printf.fprintf chan "Nodes : ";
-  IDMap.iter
-    (fun _ -> function
-      | Leaf (a,b) -> Printf.fprintf chan "L(%d,%d) " a b
-      | Interior (a,b,c,d) -> Printf.fprintf chan "N(%d,%d,%d,%d) " a b c d
-      | Single a -> Printf.fprintf chan "S(%d) " a)
-    t.nodes;
-  print_newline ();
-  ()
-
 let is_edge x y t = EdgeSet.mem (x,y) t.edges
 
 let is_node x t = IDMap.mem x t.nodes
@@ -104,7 +90,7 @@ let get_handles t = t.handles
 let get_edge a b t =
   if EdgeSet.mem (a,b) t.edges
     then (a,b)
-    else raise Not_found
+    else raise Not_found (* TODO *)
 
 let get_node a t =
   IDMap.find a t.nodes
@@ -208,9 +194,7 @@ let post_order_edges f g (a, b) bt accum =
   a, b
 
 let get_edges h t = match get_node h t with
-  (* choice of edge does not defined *)
   | Interior (a,b,_,_) | Leaf (a,b) ->
-    assert(a = h);
     pre_order_edges EdgeSet.add (a,b) t EdgeSet.empty
   | Single _ ->
     EdgeSet.empty
@@ -230,13 +214,13 @@ let partition_edge edge t =
 
 let compare_topology t1 t2 =
   let extract_set t x acc =
-    let x,_,_ = partition_edge x t in
-    IntSetSet.add x acc
+    let x,y,_ = partition_edge x t in
+    IntSetSet.add x acc |> IntSetSet.add y
   in
   let t1s =
     List.fold_right (extract_set t1) (EdgeSet.elements t1.edges) IntSetSet.empty
   and t2s =
-    List.fold_right (extract_set t2) (EdgeSet.elements t1.edges) IntSetSet.empty
+    List.fold_right (extract_set t2) (EdgeSet.elements t2.edges) IntSetSet.empty
   in
   IntSetSet.compare t1s t2s
 
@@ -312,7 +296,7 @@ let break (x,y) t =
     in
     {t with nodes; edges; }
   in
-  assert( is_edge x y t );
+  assert( is_edge x y t ); (* TODO *)
   match get_node x t, get_node y t with
   | (Single _, _ | _, Single _) -> assert false
   (* a -- x ---> a + x *)
@@ -390,8 +374,8 @@ let join j1 j2 t =
   match j1, j2 with
   (* x + y ---> x -- y *)
   | `Single x, `Single y ->
-    assert( is_single x t );
-    assert( is_single y t );
+    assert( is_single x t ); (* TODO *)
+    assert( is_single y t ); (* TODO *)
     let nodes =
       t.nodes
         |> IDMap.add x (Leaf (x,y))
@@ -413,8 +397,8 @@ let join j1 j2 t =
    *     z            z *)
   | `Single x, `Edge (y,z)
   | `Edge (y,z), `Single x ->
-    assert( is_single x t );
-    assert( is_edge y z t );
+    assert( is_single x t ); (* TODO *)
+    assert( is_edge y z t ); (* TODO *)
     let n_id, avail_codes = CodeManager.pop t.avail_codes in
     let n = Interior (n_id, x, y, z) in
     let nodes =
@@ -444,8 +428,8 @@ let join j1 j2 t =
    *  |   |     /     \
    *  x   z    x       z *)
   | `Edge (w,x), `Edge (y,z) ->
-    assert( is_edge w x t );
-    assert( is_edge y z t );
+    assert( is_edge w x t ); (* TODO *)
+    assert( is_edge y z t ); (* TODO *)
     let a, avail_codes = CodeManager.pop t.avail_codes in
     let b, avail_codes = CodeManager.pop avail_codes in
     let nodes =
@@ -502,6 +486,29 @@ let random lst =
 
 
 (** {1 Tree Specific Functions} *)
+
+(** {2 Formatter/Printer Functions} *)
+
+let pp_node ppf n = assert false
+
+and pp_tree ppf t = assert false
+
+let dump output t =
+  let outputf format = Printf.ksprintf (output) format in
+  outputf "Handles : ";
+  HandleSet.iter (fun a -> outputf "H(%d) " a) t.handles;
+  outputf "\nEdges : ";
+  EdgeSet.iter (fun (a,b) -> outputf "(%d,%d) " a b) t.edges;
+  outputf "\nNodes : ";
+  IDMap.iter
+    (fun _ -> function
+      | Leaf (a,b) -> outputf "L(%d,%d) " a b
+      | Interior (a,b,c,d) -> outputf "N(%d,%d,%d,%d) " a b c d
+      | Single a -> outputf "S(%d) " a)
+    t.nodes;
+  outputf "\n";
+  ()
+
 
 (** {2 Math Functions} *)
 

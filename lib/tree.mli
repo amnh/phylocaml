@@ -167,6 +167,7 @@ val partition_edge :
 val traverse_path :
       ('a -> Topology.id -> Topology.id -> 'a) -> Topology.id list -> t -> 'a -> 'a
 
+
 (** {2 Topological Functions} *)
 
 (** Break an edge of a topology and return a new tree and a delta based on
@@ -197,6 +198,7 @@ val of_index : int -> t
 (** Convert a tree to its index. See {ref ...} *)
 val to_index : t -> int *)
 
+
 (** {2 Math Functions} 
     Useful mathematical and combinatorial functions of binary trees. *)
 
@@ -211,4 +213,18 @@ val num_nodes : Num.num -> Num.num
 (** Calculate the number of binary unrooted trees that can be produced from with
     [n] leaves. (2n-5)!! *)
 val num_trees : Num.num -> Num.num
+
+
+(** {2 Formatter/Printer Functions} *)
+
+val pp_node : Format.formatter -> node -> unit
+
+val pp_tree : Format.formatter -> t -> unit
+
+
+(** {2 Debug Functions}
+    These functions should not be used in production code and are for diagnosing
+    issue with this module, and modules that use these functions. *)
+
+val dump : (string -> unit) -> t -> unit
 
