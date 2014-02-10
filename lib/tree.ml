@@ -47,7 +47,7 @@ let set_name x t = {t with name = Some x}
 
 let get_name t = t.name
 
-let get_other_two n p a b c =
+let get_other_two _n p a b c =
        if p = a then b,c
   else if p = b then a,c
   else if p = c then a,b
@@ -87,11 +87,6 @@ let get_edge a b t =
 
 let get_node a t =
   IDMap.find a t.nodes
-
-let get_neighbors x t = match get_node x t with
-  | Single _ -> []
-  | Leaf (_,x) -> [x]
-  | Interior (_,x,y,z) -> [x;y;z]
 
 let create ids =
   let nodes,handles =
@@ -153,21 +148,27 @@ let pre_order_nodes f h t acc =
   in
   processor None h acc
 
-let pre_order_edges f ((a,b) as e) t acc =
-  let rec each_edge prev curr accum =
-    match get_node curr t with
-    | Single _ -> assert false
-    | Interior (_,a,b,c) ->
-      let a,b = get_other_two curr prev a b c in
-      f (curr,a) accum
-        |> each_edge curr a
-        |> f (curr,b)
-        |> each_edge curr b
-    | Leaf _ -> accum
+let pre_order_edges ?dist f ((a,b) as e) t acc =
+  let rec each_edge dist prev curr accum =
+    if dist = 0 then
+      accum
+    else match get_node curr t with
+      | Single _ -> assert false
+      | Interior (_,a,b,c) ->
+        let a,b = get_other_two curr prev a b c in
+        f (curr,a) accum
+          |> each_edge (dist-1) curr a
+          |> f (curr,b)
+          |> each_edge (dist-1) curr b
+      | Leaf _ -> accum
+  in
+  let d = match dist with
+    | None   -> -1
+    | Some x -> x
   in
   f e acc
-    |> each_edge a b
-    |> each_edge b a
+    |> each_edge d a b
+    |> each_edge d b a
 
 let post_order_edges f g (a, b) bt accum =
   let rec processor prev curr accum =
@@ -194,6 +195,14 @@ let get_edges h t = match get_node h t with
     EdgeSet.empty
 
 let get_all_edges t = t.edges
+
+let get_neighbors x t = match get_node x t with
+  | Single _ -> []
+  | Leaf (_,x) -> [x]
+  | Interior (_,x,y,z) -> [x;y;z]
+
+let get_neighborhood dist edge t =
+  pre_order_edges ~dist EdgeSet.add edge t EdgeSet.empty
 
 let partition_edge edge t =
   let aset,bset =
@@ -331,18 +340,15 @@ let break (x,y) t =
     let h = handle_of a t in
     let t = clean_up_nodes b c x a t in
     let nodes = IDMap.add x (Single x) t.nodes
-    and handles =
-      t.handles
-        |> HandleSet.remove h
-        |> HandleSet.add x
-        |> HandleSet.add b (* or c, choice is arbitrary *)
+    and handles,d_handles =
+      if h = x
+        then HandleSet.add b t.handles,[b]
+        else HandleSet.add x t.handles,[x]
     in
     let t = {t with nodes; handles; avail_codes = IDManager.push a t.avail_codes; } in
     let delta =
-      let add_hs = if h = x then [b] else if h = b then [x] else [x;b]
-      and rem_hs = if h = x || h = b then [] else [h] in
-      { created = {d_nodes = []; d_edges = [(b,c)]; d_handles = add_hs;};
-        removed = {d_nodes = [a];d_edges = [(a,x);(a,b);(a,c)]; d_handles = rem_hs;};
+      { created = {d_nodes = []; d_edges = [(b,c)]; d_handles;};
+        removed = {d_nodes = [a];d_edges = [(a,x);(a,b);(a,c)]; d_handles = [];};
          jxn_of = [ `Single x; `Edge (b,c) ]; }
     in
     t,delta
@@ -357,12 +363,7 @@ let break (x,y) t =
     let h = handle_of a t in
     let t = clean_up_nodes b c w a t in
     let t = clean_up_nodes x y a w t in
-    let handles =
-      t.handles
-        |> HandleSet.remove h
-        |> HandleSet.add b (* or c, choice is arbitrary *)
-        |> HandleSet.add x (* or y, choice is arbitrary *)
-    in
+    let handles = failwith "TODO" in
     let avail_codes = IDManager.push a @@ IDManager.push w t.avail_codes in
     let delta =
       let add_hs = if h = b then [x] else if h = x then [b] else [x;b]
@@ -498,9 +499,29 @@ let random lst =
 
 (** {2 Formatter/Printer Functions} *)
 
-let pp_node ppf n = assert false
+let pp_node ppf = function
+  | Leaf (a,b) -> 
+    Format.fprintf ppf "@[L(%d,%d)@]" a b
+  | Interior (a,b,c,d) ->
+    Format.fprintf ppf "@[N(%d,%d,%d,%d)@]" a b c d
+  | Single a ->
+    Format.fprintf ppf "@[S(%d)@]" a
 
-and pp_tree ppf t = assert false
+and pp_tree ppf t =
+  let outputf format = Format.fprintf ppf format in
+  outputf "@[@[Handles :@] ";
+  HandleSet.iter (fun a -> outputf "@[H(%d)@]@ " a) t.handles;
+  outputf "@]@\n@[@[Edges :@] ";
+  EdgeSet.iter (fun (a,b) -> outputf "@[(%d,%d)@]@ " a b) t.edges;
+  outputf "@]@\n@[Nodes :@] ";
+  IDMap.iter
+    (fun _ -> function
+      | Leaf (a,b) -> outputf "@[L(%d,%d)@] " a b
+      | Interior (a,b,c,d) -> outputf "@[N(%d,%d,%d,%d)@] " a b c d
+      | Single a -> outputf "@[S(%d)@] " a)
+    t.nodes;
+  outputf "@]@\n";
+  ()
 
 let dump output t =
   let outputf format = Printf.ksprintf (output) format in
@@ -568,9 +589,3 @@ let num_trees =
     else
       d_fact (Num.sub_num (Num.mult_num two n) five))
 
-
-(** {2 Formatter/Printer Functions} *)
-
-let pp_node ppf n = assert false
-
-and pp_tree ppf t = assert false

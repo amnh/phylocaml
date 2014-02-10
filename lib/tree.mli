@@ -80,6 +80,9 @@ val get_edges : Topology.handle -> t -> Topology.EdgeSet.t
 (** Return a set of all edges in the tree *)
 val get_all_edges : t -> Topology.EdgeSet.t
 
+(** Return a neighborhood of edges [n] away from edge. *)
+val get_neighborhood : int -> Topology.edge -> t -> Topology.EdgeSet.t
+
 (** Return the node type of the node id. *)
 val get_node : Topology.id -> t -> node
 
@@ -132,7 +135,7 @@ val pre_order_nodes :
 (** [pre_order_edges f e t a] performa pre-order traversal on the topology
     starting on the edge [e] and accumulating [a]. *)
 val pre_order_edges :
-  (Topology.edge -> 'a -> 'a) -> Topology.edge -> t -> 'a -> 'a
+  ?dist:int -> (Topology.edge -> 'a -> 'a) -> Topology.edge -> t -> 'a -> 'a
 
 (** [post_order_edges f g e t a] perform a post-order traversal applying [f] to
     leaf nodes with the first argument being the parent and next being the

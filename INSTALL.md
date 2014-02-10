@@ -40,8 +40,10 @@ Uninstalling Instructions
 =========================
 
 Run from the source distribution,
+
     make uninstall
 
 or without the source,
+
     ocamlfind remove phylocaml
 

@@ -34,7 +34,7 @@ type t =
     comb_data : combinations;
   }
 
-let print a =
+let dump a =
   let str_of_ioption = function
     | None   -> "none"
     | Some x -> string_of_int x
@@ -86,6 +86,8 @@ let print a =
         Printf.printf "\t%d -- {%a} -- comp:{}\n" k pp_ilst (IntSet.elements vset))
       a.comb_data.comb_set;
     ()
+
+let pp_alphabet _ppf _ = failwith "TODO"
 
 
 (** {2 Error Module} *)

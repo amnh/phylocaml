@@ -195,7 +195,10 @@ val to_level : int -> t -> t
 (** {2 Debugging} *)
 
 (** Prints basic information of the alphabet. *)
-val print : t -> unit
+val dump : t -> unit
+
+(** pretty-printer / debugger formatter *)
+val pp_alphabet : Format.formatter -> t -> unit
 
 
 (** {2 Error Module} *)

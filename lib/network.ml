@@ -86,3 +86,26 @@ let to_parsed _ = failwith "TODO"
 let break _ _ = failwith "TODO"
 let join _ _ _ = failwith "TODO"
 let reroot _ _ = failwith "TODO"
+
+
+(* Network Specific Functions *)
+
+(* conversion *)
+
+let to_tree _ = failwith "TODO"
+and of_tree _ = failwith "TODO"
+
+(* formatters *)
+
+let pp_network _ppf _n = failwith "TODO"
+let pp_node _ppf _n = failwith "TODO"
+
+(* mathematics *)
+
+let num_networks ?ret:_ _ = failwith "TODO"
+let num_edges ~ret:_ _ = failwith "TODO"
+let num_nodes ~ret:_ _ = failwith "TODO"
+
+(* debugging *)
+
+let dump _output _ = failwith "TODO"

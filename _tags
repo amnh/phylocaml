@@ -4,6 +4,7 @@ true : debug, annot, bin_annot
  <lib>            : include
  <lib/bitvector>  : include
  <test>           : include
+ <app>            : include
 
 # external libraries and c-library linking
  <**/*.{byte,native}> : package(pareto), package(bigarray), package(str), package(num), use_phyloc
@@ -62,4 +63,5 @@ true : debug, annot, bin_annot
  "lib/pDiagnosis.cmx": for-pack(Phylocaml)
  "lib/model.cmx"     : for-pack(Phylocaml)
  "lib/pModel.cmx"    : for-pack(Phylocaml)
+ "lib/ppp.cmx"       : for-pack(Phylocaml)
 
