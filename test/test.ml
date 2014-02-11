@@ -1,4 +1,5 @@
 open OUnit
+open TestInternal
 
 (** Pure OCaml libraries *)
 let tests = [
@@ -14,7 +15,23 @@ let tests_c = [
   SequenceTest.tests;
 ]
 
+(* Command Line Options *)
+
+let usage = Printf.sprintf "%s [OPTIONS]" (Filename.basename Sys.executable_name)
+
+let seed = ref (truncate (Unix.time ()))
+let mult = ref 1
+
+let options =
+  [ "-seed", Arg.Int (fun x -> seed := x), "Set random seed for tests";
+    "-mult", Arg.Int (fun x -> mult := x), "Multiple runs for random tests"; ]
+
 let () =
-  let () = Random.self_init () in
-  ignore (OUnit.run_test_tt_main ("OCaml" >::: tests));
-  if run_tests_c then ignore (OUnit.run_test_tt_main ("OCaml<-->C" >::: tests_c));
+  Arg.parse (Arg.align options) ignore usage;
+  Printf.printf "Setting random seed : %d\n%!" !seed;
+  let () = Random.init !seed in
+  ignore (OUnit.run_test_tt_main ("OCaml" >::: (multiply_list !mult tests)));
+  if run_tests_c then
+    ignore (OUnit.run_test_tt_main ("OCaml<-->C" >::: ((multiply_list !mult tests_c))));
+  ()
+

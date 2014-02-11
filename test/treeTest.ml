@@ -18,6 +18,10 @@ let verify_delta delta t =
   List.iter (fun x -> assert_node false x) delta.removed.d_nodes;
   ()
 
+let create_random_tree () =
+  let leaves = 5 + (Random.int 95) in (* testing a variety of tree sizes *)
+  Tree.random (0 -- leaves)
+
 let tests = "Tree" >:::
 [
   "Empty Tree property cardinalities" >::
@@ -30,8 +34,7 @@ let tests = "Tree" >:::
 
   "Tree property cardinalities" >::
   (fun () ->
-    let ids = 0 -- 9 in (* 10 leaves *)
-    let tree = Tree.random ids in
+    let tree = Tree.random (0 -- 9) in
     assert_equal_int  1 (IDSet.cardinal   (Tree.get_handles tree));
     assert_equal_int 10 (IDSet.cardinal   (Tree.get_leaves tree));
     assert_equal_int  0 (IDSet.cardinal   (Tree.get_singles tree));
@@ -40,8 +43,7 @@ let tests = "Tree" >:::
 
   "Disjoint Tree property cardinalites" >::
   (fun () ->
-    let ids = 0 -- 9 in (* 10 leaves *)
-    let tree = Tree.random ids |> Tree.disjoint in
+    let tree = Tree.random (0 -- 9) |> Tree.disjoint in
     assert_equal_int 10 (IDSet.cardinal   (Tree.get_handles tree));
     assert_equal_int 10 (IDSet.cardinal   (Tree.get_leaves tree));
     assert_equal_int 10 (IDSet.cardinal   (Tree.get_singles tree));
@@ -73,7 +75,7 @@ let tests = "Tree" >:::
 
     "Partition Tree Edges" >::
     (fun () ->
-      let tree = Tree.random (0 -- 9) in
+      let tree = create_random_tree () in
       EdgeSet.iter
         (fun ((a,b) as e) ->
           let errmsg = Printf.sprintf "Non-Disjoint Partition from %d and %d)" a b in
@@ -82,14 +84,16 @@ let tests = "Tree" >:::
           let () = assert_equal_ids IDSet.empty (IDSet.inter l r) in
           let () = assert_equal_ids l (IDSet.diff l r) in
           let () = assert_equal_ids r (IDSet.diff r l) in
-          let () = assert_equal_int 10 (IDSet.cardinal (IDSet.union l r)) in
+          let () = assert_equal_int (IDSet.cardinal (Tree.get_leaves tree))
+                                    (IDSet.cardinal (IDSet.union l r))
+          in
           ())
         (Tree.get_all_edges tree);
       ());
 
     "Handle Of Functions" >::
     (fun () ->
-      let tree = Tree.random (0 -- 9) in
+      let tree = create_random_tree () in
       let handles =
         List.map (fun (x,_) -> Tree.handle_of x tree) @@ IDMap.bindings tree.Tree.nodes 
       in
@@ -99,7 +103,7 @@ let tests = "Tree" >:::
 
     "Break/Disjoint Functions" >::
     (fun () ->
-      let t1 = Tree.random (0 -- 9) in
+      let t1 = create_random_tree () in
       let rec break_all tree =
         let all = Tree.get_all_edges tree in
         if EdgeSet.is_empty all
@@ -118,7 +122,7 @@ let tests = "Tree" >:::
       let msg_of_jxn a b =
         Printf.sprintf "Joining/Breaking %a and %a failed" single_jxn a single_jxn b
       in
-      let t1 = Tree.random (0 -- 9) in
+      let t1 = create_random_tree () in
       let break_and_join tree edge =
         let t,d = Tree.break edge tree in
         let () = verify_delta d t in
@@ -130,32 +134,23 @@ let tests = "Tree" >:::
       in
       EdgeSet.iter (break_and_join t1) (Tree.get_all_edges t1));
 
-
     "Reroot/Handle Functions" >::
     (fun () -> 
-      let t1 = Tree.random (0 -- 9) in
+      let t1 = create_random_tree () in
       let x = Tree.random_node t1 in
-      let t2,p1 = Tree.reroot x t1 in
+      let t2,_ = Tree.reroot x t1 in
       assert_equal_int x (Tree.handle_of 0 t2));
-
-    "Compare Function" >::
-    (fun () ->
-      let r_state = Random.get_state () in
-      let tree1 = Tree.random (0 -- 9) in
-      let () = Random.set_state r_state in
-      let tree2 = Tree.random (0 -- 9) in
-      "Compare Equal Trees" @? (0 = (Tree.compare tree1 tree2)));
 
     "Path Function" >::
     (fun () ->
-      let tree = Tree.random (0 -- 9) in
-      let rec test_once x =
+      let tree = create_random_tree () in
+      let rec test_once n =
         let x = Tree.random_node tree
         and y = Tree.random_node tree in
         let p1 = Tree.path_of x y tree
         and p2 = Tree.path_of y x tree in
         assert_equal p1 (List.rev p2);
-        if x = 0 then test_once (x-1) else ()
+        if n = 0 then test_once (n-1) else ()
       in
       test_once 10);
 
