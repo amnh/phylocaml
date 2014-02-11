@@ -27,18 +27,6 @@ type t = {
 }
 
 
-(** {2 Exceptions} *)
-
-(** Raised when a node is attempted to be accessed but not found. *)
-exception InvalidNodeID of Topology.id
-
-(** Raised if an edge is attempted to be accessed but not found. *)
-exception InvalidEdge of Topology.edge
-
-(** Raised if handle is attempted to the accessed but not found. *)
-exception InvalidHandle of Topology.handle
-
-
 (** {2 Tree Creation Functions} *)
 
 (** Create an empty topology. *)
@@ -73,6 +61,9 @@ val get_leaves : t -> Topology.IDSet.t
 
 (** Return the single nodes of the topology. *)
 val get_singles : t -> Topology.IDSet.t
+
+(** Of a tree, return the set of handles. *)
+val get_handles : t -> Topology.HandleSet.t
 
 (** Of a pair of node ids, return an edge. *)
 val get_edge : Topology.id -> Topology.id -> t -> Topology.edge
@@ -158,63 +149,75 @@ val post_order_edges :
 val partition_edge :
   Topology.edge -> t -> Topology.IDSet.t * Topology.IDSet.t * bool
 
+(** [traverse_path] Traverse a path of nodes in a topology applying a function
+    on each, and accumulating the result. No calls to function are made on an
+    empty list or a single element in the list. *)
 val traverse_path :
-      ('a -> Topology.id -> Topology.id -> 'a) -> Topology.id list -> 'a -> 'a
+      ('a -> Topology.id -> Topology.id -> 'a) -> Topology.id list -> t -> 'a -> 'a
+
 
 (** {2 Topological Functions} *)
 
 (** Break an edge of a topology and return a new tree and a delta based on
     the new/removed nodes in the construction of the break. The number of
     handles will increase by one, always. *)
-val break : Topology.id * Topology.id -> t -> t * Topology.break_delta
+val break : Topology.edge -> t -> t * Topology.break Topology.tdelta
 
 (** Join two jxn points of a topology and return a new tree and a delta based on
     the new/removed nodes in the construction of the join. The number of handles
     will decrease by one, always. *)
-val join : Topology.jxn -> Topology.jxn -> t -> t * Topology.join_delta
+val join : Topology.jxn -> Topology.jxn -> t -> t * Topology.join Topology.tdelta
 
 (** Reroot a topology. This is relavent in rooted trees, only returns exact
     topology in this case. *)
 val reroot : Topology.id -> t -> t * Topology.reroot_delta
 
+(** Return the two jxn from a break. These can be further applied to rejoin the
+    tree, to use a tabu, et cetera. *)
+val jxn_of_delta : Topology.break Topology.tdelta -> Topology.jxn * Topology.jxn
 
 
 (** {1 Tree Specific Functions}
     These functions are not members of the Topology module and thus cannot be
     accessed if the module implementation is abstracted. *)
 
-(** {2 I/O Functions} *)
 
-(** Define the data on the nodes and leaves of the tree structure. *)
-type data =
-  [ `BranchLength of float | `Name of string | `Support of float ] list
+(** {2 Enumeration Functions}
+    Functions to aid in the enumeration of topologies.
 
-(** Type for a tree from a parsed source. This is not binary, so it can be used
-    for collapsed branches in output, or unresolved topologies in input. *)
-type parsed = [`Node of data * parsed list | `Leaf of data ]
+(** Create a binary unrooted tree from an index. See {ref ...} *)
+val of_index : int -> t
 
-val to_string : t -> string
-val of_parsed : parsed -> t
-val to_parsed :
-  (Topology.id -> Topology.id -> [>`Name of string]) ->
-    (Topology.id -> Topology.id -> [>`Support of float]) ->
-      (Topology.id -> Topology.id -> [<`BranchLength of float]) -> t -> parsed
-
-val debug_print : t -> out_channel -> unit
+(** Convert a tree to its index. See {ref ...} *)
+val to_index : t -> int *)
 
 
 (** {2 Math Functions} 
-    Useful mathematical and combinatorial functions on binary unrooted trees. We
-    use floating point results where exponential explosions can result. *)
+    Useful mathematical and combinatorial functions of binary trees. *)
 
 (** Calculate the number of edges of a binary unrooted tree with [n] leaves.
     The exact formula is, 2*n-3. Add an additional edge for rooted trees. *)
-val num_edges : int -> int
+val num_edges : Num.num -> Num.num
 
 (** Calculate the number of nodes in a binary unrooted tree with [n] leaves. The
     number of nodes are 2*n-2. *)
-val num_nodes : int -> int
+val num_nodes : Num.num -> Num.num
 
 (** Calculate the number of binary unrooted trees that can be produced from with
     [n] leaves. (2n-5)!! *)
-val num_trees : int -> float
+val num_trees : Num.num -> Num.num
+
+
+(** {2 Formatter/Printer Functions} *)
+
+val pp_node : Format.formatter -> node -> unit
+
+val pp_tree : Format.formatter -> t -> unit
+
+
+(** {2 Debug Functions}
+    These functions should not be used in production code and are for diagnosing
+    issue with this module, and modules that use these functions. *)
+
+val dump : (string -> unit) -> t -> unit
+

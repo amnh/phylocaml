@@ -8,6 +8,8 @@ let ( !$$ ) a = List.map (!$) a
 
 let (=.) a b = (abs_float @@ a -. b) < epsilon_float
 
+let flip f a b = f b a
+
 let ( -- ) a b =
   let rec iter acc a bi =
      if a=bi then bi::acc

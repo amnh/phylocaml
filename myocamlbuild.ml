@@ -20,7 +20,6 @@ let major,minor =
   let minor,_ = get_until n Sys.ocaml_version [] in
   int_of_string major, int_of_string minor
 
-
 (** Constants *)
 let bv_width = ["8";"16";"32";"64"]
 let headers  = ["lib/seq.h"; "lib/mlmodel.h"; "lib/phyloc.h"]
@@ -100,19 +99,27 @@ let () = dispatch begin function
     in
     List.iter (fun w -> flag ["c";"use_bv"^w] (S (bv_cflags w))) bv_width;
 
+    (* declare use_phylocaml and include_phylocaml for the tests *)
+    ocaml_lib "phylocaml";
+
     (* pre-process compatibility module *)
     let compatibility_options =
       if major < 4 || ((major = 4) && minor <= 0)
         then [A"-pp";A"camlp4of -DCOMPATIBILITY"]
         else [A"-pp";A"camlp4of -UCOMPATIBILITY"]
     in
-    flag ["ocaml";"use_compatibility";"ocamldoc"] (S compatibility_options);
+    flag ["ocaml";"use_compatibility";"doc"]      (S compatibility_options);
     flag ["ocaml";"use_compatibility";"ocamldep"] (S compatibility_options);
     flag ["ocaml";"use_compatibility";"compile" ] (S compatibility_options);
 
+    (* testing pre-process flags *)
+    let testing_options = [A"-pp";A"camlp4of -UUSE_EXTERNAL_LINKING"] in
+    flag ["ocaml";"test";"compile" ] (S testing_options);
+    flag ["ocaml";"test";"ocamldep" ] (S testing_options);
+
     (* dependencies for c-stubs *)
-    dep ["link"; "ocaml"; "use_phyloc"] ["libphyloc.a"];
     dep ["c"; "compile"] headers;
+    (* dep  ["link"; "ocaml"; "use_phyloc"] ["libphyloc.a"]; *)
 
     (* flags for c compilation/linking *)
     flag ["ocaml"; "compile"] (S [A"-cc";A cc]);

@@ -30,7 +30,7 @@ module type S =
     (** Remove the edge from the topology; this may not produce two disjoint
         sets, this is the case in network topologies. This can be determined
         from the break-delta also returned with the updated topology. *)
-    val break_fn : Topology.edge -> t -> t * Topology.break_delta
+    val break_fn : Topology.edge -> t -> t * Topology.break Topology.tdelta
 
     (** Reroot the topology to the provided edge - used for printing and
         diagnosis of the topology. *)
@@ -40,7 +40,7 @@ module type S =
     val cost_fn : Topology.jxn -> Topology.jxn -> t -> float
 
     (** Join the two jxn points in the topology *)
-    val join_fn : Topology.jxn -> Topology.jxn -> t -> t * Topology.join_delta
+    val join_fn : Topology.jxn -> Topology.jxn -> t -> t * Topology.join Topology.tdelta
 
     (** Optimize the assignment of states at nodes *)
     val assign_fn : t -> t

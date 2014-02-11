@@ -2,8 +2,8 @@
 
 .DEFAULT: byte
 
-BUILD=ocamlbuild -use-ocamlfind
-
+BUILD=ocamlbuild -use-ocamlfind -pp "camlp4of -DUSE_EXTERNAL_LINKING" -tags "package(phylocaml),package(oUnit),package(num),debug"
+ 
 tests : native
 
 test : native

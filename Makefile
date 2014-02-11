@@ -1,54 +1,104 @@
-.PHONY: clean byte native phyloc docs top install uninstall tests all dot
+.PHONY: clean byte native phyloc docs top install uninstall all dot extests
 
 .DEFAULT: all
 
-BUILD=ocamlbuild -use-ocamlfind
+BUILD=ocamlbuild -use-ocamlfind -classic-display
 OFIND=ocamlfind
+DOCDIR=phylocaml.docdir
 
+# files that, if exist, define a compilation path happened
+BYTE_SMOKE=_build/phylocaml.cma
+NATIVE_SMOKE=_build/phylocaml.cmxa
+
+# associate files to different compilation paths
 INST_BYT=_build/phylocaml.cma _build/dllphyloc.so
 INST_NAT=_build/phylocaml.cmxa _build/libphyloc.a _build/phylocaml.a _build/phylocaml.cmx
 INST_OTH=_build/lib/*.mli _build/phylocaml.cm[io]
 
+# compilation to pdf; references need to be replaced
+LATEX=latex
+DVIPS=dvips
+
 # -----------------------------------
 
-all : native byte
+all : phyloc native byte
 
-tests :
-	cd test && $(MAKE)
-
-native :
+native : phyloc
 	$(BUILD) phylocaml.cmxa
 
-byte :
+byte : phyloc
 	$(BUILD) phylocaml.cma
 
-top :
+top : phyloc
 	$(BUILD) phylocaml.top
 
 phyloc :
 	$(BUILD) libphyloc.a
 
+# -----------------------------------
+
+#externally linked tests; make install required to have been done
+extests :
+	cd test && $(MAKE)
+
+test.byte : phyloc
+	$(BUILD) test.byte
+
+test.d.byte : phyloc
+	$(BUILD) test.d.byte
+
+test.native : phyloc
+	$(BUILD) test.native
+
+# -----------------------------------
+
+app :
+	cd app && $(MAKE)
+
+# -----------------------------------
+
 clean :
+	cd test && $(MAKE) clean
 	$(BUILD) -clean
 
 # -----------------------------------
- 
-install :
-	$(OFIND) install phylocaml META $(INST_BYT) $(INST_NAT) $(INST_OTH)
+
+install.byte : install.init
+ifeq ("$(wildcard $(BYTE_SMOKE))","$(BYTE_SMOKE)")
+	$(OFIND) install -add phylocaml $(INST_BYT)
+endif
+
+install.native : install.init
+ifeq ("$(wildcard $(NATIVE_SMOKE))","$(NATIVE_SMOKE)")
+	$(OFIND) install -add phylocaml $(INST_NAT)
+endif
+
+install.init :
+	$(OFIND) install phylocaml META $(INST_OTH)
+
+install : install.init install.native install.byte
 
 uninstall :
 	$(OFIND) remove phylocaml
 
 # -----------------------------------
 
-docs :
-	$(BUILD) phylocaml.docdir/index.html
+phylocaml.html :
+	$(BUILD) $(DOCDIR)/index.html
 
-man :
-	$(BUILD) -docflags "-man -man-mini" phylocaml.docdir/man
+phylocaml.tex :
+	$(BUILD) $(DOCDIR)/phylocaml.tex
+
+phylocaml.pdf : phylocaml.tex
+	cd _build/$(DOCDIR)/ && \
+	$(LATEX) phylocaml.tex && \
+	$(LATEX) phylocaml.tex && \
+	$(DVIPS) phylocaml.dvi -o $(@F)
+
+docs : phylocaml.html phylocaml.pdf
+
+dot :
+	$(BUILD) $(DOCDIR)/phylocaml.dot
 
 %.mli :
 	$(BUILD) $*.inferred.mli && cp _build/lib/$*.inferred.mli lib/$*.mli
-
-dot :
-	$(BUILD) -docflag -dot phylocaml.docdir/dot && cp _build/phylocaml.docdir/dot phylocaml.dot

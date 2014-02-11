@@ -28,7 +28,7 @@ type t =
         nodes : node IDMap.t;
         edges : EdgeSet.t;
       handles : HandleSet.t;
-  avail_codes : int * int list;
+  avail_codes : IDManager.t;
   }
 
 exception InvalidNodeID of id
@@ -40,16 +40,8 @@ let empty =
     nodes = IDMap.empty;
     edges = EdgeSet.empty;
     handles = HandleSet.empty;
-    avail_codes = 0,[];
+    avail_codes = IDManager.empty;
   }
-
-let next_code t : int * t = match t.avail_codes with
-  | y,x::xs -> x, {t with avail_codes =y,xs; }
-  | y,[]    -> y, {t with avail_codes =y+1,[]; }
-
-let replace_code i t : t = match t.avail_codes with
-  | y,x when i = (y-1) -> {t with avail_codes = y-1,x; }
-  | y,x -> {t with avail_codes = y,i::x; }
 
 let random _ = failwith "TODO"
 let disjoint _ = failwith "TODO"

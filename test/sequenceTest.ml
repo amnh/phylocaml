@@ -1,5 +1,5 @@
 open OUnit
-open Internal
+open TestInternal
 
 let a = Alphabet.dna
 

@@ -1,7 +1,7 @@
 name = "phylocaml"
 version = "0.1"
 description = "Phylogenetic Library for OCaml"
-requires = "bigarray,str,pareto"
+requires = "bigarray,str,pareto,num"
 archive(byte) = "phylocaml.cma"
 archive(native) = "phylocaml.cmxa"
 exists_if = "phylocaml.cma"
