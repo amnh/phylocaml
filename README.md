@@ -17,16 +17,17 @@ become more idiomatic to the standards developed since the initial versions.
 Table of Contents
 =================
 
-+ Dependencies
-+ Configure, Install, and Uninstall
-+ Test Framework
-+ Quick Start
-  + Overview of Diagnosis Modules
-  + Overview of Search Modules
-  + Overview of Utility Modules
-+ Design Choices and Rationale
-+ Contact/Location Information
-+ License
++ [Dependencies](#dependencies)
++ [Installation](#installation)
++ [Test Framework](#test-framework)
++ [Quick Start](#quick-start)
+  + [Overview of Diagnosis Modules](#overview-of-diagnosis-modules)
+  + [Overview of Search Modules](#overview-of-search-modules)
+  + [Overview of Utility Modules](#overview-of-utility-modules)
++ [Design Choices and Rationale](#design-choices-and-rationale)
++ [Contact Information](#contact-information)
++ [License](#license)
+
 
 Dependencies
 ============
@@ -40,7 +41,8 @@ Required
 Optional
 + [oUnit](http://ounit.forge.ocamlcore.org/) (optional)
 
-Configure, Install, and Uninstall
+
+Installation
 =====================
 
 Currently, there is no configuration step.
@@ -216,16 +218,15 @@ Design Choices and Rationale
   consistency between functorized modules.
 
 
-Contact/Location Information
+Contact Information
 ===================
 + Nicholas Lucaroni (nlucaroni at amnh dot org)
 + Ward Wheeler (wheeler at amnh dot org)
-+ Lavanya Kannan (lkannan at amnh dot org)
 + [Support Forum](https://groups.google.com/forum/?fromgroups#!forum/poy4)
 + [Site on AMNH](http://www.amnh.org/our-research/computational-sciences/)
 
 
-License Information
+License
 ===================
 Mozilla Public License, version 2.0
 
