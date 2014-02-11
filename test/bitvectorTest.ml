@@ -1,4 +1,4 @@
-open OUnit
+open OUnit2
 open TestInternal
 
 let generate_for_module (module BV : Bitvector.BV) =
@@ -8,22 +8,22 @@ let generate_for_module (module BV : Bitvector.BV) =
   let ws = Printf.sprintf "(%d,%d)" BV.max_width width in
   [
     "Create/Copy/Compare Functions:"^ws >::
-      (fun () ->
+     (fun _ctxt ->
         let b1 = BV.create width 100 in
         let b2 = BV.copy b1 in
         assert_equal 0 (BV.compare b1 b2);
         ());
 
     "Cardinal/Width/Code:"^ws >::
-      (fun () ->
+     (fun _ctxt ->
         let b1 = BV.create width 100 in
         assert_equal 100 @@ BV.cardinal b1;
         assert_equal width @@ BV.width b1;
-        "Code is positive and accessible" @? ((BV.code b1) >= 0);
+        assert_bool "Code is positive and accessible" ((BV.code b1) >= 0);
         ());
 
     "Set/Get Elements/Converstion:"^ws >::
-      (fun () ->
+     (fun _ctxt ->
         let b1 = BV.create width 100 in
         for i = 0 to (BV.cardinal b1)-1 do
           BV.set_elt b1 i (BV.random_elt width)
@@ -39,10 +39,10 @@ let generate_for_module (module BV : Bitvector.BV) =
         ());
 
     "Set/Get Bits Set:"^ws >::
-      (fun () -> ());
+     (fun _ctxt -> ());
 
     "Union/Intersection:"^ws >::
-      (fun () ->
+     (fun _ctxt ->
         let b1 = BV.create width 100
         and b2 = BV.create width 100 in
         for i = 0 to (BV.cardinal b1)-1 do
@@ -57,7 +57,7 @@ let generate_for_module (module BV : Bitvector.BV) =
         ());
 
     "Fitch/Sankoff/Distance:"^ws >::
-      (fun () ->
+     (fun _ctxt ->
         let b1 = BV.create width 100
         and b2 = BV.create width 100 in
         for i = 0 to (BV.cardinal b1)-1 do
@@ -69,7 +69,7 @@ let generate_for_module (module BV : Bitvector.BV) =
         ());
 
     "Saturation/Poly-Saturation:"^ws >::
-      (fun () -> ())
+     (fun _ctxt -> ())
   ]
 
 let local_tests =

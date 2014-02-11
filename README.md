@@ -39,7 +39,7 @@ Required
 + [Findlib](http://projects.camlcity.org/projects/findlib.html)
 
 Optional
-+ [oUnit](http://ounit.forge.ocamlcore.org/) (optional)
++ [OUnit2](http://ounit.forge.ocamlcore.org/) (optional)
 
 
 Installation

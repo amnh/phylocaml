@@ -5,10 +5,11 @@ type dir = [ `Parent of Topology.id list | `Children of Topology.id list ] optio
 module type S =
   sig
 
-    type nd
-    type r
-    type n
-    type m
+    type nd (* node abstraction *)
+
+    type r  (* root data *)
+    type n  (* node data *)
+    type m  (* model     *)
 
     val of_data : Topology.id -> nd IntMap.t -> n
 
@@ -410,16 +411,6 @@ struct
     match res with
     | [x] -> x
     |  _  -> raise Not_found
-
-(*  let acc_nodes f t =*)
-(*    let unadj = match t.unadjusted with*)
-(*      | L x -> x*)
-(*      | I xs -> List.map fst xs in*)
-(*    let all  = match t.adjusted with*)
-(*      | None -> unadj*)
-(*      | Some x -> x :: unadj*)
-(*    in*)
-(*    List.fold_right f all*)
 
   let map_nodes f t =
       let unadj = match t.unadjusted with

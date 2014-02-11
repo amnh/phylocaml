@@ -1,4 +1,4 @@
-open OUnit
+open OUnit2
 open TestInternal
 
 (* A list of branch length to compose a model for *)
@@ -17,12 +17,12 @@ let tests =
   "MlModel Tests" >:::
     [
       "Enumerate Models" >::
-        (fun () ->
+       (fun _ctxt ->
           let () = ignore (List.map (MlModel.create) all_spec) in
           ());
 
       "Compose Models w/ branches" >::
-        (fun () ->
+       (fun _ctxt ->
           let verify composed = true in
           let single model (truth,branch) =
             try MlModel.compose model branch |> verify
@@ -39,10 +39,10 @@ let tests =
             all_spec);
 
       "Number of Parameters" >::
-        (fun () -> ());
+       (fun _ctxt -> ());
 
       "Gamma Rate Properties" >::
-        (fun () ->
+       (fun _ctxt ->
           let verify_rates cats rates =
             let p = 1.0 /. cats in
             let rsps = ref 0.0 in

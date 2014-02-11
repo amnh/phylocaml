@@ -153,14 +153,15 @@ module type R =
                               
 (** Implementation of NodeData with one direction in the assignment of nodes.
     This is used for rooted trees, or when diagnosis in different directions does
-    not result in variation of costs. *)
+    not result in variation of cost. *)
 module Make1D   : functor (Ordering : Topology.NodeComparator) -> R
 
 (** An encapsulation of Make1D where nodes are lazy. *)
 module MakeLazy : functor (Ordering : Topology.NodeComparator) -> R
 
-(** A abstraction of NodeData where each internal node has two children and a
-    parent and each combination of such is represented as a [MakeLazy.n]. *)
+(** A abstraction of NodeData where each internal node has diagnosis information
+    for all possible rootings --three data for each internal node. Each are lazy
+    values of above. *)
 module Make3D   : functor (Ordering : Topology.NodeComparator) -> R
 
 (** Further abstraction of [Make3D.n] with no limit to number of children or

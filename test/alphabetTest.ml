@@ -1,4 +1,4 @@
-open OUnit
+open OUnit2
 open TestInternal
 
 let dna = Alphabet.dna
@@ -8,7 +8,7 @@ let tests =
   "Alphabet" >:::
     [
       "DNA Encoding" >::
-        (fun () ->
+       (fun _ctxt ->
           assert_equal "A" (Alphabet.get_name 1 dna);
           assert_equal "C" (Alphabet.get_name 2 dna);
           assert_equal "G" (Alphabet.get_name 4 dna);
@@ -16,7 +16,7 @@ let tests =
           assert_equal "-" (Alphabet.get_name 16 dna));
 
       "Seq Alphabet Generation" >::
-        (fun () ->
+       (fun _ctxt ->
           let a = Alphabet.generate_seq_alphabet 25 in
           let () = assert_equal "00" (Alphabet.get_name  0 a) in
           let () = assert_equal "01" (Alphabet.get_name  1 a) in
@@ -32,19 +32,19 @@ let tests =
           ());
 
       "DNA/bits->Seq" >::
-        (fun () ->
+       (fun _ctxt ->
           let a = Alphabet.to_sequential dna in
           assert_equal "A" (Alphabet.get_name 0 a));
 
       "DNA/bits->Seq->level:2->bit" >::
-        (fun () ->
+       (fun _ctxt ->
           let a = Alphabet.to_sequential dna in
           let a = Alphabet.to_level 3 a in
           let a = Alphabet.to_bitflag a in
           assert_equal "A" (Alphabet.get_name 1 a));
 
       "Seq Alphabet -> level:2" >::
-        (fun () ->
+       (fun _ctxt ->
           let a = Alphabet.generate_seq_alphabet 35 in
           let a = Alphabet.to_level 2 a in
           let () = assert_equal 2 (Alphabet.CodeSet.cardinal (Alphabet.get_combination 60 a)) in
@@ -55,7 +55,7 @@ let tests =
           ());
 
       "Seq Alphabet -> level:3" >::
-        (fun () ->
+       (fun _ctxt ->
           let a = Alphabet.generate_seq_alphabet 35 in
           let a = Alphabet.to_level 3 a in
           let () = assert_equal 3 (Alphabet.CodeSet.cardinal (Alphabet.get_combination 1950 a)) in
@@ -67,7 +67,7 @@ let tests =
           ());
 
       "code(name) = name(code)" >::
-        (fun () ->
+       (fun _ctxt ->
           List.iter
             (fun (x,c,_) ->
               let () = assert_equal (Alphabet.get_code x aminoacids) c in
@@ -76,7 +76,7 @@ let tests =
             (Alphabet.to_list aminoacids));
 
 (*    "Duplicate elements" >::
-        (fun () ->
+       (fun _ctxt ->
           let states =
             List.map (fun k -> (Printf.sprintf "%02d" k,None))
                     ((0 -- 8) @ (0 -- 8))
