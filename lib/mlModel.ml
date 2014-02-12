@@ -4,7 +4,7 @@ exception ModelError of string
 
 let errorf format = Printf.ksprintf (fun x -> ModelError x) format
 
-(* Minimum value for things when 0 and min_float are too numerically unstable *)
+(* Minimum value when 0 or min_float are numerically unstable *)
 let minimum = 1e-13
 
 type site_var =
@@ -226,7 +226,7 @@ let m_jc69 a_size gap_r =
       done;
       srm.{i,i} <- -. mu *. r *. float (a_size-1)
   in
-  (* normalize by mean-rate TODO: remove, and replace above with exact. *)
+  (* normalize by mean-rate; TODO: remove, and replace above with exact. *)
   let mr = ref 0.0 and wght = 1.0 /. float a_size in
   for i = 0 to (a_size-1) do
     mr := !mr +. (~-.(srm.{i,i}) *. wght );

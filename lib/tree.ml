@@ -37,6 +37,22 @@ let empty =
     avail_codes = IDManager.empty;
   }
 
+let dump output t =
+  let outputf format = Printf.ksprintf (output) format in
+  outputf "Handles : ";
+  HandleSet.iter (fun a -> outputf "H(%d) " a) t.handles;
+  outputf "\nEdges : ";
+  EdgeSet.iter (fun (a,b) -> outputf "(%d,%d) " a b) t.edges;
+  outputf "\nNodes : ";
+  IDMap.iter
+    (fun _ -> function
+      | Leaf (a,b) -> outputf "L(%d,%d) " a b
+      | Interior (a,b,c,d) -> outputf "N(%d,%d,%d,%d) " a b c d
+      | Single a -> outputf "S(%d) " a)
+    t.nodes;
+  outputf "\n";
+  ()
+
 let is_edge x y t = EdgeSet.mem (x,y) t.edges
 
 let is_node x t = IDMap.mem x t.nodes
@@ -290,22 +306,22 @@ let jxn_of_delta (d : break tdelta) : jxn * jxn =
 let break (x,y) t =
   (* Fix a and b with x; leave c up to call. *)
   let clean_up_nodes a b c x t =
-    let nodes =
-      t.nodes
-        |> IDMap.add a (remove_replace (get_node a t) x b)
-        |> IDMap.add b (remove_replace (get_node b t) x a)
-        |> IDMap.remove x
-    and edges =
-      t.edges
-        |> EdgeSet.remove (x,a)
-        |> EdgeSet.remove (x,b)
-        |> EdgeSet.remove (x,c)
-        |> EdgeSet.add (a,b)
-    in
-    {t with nodes; edges; }
+      let nodes =
+        t.nodes
+          |> IDMap.add a (remove_replace (get_node a t) x b)
+          |> IDMap.add b (remove_replace (get_node b t) x a)
+          |> IDMap.remove x
+      and edges =
+        t.edges
+          |> EdgeSet.remove (x,a)
+          |> EdgeSet.remove (x,b)
+          |> EdgeSet.remove (x,c)
+          |> EdgeSet.add (a,b)
+      in
+      {t with nodes; edges; }
   in
   assert( is_edge x y t ); (* TODO *)
-  match get_node x t, get_node y t with
+  match get_node x t, get_node y t with 
   | (Single _, _ | _, Single _) ->
     assert false
   (* a -- x ---> a + x *)
@@ -317,7 +333,7 @@ let break (x,y) t =
         |> IDMap.add x (Single x)
     and edges = EdgeSet.remove (a,x) t.edges
     and handles,h =
-      if a = (handle_of a t)
+      if a = handle_of a t
         then HandleSet.add x t.handles,x
         else HandleSet.add a t.handles,a
     in
@@ -341,9 +357,12 @@ let break (x,y) t =
     let t = clean_up_nodes b c x a t in
     let nodes = IDMap.add x (Single x) t.nodes
     and handles,d_handles =
-      if h = x
-        then HandleSet.add b t.handles,[b]
-        else HandleSet.add x t.handles,[x]
+      if h = a then
+        HandleSet.remove a t.handles |> HandleSet.add b |> HandleSet.add x,[x;b]
+      else if h = x then
+        HandleSet.add b t.handles,[b]
+      else
+        HandleSet.add x t.handles,[x]
     in
     let t = {t with nodes; handles; avail_codes = IDManager.push a t.avail_codes; } in
     let delta =
@@ -363,19 +382,26 @@ let break (x,y) t =
     let h = handle_of a t in
     let t = clean_up_nodes b c w a t in
     let t = clean_up_nodes x y a w t in
-    let handles = failwith "TODO" in
-    let avail_codes = IDManager.push a @@ IDManager.push w t.avail_codes in
+    let handles =
+      t.handles (* TODO; don't move h if possible *)
+        |> HandleSet.remove h
+        |> HandleSet.add b (* or c, choice is arbitrary *)
+        |> HandleSet.add x (* or y, choice is arbitrary *)
+    in
+    let avail_codes = 
+      IDManager.push a @@ IDManager.push w t.avail_codes
+    in
     let delta =
-      let add_hs = if h = b then [x] else if h = x then [b] else [x;b]
-      and rem_hs = if h = b || h = x then [] else [h] in
-      { created = {d_nodes = []; d_edges = [(b,c);(x,y)]; d_handles = add_hs;};
-        removed = {d_nodes = [a;w]; d_edges = [(a,b);(a,c);(w,x);(w,y);(a,w)];
-                   d_handles = rem_hs;};
-         jxn_of = [`Edge (b,c); `Edge (x,y)];}
+        let add_hs = if h = b then [x] else if h = x then [b] else [x;b]
+        and rem_hs = if h = b || h = x then [] else [h] in
+        { created = {d_nodes = []; d_edges = [(b,c);(x,y)]; d_handles = add_hs;};
+          removed = {d_nodes = [a;w]; d_edges = [(a,b);(a,c);(w,x);(w,y);(a,w)];
+                     d_handles = rem_hs;};
+          jxn_of = [`Edge (b,c); `Edge (x,y)];}
     in
     let t = {t with avail_codes; handles; } in
     t,delta
-   
+
 let join j1 j2 t =
   let jxn_of = [j1;j2] in
   match j1, j2 with
@@ -521,22 +547,6 @@ and pp_tree ppf t =
       | Single a -> outputf "@[S(%d)@] " a)
     t.nodes;
   outputf "@]@\n";
-  ()
-
-let dump output t =
-  let outputf format = Printf.ksprintf (output) format in
-  outputf "Handles : ";
-  HandleSet.iter (fun a -> outputf "H(%d) " a) t.handles;
-  outputf "\nEdges : ";
-  EdgeSet.iter (fun (a,b) -> outputf "(%d,%d) " a b) t.edges;
-  outputf "\nNodes : ";
-  IDMap.iter
-    (fun _ -> function
-      | Leaf (a,b) -> outputf "L(%d,%d) " a b
-      | Interior (a,b,c,d) -> outputf "N(%d,%d,%d,%d) " a b c d
-      | Single a -> outputf "S(%d) " a)
-    t.nodes;
-  outputf "\n";
   ()
 
 

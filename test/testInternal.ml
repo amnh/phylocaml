@@ -3,15 +3,6 @@ include Phylocaml
 END
 include Internal
 
-let multiply_list x lst =
-  let rec multiply_list x lst acc =
-    if x = 0
-      then acc
-      else multiply_list (x-1) lst (List.rev_append acc lst)
-  in
-  assert( x >= 0 );
-  multiply_list x lst []
-
 let assert_equal_int =
   let printer = string_of_int in
   OUnit.assert_equal ~printer

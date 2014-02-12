@@ -208,10 +208,7 @@ val replace_subst : model -> subst_model -> model
 
 (** Generate a function that enumerates the combinations of substitution models
     and site-rate-variation through lists of variants given and generate a new
-    model from a previous model. Empirical priors are required if the given model
-    does not have them (under JC69, K80), else priors will always be equal.
-    
-    TODO:: Convert this to Batteries.Enum.t // Core.???  *)
+    model from a previous model. *)
 val enum_models :
   ?site_var:[`DiscreteGamma of int | `DiscreteTheta of int | `Constant
             | `DiscreteCustom of (float * float) array ] list ->
@@ -248,7 +245,6 @@ val gamma_rates :
     (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t
 
 
-
 (** {2 Compare / Higher-Order Data-Types} *)
 
 (** [compare a b] compare model [a] and [b] *)
@@ -261,13 +257,12 @@ module MlModelMap : Map.S with type key = spec
 module MlModelSet : Set.S with type elt = spec
 
 (** [categorize_by_model] categorize a list of values into lists of differing
-   types using the compare function and Map as a container. The function passed
-   obtains the model from the passed values for inclusion. *)
+    types using the compare function and Map as a container. The function passed
+    obtains the model from the passed values for inclusion. *)
 val categorize_by_model : ('a -> model) -> 'a list -> 'a list list
 
-(** [process_custom_matrix] process data to be used by the Custom model type *)
-
-(** Create a custom model by a Map and array. The map is of the char code of the
+(** [process_custom_matrix] process data to be used by the Custom model type.
+    Create a custom model by a Map and array. The map is of the char code of the
     elements of the matrix to a index in an array. This can be used with the
     Custom tag for a model. *)
 val process_custom_matrix :
@@ -340,3 +335,4 @@ val short_name : model -> string
 (** Create a specification from a classification, and parsed model details. *)
 val process_classification :
   spec -> float Internal.UnorderedTupleMap.t * float Internal.IntMap.t -> spec
+
