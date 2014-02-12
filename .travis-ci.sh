@@ -25,7 +25,7 @@ opam install ${OPAM_DEPENDS} -y
 # make/test application
 make
 make test.native
-./test.native -mult 10
+./test.native
 
 # install/test application linking
 make install
