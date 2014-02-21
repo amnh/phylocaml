@@ -221,7 +221,7 @@ struct
     }
 
 
-  let median_n m id o bs =
+  let median_n _m id o bs =
     let bs = Ordering.sort get_topot bs in
     let prelim = match o with
       | None   -> failwith "TODO"
@@ -462,8 +462,8 @@ struct
   let median_3 _ _ _ _ = failwith "TODO"
   let median_n _ _ _ _ = failwith "TODO"
 
-  let readjust_3 ?prelim _ _ _ _ _ _ = failwith "TODO"
-  let readjust_n ?prelim _ _ _ _ = failwith "TODO"
+  let readjust_3 ?prelim:_ _ _ _ _ _ _ = failwith "TODO"
+  let readjust_n ?prelim:_ _ _ _ _ = failwith "TODO"
 
   let uppass_heuristic_internal_3 _ _ _ _ _ = failwith "TODO"
   let uppass_heuristic_internal_n _ _ _ = failwith "TODO"
@@ -513,8 +513,8 @@ struct
   let median_3 _ _ _ _ _ _ = failwith "TODO"
   let median_n _ _ _ _ = failwith "TODO"
 
-  let readjust_3 ?prelim _ _ _ _ _ _ = failwith "TODO"
-  let readjust_n ?prelim _ _ _ _ = failwith "TODO"
+  let readjust_3 ?prelim:_ _ _ _ _ _ _ = failwith "TODO"
+  let readjust_n ?prelim:_ _ _ _ _ = failwith "TODO"
 
   let final_states _ _ _ _ _ = failwith "TODO"
   let uppass_heuristic_internal_3 _ _ _ _ _ = failwith "TODO"
