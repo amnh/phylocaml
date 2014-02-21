@@ -13,9 +13,6 @@ lib/Bitvector
 lib/Node
 lib/NodeData
 
-lib/Diagnosis
-lib/pDiagnosis
-
 lib/Model
 lib/MlModel
 lib/PModel
