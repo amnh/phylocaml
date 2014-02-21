@@ -255,11 +255,7 @@ struct
       prelim = prelim;
       final  = Some prelim; }, set
 
-  let readjust_n ?(prelim=false) _ _ n _ =
-    let prelim,set = failwith "TODO" in
-    {n with
-      prelim = prelim;
-      final = Some prelim; }, set
+  let readjust_n ?prelim:_ _ _ _ _ = failwith "TODO"
 
   let final_states _ _ _ _ _ = failwith "TODO"
 
