@@ -1,11 +1,12 @@
 lib/Compatibility
 lib/Internal
-lib/Ppp
+lib/Ppf
 
 lib/Topology
 lib/Ptopology
 lib/Tree
 lib/Network
+lib/Alignment
 
 lib/Alphabet
 lib/Sequence
@@ -13,9 +14,6 @@ lib/Bitvector
 
 lib/Node
 lib/NodeData
-
-lib/Diagnosis
-lib/pDiagnosis
 
 lib/Model
 lib/MlModel
