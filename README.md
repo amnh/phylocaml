@@ -19,7 +19,7 @@ Table of Contents
 
 + [Dependencies](#dependencies)
 + [Installation](#installation)
-+ [Test Framework](#test-framework)
++ [Testing Framework](#testing-framework)
 + [Quick Start](#quick-start)
   + [Overview of Diagnosis Modules](#overview-of-diagnosis-modules)
   + [Overview of Search Modules](#overview-of-search-modules)
