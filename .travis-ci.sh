@@ -37,13 +37,13 @@ if [ 1 -eq $COVERAGE ] ; then
 fi
 
 # make/test application
-  make
+make
 if [ 1 -eq $COVERAGE ] ; then
   make coverage
 else
   make test.native
 fi
-./test.native
+make test.byte
 
 # install/test application linking
 #make install
