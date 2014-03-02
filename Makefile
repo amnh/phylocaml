@@ -46,7 +46,7 @@ test.native : phyloc
 	$(BUILD) test.native
 
 COVERAGE_TAGS=package\(bisect\),syntax\(camlp4o\),syntax\(bisect_pp\)
-coverage :
+coverage : phyloc
 	$(BUILD) -tags $(COVERAGE_TAGS) test.byte
 
 # -----------------------------------
