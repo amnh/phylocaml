@@ -22,7 +22,6 @@ let major,minor =
 
 (** Constants *)
 let bv_width = ["8";"16";"32";"64"]
-let headers  = ["lib/seq.h"; "lib/mlmodel.h"; "lib/phyloc.h"]
 
 (** Helper functions *)
 let rec arg_weave p = function
@@ -33,6 +32,7 @@ let arg x = A x
  
 (** C-Header files *)
 let headers =
+  let headers = ["lib/seq.h"; "lib/mlmodel.h"; "lib/phyloc.h"] in
   let bv_ w =
     let base = "lib/bitvector/bv"^w^".h" in
     match vectorization with
@@ -99,7 +99,7 @@ let () = dispatch begin function
     in
     List.iter (fun w -> flag ["c";"use_bv"^w] (S (bv_cflags w))) bv_width;
 
-    (* declare use_phylocaml and include_phylocaml for the tests *)
+    (* declare use_phylocaml and include_phylocaml for the tests, apps, bench *)
     ocaml_lib "phylocaml";
 
     (* pre-process compatibility module *)

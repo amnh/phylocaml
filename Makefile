@@ -1,5 +1,4 @@
 .PHONY: clean byte native phyloc docs top install uninstall all dot extests
-
 .DEFAULT: all
 
 BUILD=ocamlbuild -use-ocamlfind -classic-display
@@ -37,10 +36,6 @@ phyloc :
 
 # -----------------------------------
 
-#externally linked tests; make install required to have been done
-extests :
-	cd test && $(MAKE)
-
 test.byte : phyloc
 	$(BUILD) test.byte
 
@@ -50,16 +45,31 @@ test.d.byte : phyloc
 test.native : phyloc
 	$(BUILD) test.native
 
+COVERAGE_TAGS=package\(bisect\),syntax\(camlp4o\),syntax\(bisect_pp\)
+coverage :
+	$(BUILD) -tags $(COVERAGE_TAGS) test.byte
+
 # -----------------------------------
 
 app :
 	cd app && $(MAKE)
 
+bench : 
+	cd bench && $(MAKE)
+
+test :
+	cd test && $(MAKE)
+
 # -----------------------------------
 
 clean :
-	cd test && $(MAKE) clean
+	rm -f *.native *.byte *.top
 	$(BUILD) -clean
+
+distclean : clean
+	cd bench && $(MAKE) clean
+	cd test && $(MAKE) clean
+	cd app && $(MAKE) clean
 
 # -----------------------------------
 

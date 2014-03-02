@@ -62,6 +62,7 @@ installing the provided package.
 Testing Framework
 =================
 [![Build Status](https://travis-ci.org/amnh/phylocaml.png?branch=master)](https://travis-ci.org/amnh/phylocaml)
+[![Coverage Status](https://coveralls.io/repos/amnh/phylocaml/badge.png)](https://coveralls.io/r/amnh/phylocaml)
 
 The tests can be built by installing the package and linking, or by compiling it
 directly together. Doing both ensures everything is packaged and installed
