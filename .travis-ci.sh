@@ -40,10 +40,9 @@ fi
 if [ 1 -eq $COVERAGE ] ; then
   make coverage
 else
-  make
+  make test.byte
 fi
-make test.native
-./test.native
+./test.byte
 
 # install/test application linking
 make install
