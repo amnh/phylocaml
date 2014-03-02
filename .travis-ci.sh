@@ -37,21 +37,21 @@ if [ 1 -eq $COVERAGE ] ; then
 fi
 
 # make/test application
+  make
 if [ 1 -eq $COVERAGE ] ; then
   make coverage
 else
-  make
+  make test.native
 fi
-make test.native
 ./test.native
 
 # install/test application linking
-make install
-make extests
-./test/test.native
+#make install
+#make test
+#./test/test.native
 
 # make documentation
-make phylocaml.html
+#make phylocaml.html
 
 # run toplevel with phylocaml TODO
 #echo "#use \"topfind\";;
