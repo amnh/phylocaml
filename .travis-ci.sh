@@ -37,13 +37,20 @@ if [ 1 -eq $COVERAGE ] ; then
 fi
 
 # make/test application
-make
 if [ 1 -eq $COVERAGE ] ; then
   make coverage
+  JOB_ID="$TRAVIS_JOB_ID"
+  JSON_FILE="travis-ci-$JOB_ID.json"
+  cd _build
+  ./test/test.byte
+  bisect-report -coveralls-property service_job_id $JOB_ID \
+    -coveralls-property service_name travis-ci -coveralls $JSON_FILE *.out
+  curl -F json_file=@$JSON_FILE https://coveralls.io/api/v1/jobs
+  cd ..
 else
-  make test.native
+  make test.byte
+  ./test.byte
 fi
-make test.byte
 
 # install/test application linking
 #make install
