@@ -40,6 +40,7 @@ Required
 
 Optional
 + [OUnit2](http://ounit.forge.ocamlcore.org/) (optional)
++ [Core\_bench](https://blogs.janestreet.com/ocaml-core/110.01.00/doc/core_bench/) (optional)
 
 
 Installation
@@ -70,18 +71,18 @@ properly. This switch is done with USE\_EXTERNAL\_LINKING pre-processor flag.
 
 The externally linked tests are compiled by,
 
-    make extests
-    ./tests/tests.native
+    make test
+    ./tests/test.native
 
 and the locally linked build is done by,
 
-    make tests
-    ./tests.native
+    make test.native
+    ./test.native
 
 Documentation
 =================
 
-The documentation is built using ocamlbuild and can be built from,
+The documentation (PDF and HTML) is built using ocamlbuild and can be built from,
 
     make docs
 
@@ -110,25 +111,26 @@ issues with networks or more complex topologies in optimizing states.
        +------------+----------+-------------+----------+-------+      |
                                                                        |
           +--------------+-----------+         +--------+----------+   |
-          |              < Node      |-------->|        | NodeData |---+
+          |              | Node      |-------->|        | NodeData |---+
           |              +-----------+         | Node/  +----------+
           | Diagnosis    | Topo      |----+    |  Root  | Compare  |
           |   of Model   +-----------+    |    +--------+----------+
-          |              |           |    |    +----------+   |
-          +--------------+-----------+    +--->| Topology |<--+
-                    |                          +----------+
-                    |                          +----+----+-------+
-                    +------------------------->| ML | MP | Kolmo |
+          |              | Model     |-+  |    +----------+   |
+          +--------------+-----------+ |  +--->| Topology |<--+
+                                       |       +----------+
+                                       |       +----+----+-------+
+                                       +------>| ML | MP | Kolmo |
                                                +----+----+-------+
 
            Figure 1. Basic Module dependency diagram of a Diagnosis
 
 
-In Figure 1, the diagnosis module is a functor about a model and topology.
-The topology designates a way to traverse the topology, and ptopology attaches
-data to the nodes and roots. This allows separation between structure and gives
-a common and basic interface to attach data to any topology. Topology additionally
-contains a compare module for traversing a topology in a consistent way[^1].
+In Figure 1, the diagnosis module (not included in the phylocaml package[^3]),
+is dependen on node, topology and model. The topology designates a way to traverse
+the topology, and ptopology attaches data to the nodes and roots. This allows
+separation between structure and gives a common and basic interface to attach
+data to any topology. Topology additionally contains a compare module for
+traversing a topology in a consistent way[^1].
 
 The diagnosis module is dependent on a specific type of Node type because it
 manages the data through the topological manipulations. The Node/Root module is
@@ -159,7 +161,7 @@ Overview of Search Modules
 
 We provide module implementations that support the [OCamion](https://github.com/AMNH/ocamion)
 project, although we do not directly depend on that library --it is thus highly
-recommended to install though.
+recommended to install.
 
 
 Overview of Utility Modules

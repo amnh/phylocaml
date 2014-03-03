@@ -1,16 +1,15 @@
+open Internal
+
 type 'a pp_f = Format.formatter -> 'a -> unit
 
 let measure_width pp_data data : int =
-  String.length (Format.asprintf "%a" pp_data data)
+  String.length (pp_to_string pp_data data)
 
 let combine_width max_widths pp_rowdata row =
   Array.iteri
     (fun i _ ->
       max_widths.(i) <- max max_widths.(i) (measure_width pp_rowdata row.(i)))
     row
-
-let string_of_pp pp_data data =
-  Format.asprintf "%a" pp_data data
 
 let pp_array ?(hsep=" ") pp_celldata fmt array =
   Array.iteri
