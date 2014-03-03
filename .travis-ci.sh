@@ -52,6 +52,7 @@ else
 fi
 
 # install/test application linking
+make
 make install
 make test
 ./test/test.native
