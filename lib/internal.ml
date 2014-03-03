@@ -6,6 +6,9 @@ let ( !$ ) a = Lazy.force a
 
 let ( !$$ ) a = List.map (!$) a
 
+external id : 'a -> 'a = "%identity"
+
+(** TODO; this should probably be a more robust test of equality *)
 let (=.) a b = (abs_float @@ a -. b) < epsilon_float
 
 let flip f a b = f b a
@@ -34,7 +37,7 @@ let is_nan x = match classify_float x with
 
 (** Additional List functions *)
 
-let over_path f acc lst =
+let traverse_path f acc lst =
   let rec consume acc x = function
     | y::ys -> consume (f acc x y) y ys
     | []    -> acc
@@ -43,7 +46,6 @@ let over_path f acc lst =
   | x::y::xs -> consume (f acc x y) y xs
   | [_] | [] -> acc
   
-
 let random_select n list =
   let rec take i acc = function
     | lst when i = 0 -> rand_select (n+1) (Array.of_list acc) lst

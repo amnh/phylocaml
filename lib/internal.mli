@@ -29,6 +29,8 @@ val some : 'a -> 'a option
 (** [flip f a b] flips the arguments of a binary function *)
 val flip : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
 
+(** [id z] identity function *)
+val id : 'a -> 'a
 
 (** {6 Floating Point Operations} *)
 
@@ -69,7 +71,7 @@ module IntSetMap : Map.S with type key = IntSet.t
 (** {6 Random Selection Functions} *)
 
 (** [rand_select n xs] Randomly select [n] elements from a list [xs] using
- * resevoir sampling. *)
+   resevoir sampling. *)
 val random_select : int -> 'a list -> 'a list
 
 (** [random_of_pair a b] Select a random value of two choices [a] and [b]. *)
@@ -86,7 +88,7 @@ val random_elt_pairset : UnorderedTupleSet.t -> int * int
 
 val array_fold_left2 : ('a -> 'b -> 'c -> 'a) -> 'a -> 'b array -> 'c array -> 'a
 
-val over_path : ('a -> 'b -> 'b -> 'a) -> 'a -> 'b list -> 'a
+val traverse_path : ('a -> 'b -> 'b -> 'a) -> 'a -> 'b list -> 'a
 
 (** {6 BigArray(1,2) Functions on Floats} *)
 
