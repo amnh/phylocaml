@@ -1,4 +1,3 @@
-
 OPAM_DEPENDS="ocamlfind ocamlfind ounit pareto"
 APT_DEPENDS="gsl-bin libgsl0-dev liblapack-dev libblas-dev gfortran"
 APT_OCAML="ocaml ocaml-native-compilers camlp4-extra opam aspcud curl"
@@ -53,12 +52,14 @@ else
 fi
 
 # install/test application linking
-#make install
-#make test
-#./test/test.native
+make install
+make test
+./test/test.native
+make uninstall
 
-# make documentation
-#make phylocaml.html
+# documentation
+make phylocaml.html
+#make phylocaml.tex TODO
 
 # run toplevel with phylocaml TODO
 #echo "#use \"topfind\";;
