@@ -31,14 +31,14 @@ let pp_matrix ?(hsep=" ") pp_celldata fmt matrix =
     Format.pp_set_tab fmt ();
     (* In the following ' *' is not supported with the %a argument...
     Format.fprintf fmt "%s% *a" lsep widths.(j) pp_celldata matrix.(0).(j); *)
-    Format.fprintf fmt "%s% *s" lsep widths.(j) (string_of_pp pp_celldata matrix.(0).(j));
+    Format.fprintf fmt "%s% *s" lsep widths.(j) (pp_to_string pp_celldata matrix.(0).(j));
   done;
   for i = 1 to pred @@ Array.length matrix do
     for j = 0 to pred @@ Array.length matrix.(i) do
       let lsep = if j = 0 then "" else hsep in
       Format.pp_print_tab fmt (); (* print_tab *)
       (* Format.fprintf fmt "%s% *a" lsep widths.(j) pp_celldata matrix.(i).(j) *)
-      Format.fprintf fmt "%s% *s" lsep widths.(j) (string_of_pp pp_celldata matrix.(i).(j));
+      Format.fprintf fmt "%s% *s" lsep widths.(j) (pp_to_string pp_celldata matrix.(i).(j));
     done;
   done;
   Format.pp_close_tbox fmt ()
@@ -56,14 +56,14 @@ let pp_table ?(hsep=" ") pp_headdata pp_celldata fmt (header,table) =
     Format.pp_set_tab fmt ();
     (* In the following ' *' is not supported with the %a argument...
     Format.fprintf fmt "%s% *a" lsep widths.(j) pp_headdata header.(j); *)
-    Format.fprintf fmt "%s% *s" lsep widths.(j) (string_of_pp pp_headdata header.(j));
+    Format.fprintf fmt "%s% *s" lsep widths.(j) (pp_to_string pp_headdata header.(j));
   done;
   for i = 0 to pred @@ Array.length table do
     for j = 0 to pred @@ Array.length table.(i) do
       let lsep = if j = 0 then "" else hsep in
       Format.pp_print_tab fmt ();
       (* Format.fprintf fmt "%s% *a" lsep widths.(j) pp_celldata table.(i).(j) *)
-      Format.fprintf fmt "%s% *s" lsep widths.(j) (string_of_pp pp_celldata table.(i).(j));
+      Format.fprintf fmt "%s% *s" lsep widths.(j) (pp_to_string pp_celldata table.(i).(j));
     done;
   done;
   Format.pp_close_tbox fmt ()

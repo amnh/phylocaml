@@ -1,3 +1,4 @@
+open Internal
 
 module type AssignCost =
   sig
@@ -153,35 +154,7 @@ module FullAlignment (V:DataVector) (C:AssignCost with type elt = V.elt) =
       done;
       fst mem.(xlen-1).(ylen-1)
 
-    let mem_to_latex (mat : mem) =
-      let rec repeat_ c x b = match x with
-        | 0 -> ()
-        | x -> Buffer.add_string b c;
-               repeat_ c (x-1) b
-      and transform_cell (x,tds) =
-        (List.fold_left
-          (fun acc -> function
-            | Insert _-> acc ^ " \\leftarrow "
-            | Delete _-> acc ^ " \\uparrow "
-            | Align  _-> acc ^ " \\nwarrow "
-            | Root    -> acc)
-          "{"
-          tds) ^ (Format.asprintf "%a" C.pp_cost x) ^ "}"
-      in
-      let b = Buffer.create 1789 in
-      Buffer.add_string b "\\begin{array}{";
-      repeat_ "r" (Array.length mat) b;
-      Buffer.add_string b "}\n";
-      for i = 0 to (Array.length mat)-1 do
-        Buffer.add_string b (transform_cell mat.(i).(0));
-        for j = 1 to (Array.length mat.(0)) - 1 do
-          Buffer.add_string b " & ";
-          Buffer.add_string b (transform_cell mat.(i).(j));
-        done;
-        Buffer.add_string b " \\\\\n";
-      done;
-      Buffer.add_string b "\\end{array}";
-      Buffer.contents b
+    let mem_to_latex (mat : mem) = failwith "TODO"
 
   end
 
