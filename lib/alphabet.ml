@@ -318,8 +318,9 @@ let present_absent =
           ~kind:Sequential ~orientation:false ~case:false
 
 let dna =
-  let states =
-    [("A",Some "T");("C",Some "G");("G",Some "C");("T",Some "A");(default_gap,None);("X",None)]
+  let states = [("A", Some "T"); ("C", Some "G");
+                ("G", Some "C"); ("T", Some "A");
+                (default_gap, None); ("X", None) ]
   and equates = [("0",["A"]);("1",["C"]);("2",["G"]);("3",["T"]);("4",["-"])] in
   of_list ~states ~equates ~gap:(Some default_gap) ~all:(Some "X")
           ~missing:(Some "X") ~kind:BitFlag ~orientation:false ~case:false
@@ -525,17 +526,13 @@ and to_bitflag t = match t.kind with
     of_list ~states ~equates:[] ~gap:(opt_find t.gap) ~all:(opt_find t.all)
       ~missing:(opt_find t.missing) ~kind:BitFlag ~orientation:t.orientation ~case:t.case
 
-(** Conver the alphabet to sequential or simple bitflag formats. *)
+(** Convert the alphabet to sequential or simple bitflag formats. *)
 and simplify t = match t.kind with
   | CombinationLevels _ -> to_sequential t
   | Sequential | BitFlag | Continuous -> t
 
 and to_level level t =
-  let () =
-    if level > 0
-      then ()
-      else raise (Error (`Unacceptable_Level_Argument level))
-  in
+  let () = if level <= 0 then raise (Error (`Unacceptable_Level_Argument level)) in
   match t.kind with
   | _                   when level = 1 -> to_sequential t
   | CombinationLevels l when level = l -> t

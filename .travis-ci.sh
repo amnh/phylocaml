@@ -41,7 +41,7 @@ if [ 1 -eq $COVERAGE ] ; then
   JOB_ID="$TRAVIS_JOB_ID"
   JSON_FILE="travis-ci-$JOB_ID.json"
   cd _build
-  ./test/test.byte
+  ./test/test.byte -runner sequential -verbose true -display true
   bisect-report -coveralls-property service_job_id $JOB_ID \
     -coveralls-property service_name travis-ci -coveralls $JSON_FILE *.out
   curl -F json_file=@$JSON_FILE https://coveralls.io/api/v1/jobs

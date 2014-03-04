@@ -292,10 +292,6 @@ let path_of a b t =
     then [a]
     else List.rev @@ build_path [a] None a
 
-let rec traverse_path f ids t acc = match ids with
-  | [] | [_] -> acc
-  | x1::((x2::_) as xs) -> traverse_path f xs t (f acc x1 x2)
-
 let disjoint_edge _ _ = true
 
 let jxn_of_delta (d : break tdelta) : jxn * jxn =
@@ -580,12 +576,11 @@ let num_nodes =
     else
       Num.sub_num (Num.mult_num two n) two)
 
-let num_trees =
+let num_unrooted_trees =
   let d_fact n =
     let rec d_fact final acc n =
       if Num.eq_num n final then acc
-      else d_fact final (Num.mult_num n acc)
-                        (Num.sub_num n two)
+      else d_fact final (Num.mult_num n acc) (Num.sub_num n two)
     in
     d_fact one one n
   in
@@ -598,4 +593,7 @@ let num_trees =
       then one
     else
       d_fact (Num.sub_num (Num.mult_num two n) five))
+
+let num_rooted_trees n =
+  Num.mult_num (num_edges n) (num_unrooted_trees n)
 

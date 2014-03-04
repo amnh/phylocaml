@@ -162,7 +162,7 @@ let tests = "Tree" >:::
     let  input = List.map Num.num_of_int [0;1;2;3;4; 5; 6;   7;    8;     9;     10;      11]
     and output = List.map Num.num_of_int [0;1;1;1;3;15;105;945;10395;135135;2027025;34459425] in
     List.iter2
-      (fun i o -> assert_equal_num ~cmp o (Tree.num_trees i))
+      (fun i o -> assert_equal_num ~cmp o (Tree.num_unrooted_trees i))
       input output);
 ]
 
