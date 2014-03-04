@@ -31,22 +31,24 @@ module type AssignCost =
     (** inf or very large cost; never accepted if others are available *)
     val inf : model -> cost
 
+    (** {2 Comparison Functions} *)
+
+    (** less-than *)
+    val lt : model -> cost -> cost -> bool
+
+    (** greater-than *)
+    val gt : model -> cost -> cost -> bool
+
+    (** equality *)
+    val eq : model -> cost -> cost -> bool
+
     (** {2 Cost Functions} *)
 
     (** Add two costs together *)
     val add : model -> cost -> cost -> cost
 
-    (** minimum of two costs *)
-    val min : model -> cost -> cost -> cost
-
-    (* Determine the cost and the assignment of the alignment of two elements *)
+    (** Determine the cost and the assignment of the alignment of two elements *)
     val cost : model -> elt -> elt -> cost
-
-    (** Determine a minimal cost of three with added associated data *)
-    val min3 : model -> cost * 'a -> cost * 'a -> cost * 'a -> cost * 'a list
-
-    (** Determine a minimal cost of a list *)
-    val minN : model -> (cost * 'a) list -> cost * 'a list
 
     (** {2 Accessing Assignments} *)
 
@@ -132,6 +134,9 @@ module type Alignment =
     (** Fill a memory structure with the alignment of the sequences. *)
     val align : mem -> m -> t -> t -> c
 
+    (** Return the pairwise cost and median of an alignment. *)
+    val aligned : m -> t -> t -> c * t
+
     (** {2 Pretty Printing and IO} *)
 
     val mem_to_latex : mem -> string
@@ -145,4 +150,43 @@ module FullAlignment :
     include Alignment
     val create_mem : m -> t -> t -> mem
   end
+(** Uses the Ukkonen algorithm to limit the number of cells to compute. [k] is
+   the initial width of the barrier in addition to the length difference of the
+   sequences to initiate the memory. *)
+module UkkAlignment :
+  functor (V : DataVector) ->
+    functor (C : AssignCost with type elt = V.elt) ->
+  sig
+    include Alignment
+    val create_mem : k:int -> t -> t -> mem
+  end
 
+(*
+(** Limit the number of indel events in the alignment to [k]. *)
+module MaxIndelAlignment :
+  functor (V : DataVector) ->
+    functor (C : AssignCost with type elt = V.elt) ->
+  sig
+    include Alignment
+    val create_mem : k:int -> t -> t -> mem
+  end
+
+(** Limit the maximum length of the number of indels to include in the
+   respective sequences. *)
+module MaxIndelLengthAlignment :
+  functor (V : DataVector) ->
+    functor (C : AssignCost with type elt = V.elt) ->
+  sig
+    include Alignment
+    val create_mem : g_indel:int -> f_indel:int -> g:t -> f:t -> mem
+  end
+
+(** Limit the maximum number of indel lengths in the alignment. *)
+module MaxIndelStringsAlignment :
+  functor (V : DataVector) ->
+    functor (C : AssignCost with type elt = V.elt) ->
+  sig
+    include Alignment
+    val create_mem : k:int -> t -> t -> mem
+  end
+*)
