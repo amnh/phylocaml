@@ -19,11 +19,11 @@ type node =
 
 (** Complete definition of a tree. *)
 type t = {
-  name : string option;           (** Optional naming of the tree -for I/O. *)
-  nodes : node Topology.IDMap.t;  (** Map of a node id to the node type. *)
-  edges : Topology.EdgeSet.t;     (** Set of edges in the topology. *)
-  handles : Topology.HandleSet.t; (** Set of handles in the Topology. *)
-  avail_codes : int * int list;   (** Codes for the creation of new nodes. *)
+  name : string option;               (** Optional naming of the tree -for I/O. *)
+  nodes : node Topology.IDMap.t;      (** Map of a node id to the node type. *)
+  edges : Topology.EdgeSet.t;         (** Set of edges in the topology. *)
+  handles : Topology.HandleSet.t;     (** Set of handles in the Topology. *)
+  avail_codes : Topology.IDManager.t; (** Codes for the creation of new nodes. *)
 }
 
 
@@ -152,12 +152,6 @@ val post_order_edges :
 val partition_edge :
   Topology.edge -> t -> Topology.IDSet.t * Topology.IDSet.t * bool
 
-(** [traverse_path] Traverse a path of nodes in a topology applying a function
-    on each, and accumulating the result. No calls to function are made on an
-    empty list or a single element in the list. *)
-val traverse_path :
-      ('a -> Topology.id -> Topology.id -> 'a) -> Topology.id list -> t -> 'a -> 'a
-
 
 (** {2 Topological Functions} *)
 
@@ -203,12 +197,16 @@ val to_index : t -> int *)
 val num_edges : Num.num -> Num.num
 
 (** Calculate the number of nodes in a binary unrooted tree with [n] leaves. The
-    number of nodes are 2*n-2. *)
+    number of nodes are 2*n-2. Add an additional node for rooted trees. *)
 val num_nodes : Num.num -> Num.num
 
 (** Calculate the number of binary unrooted trees that can be produced from with
-    [n] leaves. (2n-5)!! *)
-val num_trees : Num.num -> Num.num
+    [n] leaves. (2n-5)!! . *)
+val num_unrooted_trees : Num.num -> Num.num
+
+(** Calculate the number of binary rooted trees that can be produced from with
+    [n] leaves. num_unrooted_trees * num_edges *)
+val num_rooted_trees : Num.num -> Num.num
 
 
 (** {2 Formatter/Printer Functions} *)
