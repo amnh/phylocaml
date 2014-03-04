@@ -194,7 +194,7 @@ module FullAlignment (V:DataVector) (C:AssignCost with type elt = V.elt) =
             | Align  _-> acc ^ " \\nwarrow "
             | Root    -> acc)
           "{"
-          tds) ^ (Format.asprintf "%a" C.pp_cost x) ^ "}"
+          tds) ^ (pp_to_string C.pp_cost x) ^ "}"
       in
       failwith "TODO"
       (* Ppl.l_matrix ... *)
