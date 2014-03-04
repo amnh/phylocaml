@@ -1,3 +1,5 @@
+open Internal
+
 type 'a pp_l = 'a -> string
 
 type align = L | C | R
