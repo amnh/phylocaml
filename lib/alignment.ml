@@ -1,3 +1,4 @@
+open Internal
 
 module type AssignCost =
   sig
@@ -195,10 +196,8 @@ module FullAlignment (V:DataVector) (C:AssignCost with type elt = V.elt) =
           "{"
           tds) ^ (Format.asprintf "%a" C.pp_cost x) ^ "}"
       in
-      Ppl.l_matrix
-        (Array.make (Array.length 
-        [| 
-
+      failwith "TODO"
+      (* Ppl.l_matrix ... *)
 
   end
 

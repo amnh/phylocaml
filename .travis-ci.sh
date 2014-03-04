@@ -1,4 +1,3 @@
-
 OPAM_DEPENDS="ocamlfind ocamlfind ounit pareto"
 APT_DEPENDS="gsl-bin libgsl0-dev liblapack-dev libblas-dev gfortran"
 APT_OCAML="ocaml ocaml-native-compilers camlp4-extra opam aspcud curl"
@@ -39,18 +38,29 @@ fi
 # make/test application
 if [ 1 -eq $COVERAGE ] ; then
   make coverage
+  JOB_ID="$TRAVIS_JOB_ID"
+  JSON_FILE="travis-ci-$JOB_ID.json"
+  cd _build
+  ./test/test.byte
+  bisect-report -coveralls-property service_job_id $JOB_ID \
+    -coveralls-property service_name travis-ci -coveralls $JSON_FILE *.out
+  curl -F json_file=@$JSON_FILE https://coveralls.io/api/v1/jobs
+  cd ..
 else
   make test.byte
+  ./test.byte
 fi
-./test.byte
 
 # install/test application linking
+make
 make install
-make extests
+make test
 ./test/test.native
+make uninstall
 
-# make documentation
+# documentation
 make phylocaml.html
+#make phylocaml.tex TODO
 
 # run toplevel with phylocaml TODO
 #echo "#use \"topfind\";;

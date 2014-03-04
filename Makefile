@@ -1,4 +1,4 @@
-.PHONY: clean byte native phyloc docs top install uninstall all dot extests
+.PHONY: clean distclean all byte native phyloc docs app bench test top install uninstall dot coverage
 .DEFAULT: all
 
 BUILD=ocamlbuild -use-ocamlfind -classic-display
