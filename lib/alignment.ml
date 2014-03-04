@@ -185,7 +185,7 @@ module FullAlignment (V:DataVector) (C:AssignCost with type elt = V.elt) =
       done;
       fst mem.(xlen-1).(ylen-1)
 
-    let mem_to_latex (mat : mem) =
+    let l_mem (mat : mem) =
       let l_cell (x,tds) =
         (List.fold_left
           (fun acc -> function
@@ -203,6 +203,9 @@ module FullAlignment (V:DataVector) (C:AssignCost with type elt = V.elt) =
 
 module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
   struct
+
+    include Common (V) (C)
+
     type e = V.elt
     type t = V.t
     type m = C.model
@@ -253,9 +256,9 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
            | [x] when is_root x -> Root
            |  _ -> assert false
 
-    let alignments mem m x y =
+    let alignments (mem:mem) m x y =
       let indel = C.indel m in
-      let get_direction i j = mem.(i).(j) |> snd |> choose_dir in
+      let get_direction i j = mem.mat.(i).(j) |> snd |> snd |> choose_dir in
       let rec build_alignments one two i j = match get_direction i j with
         | Align  _ -> build_alignments ((V.get x i)::one) ((V.get y j)::two) (i-1) (j-1)
         | Insert _ -> build_alignments (indel ::one) ((V.get y j)::two) (i) (j-1)
@@ -265,7 +268,7 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
       build_alignments [] [] ((V.length x)-1) ((V.length y)-1)
 
     let backtrace mem _m x y =
-      let get_direction i j = mem.(i).(j) |> snd |> choose_dir in
+      let get_direction i j = mem.mat.(i).(j) |> snd |> snd |> choose_dir in
       let rec build_median acc i j = match get_direction i j with
         | Align  s -> build_median (s::acc) (i-1) (j-1)
         | Delete s -> build_median (s::acc) (i-1) j
@@ -415,4 +418,6 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
         in
         initial_matrix ();
         fst (mem.mat.((V.length x)-1).((V.length y)-1))
+
+    let l_mem (mat : mem) = failwith "TODO"
   end

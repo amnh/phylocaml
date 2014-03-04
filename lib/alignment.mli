@@ -139,7 +139,7 @@ module type Alignment =
 
     (** {2 Pretty Printing and IO} *)
 
-    val mem_to_latex : mem -> string
+    val l_mem : mem Ppl.pp_l
   end
 
 (** Uses a full alignment matrix to align two sequences. *)
@@ -158,7 +158,7 @@ module UkkAlignment :
     functor (C : AssignCost with type elt = V.elt) ->
   sig
     include Alignment
-    val create_mem : k:int -> t -> t -> mem
+    val create_mem : k:int -> m -> t -> t -> mem
   end
 
 (*
