@@ -558,20 +558,16 @@ let num_edges =
   (fun n ->
     if Num.lt_num n zero
       then raise Not_found (* TODO *)
-    else if Num.eq_num n zero
-      then n
-    else if Num.eq_num n one
-      then n
+    else if (Num.eq_num n zero) || (Num.eq_num n one)
+      then zero
     else
-      Num.sub_num (Num.mult_num two n) two)
+      Num.sub_num (Num.mult_num two n) three)
  
 let num_nodes =
   (fun n ->
     if Num.lt_num n zero
       then raise Not_found (* TODO *)
-    else if Num.eq_num n zero
-      then zero
-    else if Num.eq_num n one
+    else if (Num.eq_num n zero) || (Num.eq_num n one)
       then n
     else
       Num.sub_num (Num.mult_num two n) two)
@@ -594,6 +590,12 @@ let num_unrooted_trees =
     else
       d_fact (Num.sub_num (Num.mult_num two n) five))
 
-let num_rooted_trees n =
-  Num.mult_num (num_edges n) (num_unrooted_trees n)
+let num_rooted_trees =
+  (fun n ->
+    if Num.lt_num n zero
+      then raise Not_found
+    else if (Num.eq_num n zero) || (Num.eq_num n one) then
+      n
+    else
+      Num.mult_num (num_edges n) (num_unrooted_trees n))
 
