@@ -56,8 +56,9 @@ module IDManager =
       | y,x when i = (y-1) -> (y-1, x)
       | y,x -> (y, i::x)
 
-    let of_list ids : int * int list =
+    let of_list ids : t =
       let rec holesmax holes max xxs = match xxs with
+        | x::_ when x < 0 -> assert false (* TODO *)
         | [] -> max,holes
         | x::xs when x = max -> holesmax holes (max+1) xs
         | _ -> holesmax (max::holes) (max+1) xxs

@@ -5,6 +5,7 @@ open TestInternal
 let tests = [
   AlphabetTest.tests;
   TreeTest.tests;
+  TopologyTest.tests;
 ]
 
 (** OCaml libraries with C backend *)
