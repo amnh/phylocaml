@@ -32,7 +32,7 @@ let tests = "Tree" >:::
     assert_equal_int 0 (IDSet.cardinal   (Tree.get_singles tree));
     assert_equal_int 0 (EdgeSet.cardinal (Tree.get_all_edges tree));
     ());
-
+  
   "Tree property cardinalities" >::
   (fun _ctxt ->
     let tree = Tree.random (0 -- 9) in
@@ -156,13 +156,40 @@ let tests = "Tree" >:::
     in
     test_once 10);
 
-  "Num Trees Function" >::
+  "Num Unrooted Trees Function" >::
   (fun _ctxt ->
     let cmp = Num.eq_num in
-    let  input = List.map Num.num_of_int [0;1;2;3;4; 5; 6;   7;    8;     9;     10;      11]
-    and output = List.map Num.num_of_int [0;1;1;1;3;15;105;945;10395;135135;2027025;34459425] in
+    let  input = List.map Num.num_of_int [0;1;2;3;4; 5; 6;   7;    8;     9; 10;      11;           12]
+    and output = List.map Num.num_of_int [0;1;1;1;3;15;105;945;10395;135135;2027025;34459425;654729075] in
     List.iter2
       (fun i o -> assert_equal_num ~cmp o (Tree.num_unrooted_trees i))
+      input output);
+
+  "Num Rooted Trees Function" >::
+  (fun _ctxt ->
+    let cmp = Num.eq_num in
+    let  input = List.map Num.num_of_int [0;1;2;3; 4;  5;  6;    7;     8;      9;      10]
+    and output = List.map Num.num_of_int [0;1;1;3;15;105;945;10395;135135;2027025;34459425] in
+    List.iter2
+      (fun i o -> assert_equal_num ~cmp o (Tree.num_rooted_trees i))
+      input output);
+
+  "Num Nodes with N leaves" >::
+  (fun _ctxt ->
+    let cmp = Num.eq_num in
+    let  input = List.map Num.num_of_int [0;1;2;3;4;5; 6; 7; 8; 9;10]
+    and output = List.map Num.num_of_int [0;1;2;4;6;8;10;12;14;16;18] in
+    List.iter2
+      (fun i o -> assert_equal_num ~cmp o (Tree.num_nodes i))
+      input output);
+
+  "Num Edges with N leaves" >::
+  (fun _ctxt ->
+    let cmp = Num.eq_num in
+    let  input = List.map Num.num_of_int [0;1;2;3;4;5;6; 7; 8; 9;10]
+    and output = List.map Num.num_of_int [0;0;1;3;5;7;9;11;13;15;17] in
+    List.iter2
+      (fun i o -> assert_equal_num ~cmp o (Tree.num_edges i))
       input output);
 ]
 
