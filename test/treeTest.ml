@@ -152,7 +152,7 @@ let tests = "Tree" >:::
       let p1 = Tree.path_of x y tree
       and p2 = Tree.path_of y x tree in
       assert_equal p1 (List.rev p2);
-      if n = 0 then test_once (n-1) else ()
+      if n = 0 then () else test_once (n-1)
     in
     test_once 10);
 
