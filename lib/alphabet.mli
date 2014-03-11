@@ -174,10 +174,10 @@ val to_list : t -> (string * code * string option) list
     exist in each. The alphabets could have different encodings, but as long as
     the names of the atomic elements are the same along with the gap, missing,
     all and orientation properties this function returns true.  *)
-val compare_elts : t -> t
+val compare_elts : t -> t -> bool
 
 (** Compare of all the properties and exact encodings of the elements *)
-val compare : t -> t
+val compare : t -> t -> bool
 
 
 
