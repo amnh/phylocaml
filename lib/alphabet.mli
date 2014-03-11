@@ -168,6 +168,19 @@ val to_list : t -> (string * code * string option) list
 
 
 
+(** {2 Comparison Functions} *)
+
+(** Compare two alphabets returning true if the atomic elements of the alphabets
+    exist in each. The alphabets could have different encodings, but as long as
+    the names of the atomic elements are the same along with the gap, missing,
+    all and orientation properties this function returns true.  *)
+val compare_elts : t -> t
+
+(** Compare of all the properties and exact encodings of the elements *)
+val compare : t -> t
+
+
+
 (** {2 Converting between types of alphabets} *)
 
 (** Convert alphabet to a sequentially ordered alphabet; remove combination if
@@ -214,7 +227,13 @@ module Error : sig
     | `Alphabet_Size_Expectation of int * int
       (** The calculated alphabet sized expected [a], but found [b] elements. *)
     | `Missing_Gap_Element of int
-      (** The alphabet expected [a] to be in the set of codes. *)
+      (** The alphabet expected gap [a] to be in the set of codes. *)
+    | `No_Gap_Character_Found of string
+      (** The alphabet expected gap [a] to be in the set of names. *)
+    | `No_All_Character_Found of string
+      (** The alphabet expected all character [a] to be in the set of names. *)
+    | `No_Missing_Character_Found of string
+      (** The alphabet expected missing character [a] to be in the set of names. *)
     | `Complement_Not_Transitive of int * int
       (** [a] = f([b]) === [b] = f([a]), where [f] is complement function *)
     | `Polymorphisms_In_Sequential_Alphabet

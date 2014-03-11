@@ -98,6 +98,9 @@ module Error = struct
     | `Missing_Name_Sequential_Alphabet of int
     | `Alphabet_Size_Expectation of int * int 
     | `Missing_Gap_Element of int
+    | `No_Gap_Character_Found of string
+    | `No_All_Character_Found of string
+    | `No_Missing_Character_Found of string
     | `Complement_Not_Transitive of int * int
     | `Polymorphisms_In_Continuous_Alphabet
     | `Polymorphisms_In_Sequential_Alphabet
@@ -118,6 +121,12 @@ module Error = struct
       Printf.sprintf "Alphabet size expected to be %d, actually %d" x y
     | `Missing_Gap_Element x ->
       Printf.sprintf "Expected gap code %d in set of codes" x
+    | `No_Gap_Character_Found x ->
+      Printf.sprintf "Expected gap character %s in set of names" x
+    | `No_All_Character_Found x ->
+      Printf.sprintf "Expected all character %s in set of names" x
+    | `No_Missing_Character_Found x ->
+      Printf.sprintf "Expected missing character %s in set of names" x
     | `Complement_Not_Transitive (x,y) ->
       Printf.sprintf "Expected complement of %d and %d to be transitive." x y
     | `Polymorphisms_In_Sequential_Alphabet ->
@@ -222,7 +231,9 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
   in
   let add_one cincrfn ((cname,ncode),code) (name,_) =
     let name = if case then name else String.uppercase name in
-    (StringMap.add name code cname,CodeMap.add code name ncode),cincrfn code
+    if StringMap.mem name cname
+      then raise (Error (`Illegal_Character name))
+      else (StringMap.add name code cname,CodeMap.add code name ncode),cincrfn code
   in
   let (name_code,code_name),_ = (* add all states and equates *)
     let icode,cincr = match kind with
@@ -271,19 +282,19 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
     | Some x ->
         let x = if case then x else String.uppercase x in
         try Some (StringMap.find x name_code)
-        with Not_found -> failwith "no gap element found in alphabet"
+        with Not_found -> raise (Error (`No_Gap_Character_Found x))
   and missing = match missing with
     | None   -> None
     | Some x ->
         let x = if case then x else String.uppercase x in
         try Some (StringMap.find x name_code)
-        with Not_found -> failwith "no missing element found in alphabet"
+        with Not_found -> raise (Error (`No_Missing_Character_Found x))
   and all = match all with
     | None   -> None
     | Some x ->
         let x = if case then x else String.uppercase x in
         try Some (StringMap.find x name_code)
-        with Not_found -> failwith "no all element found in alphabet"
+        with Not_found -> raise (Error (`No_All_Character_Found x))
   in
   let a = {
     size = IntMap.cardinal code_name;
@@ -463,6 +474,13 @@ let to_list t =
     | Some x -> Some (IntMap.find x t.code_name)
   in
   StringMap.fold (fun k v lst -> (k,v,find_opt @@ complement v t)::lst) t.name_code []
+
+
+(** {2 Special Comparison Functions} *)
+
+let compare_elts a b = failwith "TODO"
+
+let compare a b = failwith "TODO"
 
 
 (** {2 Converting between types of alphabets} *)
