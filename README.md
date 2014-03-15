@@ -1,8 +1,8 @@
-phylocaml
+PhylOCaml
 =========
 A Phylogenetic Library based on a refactoring of [POY](http://code.google.com/p/poy).
 
-The **goal** of *phylocaml* is to use the experience from *POY 3/4/5* to develop a
+The **goal** of *PhylOCaml* is to use the experience from *POY 3/4/5* to develop a
 library. A major reason for this refactoring is that we need the ability to
 support different types of topologies from our previous implementations.
 Although our utility is to develop a rooted network approach, we believe the
@@ -32,16 +32,13 @@ Table of Contents
 Dependencies
 ============
 
-Required
-+ [OCaml](http://caml.inria.fr/ocaml/) (4.00.1+)
++ [OCaml](http://ocaml.org) (4.00.1+)
 + [Pareto](http://github.com/superbobry/pareto/)
 + [GSL](https://bitbucket.org/mmottl/gsl-ocaml)
 + [Findlib](http://projects.camlcity.org/projects/findlib.html)
-
-Optional
 + [OUnit2](http://ounit.forge.ocamlcore.org/) (optional)
 + [Core\_bench](https://blogs.janestreet.com/ocaml-core/110.01.00/doc/core_bench/) (optional)
-
++ [OPAM](http://opam.ocaml.org) (optional)
 
 Installation
 =====================
@@ -50,7 +47,7 @@ Currently, there is no configuration step.
 
 Typing 'make' will initiate native and bytecode compilation of the Phylocaml
 library.  After building, 'make install' will do a findlib installation.  To
-generate the ocamldoc API documentation, use 'make docs'.
+generate the ocamldoc API documentation, use 'make phylocaml.html'.
 
 To remove Phylocaml type 'make uninstall' or it can be done directly via the
 findlib command, 'ocamlfind remove phylocaml'.
@@ -84,7 +81,9 @@ Documentation
 
 The documentation (PDF and HTML) is built using ocamlbuild and can be built from,
 
-    make docs
+    make phylocaml.html
+    make phylocaml.tex
+    make phylocaml.pdf
 
 
 Quick Start
@@ -125,7 +124,7 @@ issues with networks or more complex topologies in optimizing states.
            Figure 1. Basic Module dependency diagram of a Diagnosis
 
 
-In Figure 1, the diagnosis module (not included in the phylocaml package[^3]),
+In Figure 1, the diagnosis module (not included in the PhylOCaml package[^3]),
 is dependen on node, topology and model. The topology designates a way to traverse
 the topology, and ptopology attaches data to the nodes and roots. This allows
 separation between structure and gives a common and basic interface to attach

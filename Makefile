@@ -1,9 +1,9 @@
-.PHONY: clean distclean all byte native phyloc docs app bench test top install uninstall dot coverage
+.PHONY: clean distclean all byte native phyloc app bench test top install uninstall dot coverage
 .DEFAULT: all
 
 BUILD=ocamlbuild -use-ocamlfind -classic-display
 OFIND=ocamlfind
-DOCDIR=phylocaml.docdir
+DOCDIR=phylocaml.docdir/
 
 # files that, if exist, define a compilation path happened
 BYTE_SMOKE=_build/phylocaml.cma
@@ -104,8 +104,6 @@ phylocaml.pdf : phylocaml.tex
 	$(LATEX) phylocaml.tex && \
 	$(LATEX) phylocaml.tex && \
 	$(DVIPS) phylocaml.dvi -o $(@F)
-
-docs : phylocaml.html phylocaml.pdf
 
 dot :
 	$(BUILD) $(DOCDIR)/phylocaml.dot
