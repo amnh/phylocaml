@@ -9,15 +9,23 @@ let rec repeat_ c x b = match x with
   | x -> Buffer.add_string b c;
          repeat_ c (x-1) b
 
-let align_to_string = function
-  | L -> "l"
-  | C -> "c"
-  | R -> "r"
+let align_to_char = function
+  | L -> 'l'
+  | C -> 'c'
+  | R -> 'r'
 
-let l_matrix align l_celldata matrix =
+let align_array len = function
+  | None -> String.make len (align_to_char R)
+  | Some array ->
+    assert (len = Array.length array);
+    let b = Buffer.create 1789 in
+    Array.iter (fun x -> Buffer.add_char b @@ align_to_char x) array;
+    Buffer.contents b
+
+let l_matrix ?align l_celldata matrix =
   let b = Buffer.create 1789 in
   Buffer.add_string b "\\begin{array}{";
-  Array.iter (fun x -> Buffer.add_string b @@ align_to_string x) align;
+  Buffer.add_string b @@ align_array (Array.length matrix) align;
   Buffer.add_string b "}\n";
   for i = 0 to (Array.length matrix)-1 do
     Buffer.add_string b (l_celldata matrix.(i).(0));
@@ -30,10 +38,10 @@ let l_matrix align l_celldata matrix =
   Buffer.add_string b "\\end{array}";
   Buffer.contents b
 
-let l_table align l_headdata l_celldata (header,table) =
+let l_table ?align l_headdata l_celldata (header,table) =
   let b = Buffer.create 1789 in
   Buffer.add_string b "\\begin{array}{";
-  Array.iter (fun x -> Buffer.add_string b @@ align_to_string x) align;
+  Buffer.add_string b @@ align_array (Array.length header) align;
   Buffer.add_string b "}\n";
   Buffer.add_string b (l_headdata header.(0));
   for i = 1 to (Array.length header)-1 do
@@ -51,10 +59,10 @@ let l_table align l_headdata l_celldata (header,table) =
   Buffer.add_string b "\\end{array}";
   Buffer.contents b
 
-let l_datatable align l_headdata l_coldata l_celldata (header,column,table) =
+let l_datatable ?align l_headdata l_coldata l_celldata (header,column,table) =
   let b = Buffer.create 1789 in
   Buffer.add_string b "\\begin{array}{";
-  Array.iter (fun x -> Buffer.add_string b @@ align_to_string x) align;
+  Buffer.add_string b @@ align_array (Array.length header) align;
   Buffer.add_string b "}\n";
   Buffer.add_string b (l_headdata header.(0));
   for i = 1 to (Array.length header)-1 do

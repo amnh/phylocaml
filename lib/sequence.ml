@@ -49,8 +49,9 @@ let prepend =
 
 let missing a =
   let s = create 1 in
-  prepend s (Alphabet.get_gap a);
-  s
+  match a.Alphabet.missing with
+  | None   -> failwith "cannot find missing"
+  | Some x -> prepend s x; s
 
 let mapi f s =
   let len = length s in
@@ -185,7 +186,10 @@ let remove_base ?(prependbase=true) s gapcode =
   res
 
 let is_missing seq alph =
-  let gap = Alphabet.get_gap alph in
+  let missing = match alph.Alphabet.missing with
+    | Some x -> x
+    | None  -> failwith "missing not found" (* implies false? *)
+  in
   let len = length seq in
   if len=0 then true
   else
@@ -193,7 +197,7 @@ let is_missing seq alph =
       if p = len
         then true
         else
-          if gap <> get seq p
+          if missing <> get seq p
             then false
             else check (p + 1)
     in
@@ -381,8 +385,9 @@ let complement a s =
     res
   in
   let res = aux_complement 1 a s in
-  prepend res (Alphabet.get_gap a);
-  res
+  match a.Alphabet.gap with
+  | None   -> res
+  | Some x -> prepend res x; res
 
 (*
 let contains_code code seq =
@@ -409,12 +414,14 @@ let cmp_num_not_gap seq alph =
 
 let gap_saturation seq alph =
   assert( Alphabet.is_bitset alph );
-  let gap = Alphabet.get_gap alph in
-  let len = length seq
-  and gaps =
-    fold_left (fun acc base -> if 0 <> base land gap then acc + 1 else acc) 0 seq
-  in
-  proportion gaps len
+  match alph.Alphabet.gap with
+  | None -> 0.0
+  | Some gap ->
+    let len = length seq
+    and gaps =
+      fold_left (fun acc base -> if 0 <> base land gap then acc + 1 else acc) 0 seq
+    in
+    proportion gaps len
 
 let poly_saturation sequence alph n =
   let len = length sequence
@@ -437,7 +444,6 @@ let poly_saturation sequence alph n =
   proportion poly len
 
 
-
 let concat x =
   let len = List.fold_left (fun x y -> x + length y) 0 x in
   let ns = init (fun _ -> 0) len in
@@ -451,6 +457,10 @@ let concat x =
   in
   List.iter (copier) x;
   ns
+
+let of_fn fn = failwith "TODO"
+
+let random a i = failwith "TODO"
 
 
 let unique_elements seq alph =

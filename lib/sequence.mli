@@ -133,12 +133,19 @@ val of_string : string -> Alphabet.t -> s
 (** convert a string of characters to a sequence by an alphabet. the alphabet
     must be prefix free for the parsing of the string to be successful. *)
 
+val of_fn : (int -> elt) -> s
+(** Generate a sequence from a function that accepts the index of the location;
+    this can be ignored for consuming information from a stream. The function
+    stops when Not_found is returned. *)
+
 val of_state_list : string list -> Alphabet.t -> s
 (** convert a list of characters to a sequence by an alphabet. *)
 
 val concat : s list -> s
 (** concatenate elements of a list to a single sequence; flatten. *)
 
+val random : Alphabet.t -> int -> s
+(** create a random sequence of elements of the alphabet [a] of length [n] *)
 
 (** {2 IO} *)
 

@@ -100,15 +100,15 @@ let gamma_rates a b len =
 (** Return the alphabet for the characters *)
 let get_alphabet s = s.alphabet
 
-(** Return the size of the alphabet for analysis;  *)
+(** Return the size of the alphabet under analysis  *)
 let alphabet_size spec =
   let g = match spec.gap with
     | Missing -> 0
     | Coupled _  | Independent -> 1
   in
-  g + (Alphabet.size spec.alphabet)
+  g + (spec.alphabet.Alphabet.size)
 
-(** Compare two models; not to be used for a total ordering (ret neg or zero) *)
+(** Compare two models specification and the states of parameters *)
 let compare a b =
   let a_asize = alphabet_size a.spec
   and b_asize = alphabet_size b.spec in
@@ -194,7 +194,7 @@ let num_parameters model : int =
 type gap_repr =
   (int * float) option
 
-(** divide a matrix by the mean rate so it will equal 1 *)
+(** divide a matrix by the mean rate, to normalize to 1 *)
 let m_meanrate srm pi_ =
   let mr = ref 0.0 and a_size = Bigarray.Array2.dim1 srm in
   for i = 0 to (a_size-1) do
@@ -226,7 +226,6 @@ let m_jc69 a_size gap_r =
       done;
       srm.{i,i} <- -. mu *. r *. float (a_size-1)
   in
-  (* normalize by mean-rate; TODO: remove, and replace above with exact. *)
   let mr = ref 0.0 and wght = 1.0 /. float a_size in
   for i = 0 to (a_size-1) do
     mr := !mr +. (~-.(srm.{i,i}) *. wght );
@@ -273,7 +272,6 @@ let m_k2p beta a_size gap_r =
       done;
       srm.{i,i} <- -. beta *. r *. float (a_size-1)
   in
-  (* normalize by mean-rate; TODO: this should be calculated directly *)
   let mr = ref 0.0 and wght = 1.0 /. float a_size in
   for i = 0 to (a_size-1) do
     mr := !mr +. (~-.(srm.{i,i}) *. wght );
@@ -545,8 +543,30 @@ let process_custom_matrix alph_size (f_aa: char array array) =
   in
   (map, Array.create length 1.0)
 
-let generate_opt_vector _ = failwith "TODO"
-
+let generate_opt_vector s = failwith "TODO" (*
+  let p_sub,n_sub = match s.substitution with
+    | JC69
+    | Const _
+    | F81   -> [||],0
+    | K2P   x
+    | F84   x
+    | HKY85 x -> [| x |], 1
+    | TN93  x -> [| fst x; snd x|],2
+    | GTR   x -> x, Array.length x
+    | Custom _ -> failwith "TODO"
+  and p_var,n_var = match s.site_variation with
+    | Constant -> [||],0
+    | DiscreteGamma i,x -> [| x |], 1
+    | DiscreteTheta i,x,y -> [| x;y |], 2
+  and p_gap,n_gap = match s.gap with
+    | Missing -> [||],0
+    | ...
+  in
+  let opt = Array.make (n_sub+n_gap+n_var) -~.1.0 in
+  Array.blit p_sub 0 opt 0 n_sub;
+  Array.blit p_gap 0 opt n_sub n_gap;
+  Array.blit p_var 0 opt (n_sub+n_gap) n_var;
+  opt *)
 
 (* functions to diagonalize the two types of substitution matrices *)
 let diagonalize (sym : bool) mat =
@@ -588,7 +608,11 @@ let compose model t = match model.ui with
 
 let substitution_matrix model topt =
   let _gapr = match model.spec.gap with
-    | Coupled x   -> Some (Alphabet.get_gap model.spec.alphabet, x)
+    | Coupled x   ->
+      begin match model.spec.alphabet.Alphabet.gap with
+        | Some g  -> Some (g, x)
+        | None    -> failwith "cannot couple with gap, w/out gap" (* todo *)
+      end
     | Independent -> None
     | Missing     -> None
   and a_size = alphabet_size model.spec
@@ -709,7 +733,11 @@ let create lk_spec =
       ba_of_array1 p
   in
   let _gapr = match lk_spec.gap with
-    | Coupled x   -> Some (Alphabet.get_gap lk_spec.alphabet, x)
+    | Coupled x   ->
+      begin match lk_spec.alphabet.Alphabet.gap with
+        | None    -> raise (errorf "No gap character found")
+        | Some g  -> Some (g, x)
+      end
     | Independent -> None
     | Missing     -> None
   in
@@ -809,9 +837,13 @@ let enum_models ?(site_var=[`DiscreteGamma 4;`DiscreteTheta 4;`Constant])
 
 (** Compute the priors of a dataset by frequency and gap-counts *)
 let compute_priors (alph,u_gap) freq_ (count,gcount) lengths : float array =
-  let size = if u_gap then (Alphabet.size alph) else (Alphabet.size alph)-1 in
+  let size = if u_gap then alph.Alphabet.size else alph.Alphabet.size-1 in
   let gap_contribution = (float_of_int gcount) /. (float_of_int size) in
-  let gap_char = Alphabet.get_gap alph in
+  let gap_char = match alph.Alphabet.gap with
+    | None when not u_gap -> -1
+    | Some x -> x
+    | None   -> raise (errorf "No gap to compute prior")
+  in
   let final_priors =
     if u_gap then begin
       let total_added_gaps =
@@ -838,20 +870,21 @@ let process_classification spec (comp_map,pis) =
     | Coupled _    -> true
   and alph = spec.alphabet in
   let f_priors,a_size = match spec.base_priors with
-    | Equal when ugap -> Equal,1+Alphabet.size alph
-    | Equal           -> Equal,  Alphabet.size alph
+    | Equal when ugap -> Equal,1+alph.Alphabet.size
+    | Equal           -> Equal,  alph.Alphabet.size
     | Empirical _     ->
-      let sum = IntMap.fold (fun _ v x -> v +. x) pis 0.0
-      and gap_size =
-        try IntMap.find (Alphabet.get_gap alph) pis
-        with Not_found -> 0.0
+      let sum = IntMap.fold (fun _ v x -> v +. x) pis 0.0 in
+      let gap,sum = match alph.Alphabet.gap with
+          | None when ugap -> raise (errorf "No gap in alphabet")
+          | None -> -1, sum
+          | Some x when ugap -> x,sum
+          | Some x -> x,sum -. IntMap.find x pis
       in
       let l =
-        let sum = if ugap then sum else sum -. gap_size in
         List.fold_left
           (fun acc (_,b,_) ->
             match b with
-            | b when (not ugap) && (b = Alphabet.get_gap alph) -> acc
+            | b when (not ugap) && (b = gap) -> acc
             | b ->
               let c =
                 try (IntMap.find b pis) /. sum
@@ -922,7 +955,10 @@ let process_classification spec (comp_map,pis) =
       (* 1 -> 2, 1 -> 3, 1 -> 4 ... 2 -> 3 ... *)
       begin match gap with
         | Independent | Missing ->
-          let cgap = Alphabet.get_gap alph in
+          let cgap = match alph.Alphabet.gap with
+            | Some x -> x
+            | None   -> -1
+          in
           let lst =
             List.fold_right
               (fun (_,alph1,_) acc1 ->
@@ -947,7 +983,10 @@ let process_classification spec (comp_map,pis) =
           let arr = Array.init ((List.length lst)-1) (fun i -> arr.(i)) in
           GTR arr,gap
         | Coupled _ ->
-          let cgap = Alphabet.get_gap alph in
+          let cgap = match alph.Alphabet.gap with
+            | Some x -> x
+            | None   -> raise (errorf "no gap character in coupled model")
+          in
           let lst,gap_trans =
             List.fold_right
               (fun (_,alph1,_) acc1 ->

@@ -11,7 +11,6 @@ module CodeSetMap = Internal.IntSetMap
 type combinations =
  {  comb_set : CodeSet.t CodeMap.t;
     set_comb : code CodeSetMap.t;
-    level    : int;
  }
 
 type kind =
@@ -78,8 +77,8 @@ let dump a =
     print_header ();
     print_code_names true a.code_name;
     ()
-  | CombinationLevels _ ->
-    Printf.printf "Combination Level %d:\n%!" a.comb_data.level;
+  | CombinationLevels l ->
+    Printf.printf "Combination Level %d:\n%!" l;
     print_header ();
     IntMap.iter
       (fun k vset ->
@@ -87,7 +86,38 @@ let dump a =
       a.comb_data.comb_set;
     ()
 
-let pp_alphabet _ppf _ = failwith "TODO"
+let pp_alphabet fmt t =
+  Format.(
+    let pp_print_option fmt = function
+      | None -> pp_print_string fmt "None"
+      | Some i -> pp_print_int fmt i
+    and pp_tab_name f n =
+      pp_print_tab fmt ();
+      pp_print_string fmt n;
+      pp_print_tab fmt ();
+    in
+    pp_open_tbox fmt ();
+    pp_set_tab fmt ();
+    (* match width of    orientation *)
+    pp_print_string fmt "Kind       ";
+    pp_print_string fmt begin match t.kind with
+      | BitFlag -> "Bit Flag"
+      | Sequential -> "Sequential"
+      | Continuous -> "Continuous"
+      | CombinationLevels k -> "Level "^(string_of_int k)
+    end;
+    pp_tab_name fmt "Size";        pp_print_int fmt t.size;
+    pp_tab_name fmt "Gap";         pp_print_option fmt t.gap;
+    pp_tab_name fmt "Missing";     pp_print_option fmt t.missing;
+    pp_tab_name fmt "All";         pp_print_option fmt t.all;
+    pp_tab_name fmt "Case";        pp_print_bool fmt t.case;
+    pp_tab_name fmt "Orientation"; pp_print_bool fmt t.orientation;
+    pp_tab_name fmt "States";
+    pp_open_hbox fmt ();
+      StringMap.iter (fprintf fmt "%s=>%d @,") t.name_code;
+    pp_close_box fmt ();
+    pp_close_tbox fmt ());
+  ()
 
 
 (** {2 Error Module} *)
@@ -105,7 +135,6 @@ module Error = struct
     | `Gap_Not_Atomic_BitFlag_Alphabet of int
     | `Illegal_Character of string
     | `Illegal_Code of int
-    | `Not_found
     | `Alphabet_Size_Too_Large_For_BitFlag of int
   ]
 
@@ -132,13 +161,13 @@ module Error = struct
       Printf.sprintf "Cannot find character '%s' in alphabet" str
     | `Illegal_Code i ->
       Printf.sprintf "Cannot find character %d in alphabet" i
-    | `Not_found ->
-      Printf.sprintf "Not Found"
     | `Alphabet_Size_Too_Large_For_BitFlag x ->
       Printf.sprintf "The alphabet of %d elements is too large to convert to bit-flags" x
 end
 
 exception Error of Error.t
+
+let raise_error err = raise (Error err)
 
 
 (** {2 Constants *)
@@ -151,9 +180,8 @@ let default_orientation = "~"
 
 let default_separators = ["#"; "|"; "@";]
 
-let empty_comb_data bits =
-  { comb_set = IntMap.empty; set_comb = IntSetMap.empty;
-    level = if bits then 0 else 1; }
+let empty_comb_data =
+  { comb_set = IntMap.empty; set_comb = IntSetMap.empty; }
 
 (** {2 Combination Functions} *)
 
@@ -191,23 +219,21 @@ let verify_alphabet a : unit =
   let () = match a.gap with
     | None -> ()
     | Some x when IntMap.mem x a.code_name -> ()
-    | Some x -> raise (Error (`Missing_Gap_Element x))
+    | Some x -> raise_error (`Missing_Gap_Element x)
   in
   match a.kind with
   | Sequential          -> ()
-  | CombinationLevels l ->
-      assert( l = a.comb_data.level );
-      ()
-  | BitFlag     -> ()
+  | CombinationLevels _ -> ()
+  | BitFlag             -> ()
   | Continuous          -> ()
 
 let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
   let combine_equates comb_data name_code = match kind with
     | Sequential ->
       (function [x] -> StringMap.find x name_code 
-               | _  -> raise (Error `Polymorphisms_In_Sequential_Alphabet))
+               | _  -> raise_error `Polymorphisms_In_Sequential_Alphabet)
     | Continuous ->
-      (fun _ -> raise (Error `Polymorphisms_In_Continuous_Alphabet))
+      (fun _ -> raise_error `Polymorphisms_In_Continuous_Alphabet)
     | CombinationLevels _ ->
       (fun xs ->
         let set =
@@ -235,9 +261,9 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
   let comb_data = match kind with
     | CombinationLevels level ->
         let comb,lists = generate_combinational_elements ~level code_name in
-        {comb_set = comb; set_comb = lists; level; }
-    | Sequential | Continuous -> empty_comb_data false
-    | BitFlag                 -> empty_comb_data true
+        {comb_set = comb; set_comb = lists;}
+    | Sequential | Continuous -> empty_comb_data
+    | BitFlag                 -> empty_comb_data
   in
   let name_code,code_name =
     List.fold_left (* add equates *)
@@ -260,7 +286,7 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
         | (k,Some x) ->
           let k = StringMap.find k name_code in
           let x = try StringMap.find x name_code
-                  with Not_found -> raise (Error (`Illegal_Character x))
+                  with Not_found -> raise_error (`Illegal_Character x)
           in
           IntMap.add k x (IntMap.add x k acc))
       IntMap.empty
@@ -271,19 +297,19 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
     | Some x ->
         let x = if case then x else String.uppercase x in
         try Some (StringMap.find x name_code)
-        with Not_found -> failwith "no gap element found in alphabet"
+        with Not_found -> raise_error (`Illegal_Character x)
   and missing = match missing with
     | None   -> None
     | Some x ->
         let x = if case then x else String.uppercase x in
         try Some (StringMap.find x name_code)
-        with Not_found -> failwith "no missing element found in alphabet"
+        with Not_found -> raise_error (`Illegal_Character x)
   and all = match all with
     | None   -> None
     | Some x ->
         let x = if case then x else String.uppercase x in
         try Some (StringMap.find x name_code)
-        with Not_found -> failwith "no all element found in alphabet"
+        with Not_found -> raise_error (`Illegal_Character x)
   in
   let a = {
     size = IntMap.cardinal code_name;
@@ -309,7 +335,7 @@ let continuous =
     all       = None;
     orientation = false;
     case      = false;
-    comb_data = empty_comb_data false;
+    comb_data = empty_comb_data;
   }
 
 let present_absent =
@@ -379,28 +405,6 @@ let generate_seq_alphabet ?(gap=true) ?(missing=false) n =
 
 (** {2 Basic Functions for querying alphabets *)
 
-let get_gap t = match t.gap with
-  | Some x -> x
-  | None   -> raise (Error `Not_found)
-
-let has_gap t = match t.gap with
-  | Some _ -> true
-  | None   -> false
-
-let size t = t.size
-
-let orientation t = t.orientation
-
-let get_all t = match t.all with
-  | Some x -> x
-  | None   -> raise (Error `Not_found)
-
-let has_all t = match t.all with
-  | Some _ -> true
-  | None   -> false
-
-let kind t = t.kind
-
 let is_statebased t = match t.kind with
   | CombinationLevels _
   | Sequential
@@ -427,7 +431,7 @@ let is_complement a b t =
   let result = is_complement a b t in
   if result = is_complement b a t
     then result
-    else raise (Error (`Complement_Not_Transitive (a,b)))
+    else raise_error (`Complement_Not_Transitive (a,b))
 
 let get_combination i t : IntSet.t = match t.kind with
   | CombinationLevels _
@@ -441,21 +445,28 @@ let get_state_combination s t : int = match t.kind with
   | Continuous ->
     if (IntSet.cardinal s) = 1
       then IntSet.choose s
-      else raise (Error `Polymorphisms_In_Continuous_Alphabet)
+      else raise_error `Polymorphisms_In_Continuous_Alphabet
   | BitFlag    -> BitSet.to_packed (`Set s)
 
-let get_code n t =
-  try match t.kind with
+let is_atomic i t = match t.kind with
+  | Sequential when IntMap.mem i t.code_name -> true
+  | Continuous -> true
+  | CombinationLevels _
+  | BitFlag -> 1 = IntSet.cardinal @@ get_combination i t
+  | Sequential -> raise_error (`Illegal_Code i)
+
+let get_code n t = match t.kind with
     | Continuous -> int_of_string n
     | BitFlag | CombinationLevels _ | Sequential ->
-      StringMap.find (String.uppercase n) t.name_code
-  with Not_found -> raise (Error (`Illegal_Character n))
+      let n = if t.case then n else String.uppercase n in
+      try StringMap.find n t.name_code
+      with Not_found -> raise_error (`Illegal_Character n)
 
-let get_name c t =
-  try match t.kind with
+let get_name c t = match t.kind with
     | Continuous -> string_of_int c
-    | BitFlag | CombinationLevels _ | Sequential -> IntMap.find c t.code_name
-  with Not_found -> raise (Error (`Illegal_Code c))
+    | BitFlag | CombinationLevels _ | Sequential ->
+      try IntMap.find c t.code_name
+      with Not_found -> raise_error (`Illegal_Code c)
 
 let to_list t =
   let find_opt = function
@@ -532,7 +543,7 @@ and simplify t = match t.kind with
   | Sequential | BitFlag | Continuous -> t
 
 and to_level level t =
-  let () = if level <= 0 then raise (Error (`Unacceptable_Level_Argument level)) in
+  let () = if level <= 0 then raise_error (`Unacceptable_Level_Argument level) in
   match t.kind with
   | _                   when level = 1 -> to_sequential t
   | CombinationLevels l when level = l -> t
@@ -541,7 +552,7 @@ and to_level level t =
   | CombinationLevels _                -> to_level level (to_sequential t)
   | Sequential ->
     let combs,lsts = generate_combinational_elements ~level t.code_name in
-    let comb_data = {level; comb_set = combs; set_comb = lsts;} in
+    let comb_data = {comb_set = combs; set_comb = lsts;} in
     {t with
       kind = CombinationLevels level; comb_data; }
 

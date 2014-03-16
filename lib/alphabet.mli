@@ -1,9 +1,8 @@
-(** {2 Definition of an Alphabet} This provides point between the user and the
-    software to translate data to the proper encoding. The input data to generate
-    an alphabet using of_list is in a common format of (NAME,CODE,COMP). The CODE
-    should be appropriate to the alphabet type. *)
+(** This provides a point between the user and the software to translate data to
+    the proper encoding. The input data to generate an alphabet using of_list is
+    in a common format of (NAME,CODE,COMP). The CODE should be appropriate to the alphabet type. *)
 
-(** How codes in the alphabet are represented; as an integer. This code an be
+(** How codes in the alphabet are represented; as an integer. This code can be
     either bitpacked, packed in some specific ordering, or literally define the
     state depending on the kind of alphabet. Using the interface to decrypt the
     states is recommended. *)
@@ -13,19 +12,18 @@ module CodeMap    : Map.S with type key = int
 module CodeSet    : Set.S with type elt = int
 module CodeSetMap : Map.S with type key = CodeSet.t
 
-(** Define additional properties for combinations. *)
+(** Define additional properties for combinations of states. *)
 type combinations =
  {  comb_set : CodeSet.t CodeMap.t;
     set_comb : code CodeSetMap.t;
-    level    : int;
  }
 
 (** Defines the type of alphabet that has been processed or will be processed.*)
 type kind =
   | Sequential
-    (** Numbers define states. Should be 0 -- (n-1) *)
+    (** Numbers define states. Indexed from, 0 -- (n-1) *)
   | BitFlag
-    (** Set bits in numbers define states. *)
+    (** Set bits in numbers define states. Requires 2^s bits. *)
   | Continuous
     (** A continuous alphabet of values; the states define the alphabet. *)
   | CombinationLevels of int
@@ -34,13 +32,13 @@ type kind =
 (** An alphabet stores the character codes, states, their compliments, the type
     of alphabet and some other basic information. comb_set/set_comb are used in
     sequential alphabets only, to be used to associate a sequential state to
-    a set of sequential state that cannot be transformed easily (unlike bitsets). *)
+    a set of sequential states that cannot be transformed easily (unlike bitsets). *)
 type t =
   { kind      : kind;         (** Type of the alphabet *)
     name_code : code Internal.StringMap.t;  (** Single Code -> Name *)
     code_name : string CodeMap.t;  (** Name -> Single Code *)
     comp_code : int CodeMap.t;(** Code -> Compliment of Code *)
-    size      : int;          (** Size of the basic alphabet; excludes gap *)
+    size      : int;          (** Size of the basic alphabet; excludes gap, all and missing *)
     orientation : bool;       (** If ~ symbol should be used to parse *)
     gap       : int option;   (** Code for the gap-character; if present *)
     missing   : int option;   (** Code for the missing-character; if present *)
@@ -108,27 +106,6 @@ val get_code : string -> t -> code
 (** Return the name of the character code *)
 val get_name : code -> t -> string
 
-(** Return the gap character *)
-val get_gap : t -> code
-
-(** Return if the alphabet has a gap *)
-val has_gap : t -> bool
-
-(** Return the size of the alphabet *)
-val size : t -> int
-
-(** Return if orientation is used *)
-val orientation : t -> bool
-
-(** Return the all element if it exists *)
-val get_all : t -> code
-
-(** Return if the element has an all element *)
-val has_all : t -> bool
-
-(** Return the type of the alphabet *)
-val kind : t -> kind
-
 (** Return if the alphabet is state identified. Combination, Continuous, and
     Sequential alphabets are statebased. *)
 val is_statebased : t -> bool
@@ -137,10 +114,13 @@ val is_statebased : t -> bool
 val is_bitset : t -> bool
 
 (** Get the compliment of the character code *)
-val complement : int -> t -> int option
+val complement : code -> t -> code option
 
 (** Determines if two elements in the alphabet are complements *)
 val is_complement : code -> code -> t -> bool
+
+(** Determines if a state is atomic *)
+val is_atomic : code -> t -> bool
 
 (** Return the list of states that represent a code *)
 val get_combination : code -> t -> CodeSet.t
@@ -151,7 +131,7 @@ val get_state_combination : CodeSet.t -> t -> code
 (** [of_list states equates gap all missing orientation case kind] Generate an
     alphabet from a list of [states] in the form [(NAME,COMPLIMENT OPTION)].
     Gap, all element, and missing are included if they exist as well as the type
-    of alphabet to create, and if orientation and cse should be considered for
+    of alphabet to create, and if orientation and case should be considered for
     parsing the data. Equates are stored in the name->code field, while states
     are stored in both. This allows coincident names to exist in parsing but not
     in the output stream of data. *)
@@ -160,7 +140,7 @@ val of_list :
     gap : string option -> all : string option -> missing : string option ->
       orientation: bool -> case:bool -> kind:kind -> t
 
-(** Convert an alphabet to a list of the main properties like [data] in the
+(** Convert an alphabet to a list of the main properties like in the
     [of_list] function. This, once filtered of the middle element in the tuple,
     can be used to re-initialize the alphabet, although equates and indel
     details are missing. *)
@@ -189,7 +169,7 @@ val to_level : int -> t -> t
 
 (** {2 Parsing Data} *)
 
-(* val parse_data_stream : t -> in_channel -> int array *)
+(* val parse_data_stream : t -> in_channel -> (int -> code -> unit) -> unit *)
 
 
 (** {2 Debugging} *)
@@ -229,9 +209,8 @@ module Error : sig
       (** Character name not found in alphabet *)
     | `Illegal_Code of int
       (** Character code not found in alphabet *)
-    | `Not_found
-      (** If the alphabet size is too large to convert to bitflags. *)
     | `Alphabet_Size_Too_Large_For_BitFlag of int
+      (** If the alphabet size is too large to convert to bitflags. *)
   ]
 
   (** Convert the error messages to something human readable. *)
