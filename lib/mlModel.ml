@@ -1,8 +1,8 @@
 open Internal
 
-exception ModelError of string
+exception Error of string
 
-let errorf format = Printf.ksprintf (fun x -> ModelError x) format
+let errorf format = Printf.ksprintf (fun x -> Error x) format
 
 (* Minimum value when 0 or min_float are numerically unstable *)
 let minimum = 1e-13
@@ -47,46 +47,48 @@ let default_alpha = 0.1
 and default_invar = 0.1
 and default_tstv  = 2.0
 
+type vector = (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t
+type matrix = (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
+
 type model = {
   spec  : spec;
-  priors: (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t;
+  priors: vector;
   pinvar: float option;
-  rates : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t;
-  probs : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t;
-  q     : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t;
-  u     : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t;
-  d     : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t;
-  ui    : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t option; 
-  opt   : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t;
+  rates : vector;
+  probs : vector;
+  q     : matrix;
+  u     : matrix;
+  d     : matrix;
+  ui    : matrix option;
+  opt   : vector;
 }
 
-(** diagonalize a symmetric or gtr matrix, WARNING: modifies passed matrices *)
+(** [diagonalize_gtr U D Ui] diagonalize [U] into [U] [D] and [Ui], [U] is
+    modified in this function call. [U] must be similar to a symmetric matrix,
+    as this routine expects no imaginary eigen-values. GTR matrices with unequal
+    priors are of this category.
+
+    {b References}
+    + Keilson J. Markov Chain Models–Rarity and Exponentiality.
+      New York: Springer-Verlag; 1979. *)
 external diagonalize_gtr: (* U D Ui *)
-  (float,Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-  (float,Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-  (float,Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-    unit = "likelihood_CAML_diagonalize_gtr"
+  matrix -> matrix -> matrix -> unit = "likelihood_CAML_diagonalize_gtr"
 
+(** [diagonalize U D Ui] diagonalize [U] into [U] [D], [U] is
+    modified in this function call. In this case, Ut = Ui (transpose = inverse). *)
 external diagonalize_sym: (* U D *)
-  (float,Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-  (float,Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-    unit = "likelihood_CAML_diagonalize_sym"
+  matrix -> matrix -> unit = "likelihood_CAML_diagonalize_sym"
 
-(** compose matrices -- for testing purposes, as this composition is
-    usually done on the C side exclusively. If the time is less then zero, the
-    instantaneious rate matrix will be returned instead (which is just UDUi). *)
+(** [compose_gtr U D Ui t] compose the construction of probability rate matrix
+    [P] from a decomposed matrix [Q=U*D*Ui], where [P=e^Q*t]. *)
 external compose_gtr: (* U D Ui t -> P^e^t *)
-  (float,Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t -> 
-  (float,Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-  (float,Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t -> float ->
-    (float,Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t =
-      "likelihood_CAML_compose_gtr"
+  matrix -> matrix -> matrix -> float -> matrix = "likelihood_CAML_compose_gtr"
 
+(** [compose_sym U D Ui t] compose the construction of probability rate matrix
+    [P] from a decomposed matrix [Q=U*D*Ui], where [P=e^Q*t]. In this case, [Ui]
+    is unneccessary since [Ut = Ui]. *)
 external compose_sym: (* U D t -> P^e^t *)
-  (float,Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-  (float,Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t -> float ->
-    (float,Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t =
-      "likelihood_CAML_compose_sym"
+  matrix -> matrix -> float -> matrix = "likelihood_CAML_compose_sym"
 
 (** Generate the GAMMA RATE classes *)
 let gamma_rates a b len =
@@ -106,7 +108,7 @@ let alphabet_size spec =
     | Missing -> 0
     | Coupled _  | Independent -> 1
   in
-  g + (spec.alphabet.Alphabet.size)
+  g + (Alphabet.size spec.alphabet)
 
 (** Compare two models specification and the states of parameters *)
 let compare a b =
@@ -207,7 +209,7 @@ let m_meanrate srm pi_ =
   done
 
 (** val jc69 :: ANY ALPHABET size *)
-let m_jc69 a_size gap_r =
+let m_jc69 a_size (gap_r : gap_repr) =
   let mu = 1.0 in
   let srm = create_ba2 a_size a_size in
   Bigarray.Array2.fill srm mu;
@@ -238,7 +240,7 @@ let m_jc69 a_size gap_r =
   srm
 
 (** val k2p :: only 4 or 5 characters *)
-let m_k2p beta a_size gap_r =
+let m_k2p beta a_size (gap_r : gap_repr) =
   let alpha = 1.0 in
   if not ((a_size = 4) || (a_size = 5)) then
     raise (raise (errorf "Alphabet does not support this model"));
@@ -284,7 +286,7 @@ let m_k2p beta a_size gap_r =
   srm
 
 (** val tn93 :: only 4 or 5 characters *)
-let m_tn93 pi_ alpha beta a_size gap_r =
+let m_tn93 pi_ alpha beta a_size (gap_r : gap_repr) =
   if not ((a_size = 4) || (a_size = 5)) then
     raise (errorf "Alphabet size does not support this model");
   let srm = create_ba2 a_size a_size in
@@ -320,7 +322,7 @@ let m_tn93 pi_ alpha beta a_size gap_r =
   srm
 
 (** val f81 :: ANY ALPHABET size *)
-let m_f81 pi_ a_size gap_r =
+let m_f81 pi_ a_size (gap_r : gap_repr) =
   let srm = create_ba2 a_size a_size in
   let lambda = 1.0 in
   let () = match gap_r with
@@ -352,11 +354,11 @@ let m_f81 pi_ a_size gap_r =
   srm
 
 (** val hky85 :: only 4 or 5 characters *)
-let m_hky85 pi_ kappa a_size gap_r =
+let m_hky85 pi_ kappa a_size (gap_r : gap_repr) =
   m_tn93 pi_ kappa kappa a_size gap_r
 
 (** val f84 :: only 4 or 5 characters *)
-let m_f84 pi_ kappa a_size gap_r =
+let m_f84 pi_ kappa a_size (gap_r : gap_repr) =
   let y = pi_.{1} +. pi_.{3} in (* Y = C + T *)
   let r = pi_.{0} +. pi_.{2} in (* R = A + G *)
   let alpha = 1.0 +. kappa /. r in
@@ -456,7 +458,7 @@ let m_gtr_coupled pi_ co_ a_size i_gap r_gap =
   m_meanrate srm pi_;
   srm
 
-let m_gtr pi_ co_ a_size gap_r =
+let m_gtr pi_ co_ a_size (gap_r : gap_repr) =
   let srm = match gap_r with
     | Some (i,r) -> m_gtr_coupled pi_ co_ a_size i r
     | None       -> m_gtr_independent pi_ co_ a_size
@@ -543,7 +545,7 @@ let process_custom_matrix alph_size (f_aa: char array array) =
   in
   (map, Array.create length 1.0)
 
-let generate_opt_vector s = failwith "TODO" (*
+let generate_opt_vector _ = failwith "TODO" (*
   let p_sub,n_sub = match s.substitution with
     | JC69
     | Const _
@@ -568,7 +570,9 @@ let generate_opt_vector s = failwith "TODO" (*
   Array.blit p_var 0 opt (n_sub+n_gap) n_var;
   opt *)
 
-(* functions to diagonalize the two types of substitution matrices *)
+
+(** [diagonalize sym Q] diagonalize matrix [Q]; [sym] decides if the function
+    should use symmetric or general routines for diagonalization. *)
 let diagonalize (sym : bool) mat =
   (* A function to check for nan values; catch before a diagonalization, since
    * the lapack routines return illegal value instead of a backtrace *)
@@ -600,11 +604,9 @@ let diagonalize (sym : bool) mat =
     let () = diagonalize_gtr n_u n_d n_ui in
     n_u, n_d, Some n_ui
 
-
 let compose model t = match model.ui with
   | Some ui -> compose_gtr model.u model.d ui t
   | None    -> compose_sym model.u model.d t
-
 
 let substitution_matrix model topt =
   let _gapr = match model.spec.gap with
@@ -639,8 +641,8 @@ let substitution_matrix model topt =
   | None ->
     m
 
-(** [compose_model] compose a substitution probability matrix from branch length
-    and substitution rate matrix. *)
+(** [compose_matrix Q t] compose the construction of a probability rate matrix
+    directly from a substitution rate matrix and time period/branch length.
 let compose_matrix sub_mat t = 
   let a_size = Bigarray.Array2.dim1 sub_mat in
   let (u_,d_,ui_) = 
@@ -651,7 +653,7 @@ let compose_matrix sub_mat t =
     diagonalize_gtr sub_mat n_d n_ui;
     (sub_mat, n_d, n_ui)
   in
-  compose_gtr u_ d_ ui_ t
+  compose_gtr u_ d_ ui_ t *)
 
 
 (** [integerized_model] convert a model and branch length to a probability rate
@@ -678,14 +680,6 @@ let integerized_model ?(sigma=4) model t =
     done;
   done;
   imatrix
-
-
-(** create a cost matrix from a model
-let model_to_cm model t =
-  let input = let t = max minimum t in integerized_model model t in
-  let llst = Array.to_list (Array.map Array.to_list input) in
-  let res = Cost_matrix.Two_D.of_list ~suppress:true llst (model.spec.gap) in
-  res *)
 
 
 (** create a model based on a specification and an alphabet *)
@@ -727,7 +721,7 @@ let create lk_spec =
           else Array.map (fun i -> i /. sum) p
     in
     if not (a_size = Array.length p) then
-      raise (errorf "Priors (length %d) don't match alphabet (%d)"
+      raise (errorf "Priors (length %d) don't match alphabet (length %d)"
                     (Array.length p) a_size)
     else
       ba_of_array1 p
@@ -836,16 +830,16 @@ let enum_models ?(site_var=[`DiscreteGamma 4;`DiscreteTheta 4;`Constant])
 
 
 (** Compute the priors of a dataset by frequency and gap-counts *)
-let compute_priors (alph,u_gap) freq_ (count,gcount) lengths : float array =
-  let size = if u_gap then alph.Alphabet.size else alph.Alphabet.size-1 in
+let compute_priors (alph,use_gap) freq_ (count,gcount) lengths : float array =
+  let size = if use_gap then Alphabet.size alph else (Alphabet.size alph) - 1 in
   let gap_contribution = (float_of_int gcount) /. (float_of_int size) in
   let gap_char = match alph.Alphabet.gap with
-    | None when not u_gap -> -1
+    | None when not use_gap -> -1
     | Some x -> x
     | None   -> raise (errorf "No gap to compute prior")
   in
   let final_priors =
-    if u_gap then begin
+    if use_gap then begin
       let total_added_gaps =
         let longest = List.fold_left (fun a x-> max a x) 0 lengths in
         let add_gap = List.fold_left (fun acc x -> (longest - x) + acc) 0 lengths in
@@ -864,36 +858,38 @@ let compute_priors (alph,u_gap) freq_ (count,gcount) lengths : float array =
 
 (* Develop a model from a classification of alignment pairs on edges. *)
 let process_classification spec (comp_map,pis) =
-  let ugap = match spec.gap with
+  let use_gap = match spec.gap with
     | Missing      -> false
     | Independent  -> true
     | Coupled _    -> true
   and alph = spec.alphabet in
   let f_priors,a_size = match spec.base_priors with
-    | Equal when ugap -> Equal,1+alph.Alphabet.size
-    | Equal           -> Equal,  alph.Alphabet.size
+    | Equal when use_gap -> Equal,1 + Alphabet.size alph
+    | Equal           -> Equal,    Alphabet.size alph
     | Empirical _     ->
       let sum = IntMap.fold (fun _ v x -> v +. x) pis 0.0 in
       let gap,sum = match alph.Alphabet.gap with
-          | None when ugap -> raise (errorf "No gap in alphabet")
+          | None when use_gap -> raise (errorf "No gap in alphabet")
           | None -> -1, sum
-          | Some x when ugap -> x,sum
+          | Some x when use_gap -> x,sum
           | Some x -> x,sum -. IntMap.find x pis
       in
       let l =
-        List.fold_left
-          (fun acc (_,b,_) ->
-            match b with
-            | b when (not ugap) && (b = gap) -> acc
+        Alphabet.CodeSet.fold
+          (fun b acc -> match b with
+            | b when (not use_gap) && (b = gap) -> acc
             | b ->
               let c =
                 try (IntMap.find b pis) /. sum
                 with Not_found -> 0.0 in
-              c :: acc)
-              []
-          (Alphabet.to_list alph)
+              (b,c) :: acc)
+          alph.Alphabet.atomic
+          []
       in
-      let ray = Array.of_list (List.rev l) in
+      let ray =
+        l |> List.sort (fun (x,_) (y,_) -> Pervasives.compare x y)
+          |> List.map snd |> Array.of_list
+      in
       Empirical ray, Array.length ray
   and is_comp a b =
     (* these models assume nucleotides only; T<->C=1, A<->G=2, this is
@@ -960,22 +956,21 @@ let process_classification spec (comp_map,pis) =
             | None   -> -1
           in
           let lst =
-            List.fold_right
-              (fun (_,alph1,_) acc1 ->
-                if (not ugap) && (cgap = alph1) then
+            Alphabet.CodeSet.fold
+              (fun state1 acc1 ->
+                if (not use_gap) && (cgap = state1) then
                   acc1
                 else
-                  List.fold_right
-                    (fun (_,alph2,_) acc2 ->
-                      if alph2 <= alph1 then acc2
-                      else if (not ugap) && (cgap = alph2) then
+                  Alphabet.CodeSet.fold
+                    (fun state2 acc2 ->
+                      if state2 <= state1 then acc2
+                      else if (not use_gap) && (cgap = state2) then
                         acc2
-                      else begin
-                        let sum = tuple_sum alph1 alph2 comp_map in
-                        sum :: acc2 
-                      end)
-                    (Alphabet.to_list alph) acc1)
-                    (Alphabet.to_list alph) []
+                      else
+                        let sum = tuple_sum state1 state2 comp_map in
+                        sum :: acc2)
+                    alph.Alphabet.atomic acc1)
+              alph.Alphabet.atomic []
           in
           let sum = List.fold_left (fun a x -> x +. a) 0.0 lst in
           let lst = List.map (fun x -> x /. sum) lst in
@@ -988,23 +983,22 @@ let process_classification spec (comp_map,pis) =
             | None   -> raise (errorf "no gap character in coupled model")
           in
           let lst,gap_trans =
-            List.fold_right
-              (fun (_,alph1,_) acc1 ->
-                if cgap = alph1 then acc1
+            Alphabet.CodeSet.fold
+              (fun state1 acc1 ->
+                if cgap = state1 then acc1
                 else
-                  List.fold_right
-                    (fun (_,alph2,_) ((chrt,gapt) as acc2) ->
-                      if alph2 <= alph1 then acc2
-                      else if cgap = alph2 then
-                        let sum = tuple_sum alph1 alph2 comp_map in
+                  Alphabet.CodeSet.fold
+                    (fun state2 ((chrt,gapt) as acc2) ->
+                      if state2 <= state1 then acc2
+                      else if cgap = state2 then
+                        let sum = tuple_sum state1 state2 comp_map in
                         (chrt, sum +. gapt)
                       else begin
-                        let sum = tuple_sum alph1 alph2 comp_map in
+                        let sum = tuple_sum state1 state2 comp_map in
                         (sum :: chrt,gapt)
                       end)
-                    (Alphabet.to_list alph) acc1)
-                    (Alphabet.to_list alph)
-                    ([],0.0)
+                    alph.Alphabet.atomic acc1)
+              alph.Alphabet.atomic ([],0.0)
           in
           let sum = List.fold_left (fun a x -> x +. a) gap_trans lst in
           let lst = List.map (fun x -> x /. sum) lst in
@@ -1053,12 +1047,11 @@ let process_classification spec (comp_map,pis) =
     | Const _ -> failwith "I cannot estimate this type of model"
   and calc_invar all comp_map =
     let same = 
-      List.fold_left
-        (fun acc (_,ac,_) ->
+      Alphabet.CodeSet.fold
+        (fun ac acc ->
           acc +. (try (UnorderedTupleMap.find (ac,ac) comp_map)
-                  with | Not_found -> 0.0))
-        0.0
-        (Alphabet.to_list alph)
+                  with Not_found -> 0.0))
+        alph.Alphabet.atomic 0.0
     in
     same /. all
   in

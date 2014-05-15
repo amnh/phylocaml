@@ -1,24 +1,31 @@
 (** This provides a point between the user and the software to translate data to
-    the proper encoding. The input data to generate an alphabet using of_list is
-    in a common format of (NAME,CODE,COMP). The CODE should be appropriate to the alphabet type. *)
+    the proper encoding. *)
 
-(** How codes in the alphabet are represented; as an integer. This code can be
-    either bitpacked, packed in some specific ordering, or literally define the
-    state depending on the kind of alphabet. Using the interface to decrypt the
-    states is recommended. *)
+(** Defines codes in the alphabet. This code can be either bitpacked, packed in
+    some specific ordering, or literally define the state depending on the kind
+    of alphabet. Using the interface to decrypt the states is recommended. *)
 type code = int
 
-module CodeMap    : Map.S with type key = int
-module CodeSet    : Set.S with type elt = int
+module CodeMap    : Map.S with type key = code
+module CodeSet    : Set.S with type elt = code
 module CodeSetMap : Map.S with type key = CodeSet.t
 
-(** Define additional properties for combinations of states. *)
+(** combinations define a bijective map for a code and a set of atomic states *)
 type combinations =
  {  comb_set : CodeSet.t CodeMap.t;
     set_comb : code CodeSetMap.t;
  }
 
-(** Defines the type of alphabet that has been processed or will be processed.*)
+(** Record of default characters for parsing.
+type symbols = {
+  gap : string;
+  missing : string;
+  orientation : string;
+  separators : string list;
+  containers : (string * string) list;
+} *)
+
+(** Defines the type of alphabet.*)
 type kind =
   | Sequential
     (** Numbers define states. Indexed from, 0 -- (n-1) *)
@@ -35,34 +42,17 @@ type kind =
     a set of sequential states that cannot be transformed easily (unlike bitsets). *)
 type t =
   { kind      : kind;         (** Type of the alphabet *)
+    atomic    : CodeSet.t;    (** Return a set of the atomic elements *)
     name_code : code Internal.StringMap.t;  (** Single Code -> Name *)
-    code_name : string CodeMap.t;  (** Name -> Single Code *)
-    comp_code : int CodeMap.t;(** Code -> Compliment of Code *)
-    size      : int;          (** Size of the basic alphabet; excludes gap, all and missing *)
-    orientation : bool;       (** If ~ symbol should be used to parse *)
+    code_name : string CodeMap.t;           (** Name -> Single Code *)
+    compliment: int CodeMap.t;(** Code -> Compliment of Code *)
+    comb_data : combinations; (** Holds combination information. *)
     gap       : int option;   (** Code for the gap-character; if present *)
     missing   : int option;   (** Code for the missing-character; if present *)
     all       : int option;   (** Code for the all-character; if present *)
     case      : bool;         (** Does case matter in parsing/analysis? *)
-    comb_data : combinations; (** Holds combination information. *)
+    orientation : bool;       (** If ~ symbol should be used to parse *)
   }
-
-
-
-(** {2 Constants} *)
-
-(** default gap representation is '-'. *)
-val default_gap : string
-
-(** default missing represenation is '?'. *)
-val default_missing : string
-
-(** default prefix to denote orientation is '~'. *)
-val default_orientation : string
-
-(** default characters that define higher-level separations of data. *)
-val default_separators : string list
-
 
 
 (** {2 Basic Alphabets} *)
@@ -97,8 +87,7 @@ val present_absent : t
 val generate_seq_alphabet : ?gap:bool -> ?missing:bool -> int -> t
 
 
-
-(** {2 Functions for querying alphabets} *)
+(** {2 Basic Functions} *)
 
 (** Get the code associated with the name of the character *)
 val get_code : string -> t -> code
@@ -119,33 +108,57 @@ val complement : code -> t -> code option
 (** Determines if two elements in the alphabet are complements *)
 val is_complement : code -> code -> t -> bool
 
+(** Return the size of the alphabet as defined by the number of atomic states *)
+val size : t -> int
+
+(** {2 Functions on Polymorphisms} *)
+
 (** Determines if a state is atomic *)
 val is_atomic : code -> t -> bool
 
-(** Return the list of states that represent a code *)
+(** Return the list of states that represent a code; if the code is atomic
+    return a singleton of the code. *)
 val get_combination : code -> t -> CodeSet.t
 
-(** Opposite of the above function *)
-val get_state_combination : CodeSet.t -> t -> code
+(** Return a code that represents a set of codes *)
+val get_state_combination : CodeSet.t -> t -> code option
 
-(** [of_list states equates gap all missing orientation case kind] Generate an
-    alphabet from a list of [states] in the form [(NAME,COMPLIMENT OPTION)].
-    Gap, all element, and missing are included if they exist as well as the type
-    of alphabet to create, and if orientation and case should be considered for
-    parsing the data. Equates are stored in the name->code field, while states
-    are stored in both. This allows coincident names to exist in parsing but not
-    in the output stream of data. *)
-val of_list :
+(** Take a set of states and return a single state that represents their
+    combination if they exist within the alphabet. *)
+val compress_polymorphisms : code list -> t -> code option
+
+(** Take a set of states and return a single state that represents their
+    combination, if the combination extends beyond the number of combinations
+    allowed within the polymorphism, we take the largest (in number of
+    states represented) minimal (based on ordering of the states) set. *)
+val choose_polymorphism : code list -> t -> code
+
+
+(** {2 Creating alphabets} *)
+
+(** [sequential_alphabet states equates gap all missing orientation case]
+    Creates an alphabet encoded in sequential codes, that is 0,1,2,3...(n-1). No
+    polymorphisms exist as a single code. *)
+val sequential_alphabet :
   states : (string * string option) list -> equates : (string * string list) list ->
     gap : string option -> all : string option -> missing : string option ->
-      orientation: bool -> case:bool -> kind:kind -> t
+      orientation: bool -> case:bool -> t
 
-(** Convert an alphabet to a list of the main properties like in the
-    [of_list] function. This, once filtered of the middle element in the tuple,
-    can be used to re-initialize the alphabet, although equates and indel
-    details are missing. *)
-val to_list : t -> (string * code * string option) list
+(** [combination_alphabet equates gap all missing orientation case level] 
+    Creates a combination sequential alphabet. It expands the sequential
+    alphabet with polymorphisms up to the [level] argument. *)
+val combination_alphabet :
+  states : (string * string option) list -> equates : (string * string list) list ->
+    gap : string option -> all : string option -> missing : string option ->
+      orientation: bool -> case:bool -> level:int -> t
 
+(** [bitflag_alphabet states equates gap all missing orientation case]
+    Creates a bit-packed alphabet. The number of states are dependent on the OS,
+    31 or 63 elements. *)
+val bitflag_alphabet :
+  states : (string * string option) list -> equates : (string * string list) list ->
+    gap : string option -> all : string option -> missing : string option ->
+      orientation: bool -> case:bool -> t
 
 
 (** {2 Converting between types of alphabets} *)
@@ -154,12 +167,12 @@ val to_list : t -> (string * code * string option) list
     they exist in the alphabet, continuous alphabets are unchanged. *)
 val to_sequential : t -> t
 
-(** Convert the alphabet to a simple bit encoding format. This removes extra
-    polymorphic states; limited to transforming alphabets < 63bits. *)
+(** Convert the alphabet to a simple bit encoding format. Limited to
+    transforming alphabets < 31/63bits, depending on OS. *)
 val to_bitflag : t -> t
 
 (** Simplify turns the alphabet to one of the following based on it's current
-    state: simplebitflag, sequential, or continuous *)
+    state: bitflag, sequential, or continuous *)
 val simplify : t -> t
 
 (** Convert the alphabet to one with levels; this generates polymorphisms and
@@ -169,7 +182,11 @@ val to_level : int -> t -> t
 
 (** {2 Parsing Data} *)
 
-(* val parse_data_stream : t -> in_channel -> (int -> code -> unit) -> unit *)
+(** default gap, missing, all, container and higher-level separator characters
+    for parsing data. *)
+(* val default_symbols : symbols *)
+
+(* val parse_data_stream : t -> ('a -> int -> code -> 'a) -> in_channel -> 'a -> 'a *)
 
 
 (** {2 Debugging} *)
@@ -195,7 +212,7 @@ module Error : sig
       (** The calculated alphabet sized expected [a], but found [b] elements. *)
     | `Missing_Gap_Element of int
       (** The alphabet expected [a] to be in the set of codes. *)
-    | `Complement_Not_Transitive of int * int
+    | `Complement_Not_Bijective of int * int
       (** [a] = f([b]) === [b] = f([a]), where [f] is complement function *)
     | `Polymorphisms_In_Sequential_Alphabet
       (** Sequential alphabet does not have polymorphisms. *)
@@ -211,9 +228,11 @@ module Error : sig
       (** Character code not found in alphabet *)
     | `Alphabet_Size_Too_Large_For_BitFlag of int
       (** If the alphabet size is too large to convert to bitflags. *)
+    | `Insufficient_Level_To_Represent_States of int * Internal.IntSet.t
+      (** If the state is out of range of the level *)
   ]
 
-  (** Convert the error messages to something human readable. *)
+  (** Convert the error messages to something more human readable. *)
   val to_string : t -> string
 
 end

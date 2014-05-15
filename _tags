@@ -7,9 +7,9 @@ true : debug, annot, bin_annot
  <app>            : include
 
 # external libraries and c-library linking
- <**/*.{byte,native}> : package(pareto), package(bigarray), package(str), package(num), use_phyloc
- <**/*.cm{x,}a>       : package(pareto), package(bigarray), package(str), package(num), use_phyloc
- <**/*.top>           : package(pareto), package(bigarray), package(str), package(num), use_phyloc
+ <**/*.{byte,native}> : package(pareto,bigarray,str,num), use_phyloc
+ <**/*.cm{x,}a>       : package(pareto,bigarray,str,num), use_phyloc
+ <**/*.top>           : package(pareto,bigarray,str,num), use_phyloc
 # of testing suite
  <test/**.*>          : package(oUnit), use_phyloc
  <test/testInternal.*>: test

@@ -2,7 +2,7 @@
    standard parameters in tradiational applications with general variants. *)
 
 (** Report General Error Messages for Model Creation through here *)
-exception ModelError of string
+exception Error of string
 
 
 (** {2 Types} *)
@@ -91,98 +91,29 @@ type spec = {
   gap : gap;
 }
 
+(** type alias for clarity in the interface *)
+type matrix =
+  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
+
+(** type alias for clarity in the interface *)
+type vector =
+  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t
 
 (** Fully defined model of cost matrices decomposed for easy use and data-types
-    presented in a fashion for C exposure. *)
-type model = {
-  spec : spec;
-  (** The specification that created this model. *)
-  priors : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t;
-  (** The vector of prior probabilities. SUM=1 *)
-  pinvar : float option;
-  (** Percent invar for the Theta model of invariant sites in evolution. *)
-  rates : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t;
-  (** The rates for each class in Discrete Rate distributions. *)
-  probs : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t;
-  (** The probability of each rate-class for Discrete Rate Distributions. *)
-  q : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t;
-  (** [q] The Substitution-Rate Matrix. *)
-  u : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t;
-  (** [u] The right-eigenvectors of the decomposed [q] matrix. *)
-  d : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t;
-  (** [d] the eigen-values as a diagonal matrix of the decomposed [q] matrix. *)
-  ui : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t option;
-  (** [ui] the inverse of the [u] matrix; optional in cases where [ui = ut]
-      (transpose = inverse in symmetric matrices) *)
-  opt : (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t;
-  (** A vector of parameters to optimized; this is gathered from the model
-      specification for easy optimization and update of model parameters. *)
-}
-
+    presented in a fashion for C exposure. Left abstract, and should only be
+    manipulated through the specification. *)
+type model
 
 
 (** {2 Matrix Diagonalization / Composition Functions} *)
 
-(** [diagonalize_gtr U D Ui] diagonalize [U] into [U] [D] and [Ui], [U] is
-    modified in this function call. [U] must be similar to a symmetric matrix,
-    as this routine expects no imaginary eigen-values. GTR matrices with unequal
-    priors are of this category.
-
-    {b References}
-    + Keilson J. Markov Chain Models–Rarity and Exponentiality.
-      New York: Springer-Verlag; 1979.  *)
-val diagonalize_gtr :
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t -> unit
-
-(** [diagonalize U D Ui] diagonalize [U] into [U] [D], [U] is
-    modified in this function call. In this case, Ut = Ui (transpose = inverse). *)
-val diagonalize_sym :
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t -> unit
-
-(** [compose_gtr U D Ui t] compose the construction of probability rate matrix
-    [P] from a decomposed matrix [Q=U*D*Ui], where [P=e^Q*t]. *)
-val compose_gtr :
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-  float -> (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
-
-(** [compose_sym U D Ui t] compose the construction of probability rate matrix
-    [P] from a decomposed matrix [Q=U*D*Ui], where [P=e^Q*t]. In this case, [Ui]
-    is unneccessary since [Ut = Ui]. *)
-val compose_sym :
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-  float -> (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
-
-(** [diagonalize sym Q] diagonalize matrix [Q]; [sym] decides if the function
-    should use symmetric or general routines for diagonalization. *)
-val diagonalize :
-  bool -> (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-    (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t *
-    (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t *
-    (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t option
-
 (** [compose] compose a matrix from a model and a branch length. *)
-val compose :
-  model -> float ->
-    (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
+val compose : model -> float -> matrix
 
 (** [substitution_matrix m t?] return a substitution rate matrix optionally
     multiplied against a branch length [t]. This is the matrix Q in, [P=e^Q*t],
     or [Q*t] if [t] is optionally supplied. *)
-val substitution_matrix :
-  model -> float option ->
-    (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
-
-(** [compose_matrix Q t] compose the construction of a probability rate matrix
-    directly from a substitution rate matrix and time period/branch length. *) 
-val compose_matrix :
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t ->
-    float -> (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
+val substitution_matrix : model -> float option -> matrix
 
 (** [integerize_model \sigma m t] Generate a integerized matrix of precision
    [sigma]. This can be used to give speed-ups using alternate methods of
@@ -190,8 +121,7 @@ val compose_matrix :
 val integerized_model : ?sigma:int -> model -> float -> int array array
 
 
-
-(** {2 Creation and Iteration functions of Models} *)
+(** {2 Creation and Enumeration functions of Models} *)
 
 (** Create a model from a spec. *)
 val create : spec -> model
@@ -211,14 +141,14 @@ val replace_subst : model -> subst_model -> model
     model from a previous model. *)
 val enum_models :
   ?site_var:[`DiscreteGamma of int | `DiscreteTheta of int | `Constant
-            | `DiscreteCustom of (float * float) array ] list ->
+            | `DiscreteCustom of (float * float) array ]list ->
     ?subst_model:[`F81 | `F84 | `GTR | `HKY85 | `JC69 | `K2P | `TN93
-                 | `Custom of int Internal.IntMap.t * float array ] list ->
-      ?priors:[`Empirical | `Equal ] list ->
-        ?gap:[`Missing | `Independent | `Coupled | `Indel ] ->
+                 | `Custom of int Internal.IntMap.t * float array] list ->
+      ?priors:[`Empirical | `Equal] list ->
+        ?gap:[`Missing | `Independent | `Coupled | `Indel] ->
           float array option -> Alphabet.t -> (unit -> spec option)
 
-(** [compuate_priors (a,g) f (c,gc) ls] compute the priors of data from an array
+(** [compute_priors (a,g) f (c,gc) ls] compute the priors of data from an array
     of base frequencies [f], but predicated on gap being an additional state we
     also include the indel prior from the number of indels [gc] and the minimum
     number of indels required to align all data from [ls]. *)
@@ -237,12 +167,6 @@ val alphabet_size : spec -> int
 
 (** [num_parameters] return the number of variables used to parameterize the model. *)
 val num_parameters : model -> int
-
-(** [gamma_rates a b i] return the different rates in each class of a gamma
-    distribution with shape paramter [a], scale parameter [b] and [i] classes. *)
-val gamma_rates :
-  float -> float -> int ->
-    (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t
 
 
 (** {2 Compare / Higher-Order Data-Types} *)
@@ -269,57 +193,6 @@ val process_custom_matrix :
   int -> char array array -> int Internal.IntMap.t * float array
 
 
-(** {2 Substitution Rate Matrix Constructions} *)
-
-(** A type to represent how gaps should be treated when creating substitution
-    rate matrices. *)
-type gap_repr =
-  (int * float) option
-
-val m_jc69 :
-  int -> gap_repr ->
-    (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
-
-val m_k2p :
-  float -> int -> gap_repr ->
-    (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
-
-val m_tn93 :
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t ->
-    float -> float -> int -> gap_repr ->
-      (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
-
-val m_f81 :
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t ->
-    int -> gap_repr ->
-      (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
-
-val m_hky85 :
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t ->
-    float -> int -> gap_repr ->
-      (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
-
-val m_f84 :
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t ->
-    float -> int -> gap_repr ->
-      (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
-
-val m_gtr :
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t ->
-    float array -> int -> gap_repr ->
-      (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
-
-val m_file :
-  (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t ->
-    float array array -> int ->
-      (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
-
-val m_custom :
-  (float, 'a, 'b) Bigarray.Array1.t ->
-    int Internal.IntMap.t -> float array -> int ->
-      (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
-
-
 (** {2 I/O Functions} *)
 
 (** [short_name model] gives a short and sweet name of the models initials and
@@ -336,3 +209,23 @@ val short_name : model -> string
 val process_classification :
   spec -> float Internal.UnorderedTupleMap.t * float Internal.IntMap.t -> spec
 
+
+(* extra functions that do not need to be exposed
+val diagonalize_gtr : matrix -> matrix -> matrix -> unit
+val diagonalize_sym : matrix -> matrix -> unit
+val compose_gtr : matrix -> matrix -> matrix -> float -> matrix
+val compose_sym : matrix -> matrix -> float -> matrix
+val diagonalize : bool -> matrix -> matrix * matrix * matrix option
+val compose_matrix : matrix -> float -> matrix
+
+type gap_repr = (int * float) option
+
+val m_jc69 : int -> gap_repr -> matrix
+val m_k2p : float -> int -> gap_repr -> matrix
+val m_tn93 : vector -> float -> float -> int -> gap_repr -> matrix
+val m_f81 : vector -> int -> gap_repr -> matrix
+val m_hky85 : vector -> float -> int -> gap_repr -> matrix
+val m_f84 : vector -> float -> int -> gap_repr -> matrix
+val m_gtr : vector -> float array -> int -> gap_repr -> matrix
+val m_file : vector -> float array array -> int -> matrix
+val m_custom : vector -> int Internal.IntMap.t -> float array -> int -> matrix *)
