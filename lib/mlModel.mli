@@ -168,6 +168,10 @@ val alphabet_size : spec -> int
 (** [num_parameters] return the number of variables used to parameterize the model. *)
 val num_parameters : model -> int
 
+(** [gamma_rates] return the gamma rate classes generated from alpha, beta and
+    number of categories; for testing, but can be used directly. *)
+val gamma_rates : float -> float -> int -> vector
+
 
 (** {2 Compare / Higher-Order Data-Types} *)
 
