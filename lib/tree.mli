@@ -104,6 +104,9 @@ val path_of : Topology.id -> Topology.id -> t -> Topology.id list
 (** Determine if two nodes are on separate handles of the topology. *)
 val disjoint_edge : Topology.id -> Topology.id -> bool
 
+(** Determines if a node is in the subtree of a directional edge *)
+val in_subtree : Topology.id -> Topology.id -> Topology.id -> t -> bool
+
 
 (** {2 Random Accessors} *)
 
@@ -145,6 +148,11 @@ val post_order_edges :
   (Topology.id -> Topology.id -> 'a -> 'a) ->
     (Topology.id -> Topology.id -> 'a -> 'a -> 'a) ->
       Topology.edge -> t -> 'a -> 'a * 'a
+
+(** [pre_order_node_subtree] run a function on a subtree of a node while noting
+    a parent of that node for direction of the subtree. *)
+val pre_order_node_subtree :
+  (Topology.id -> 'a -> 'a) -> Topology.id -> Topology.id -> t -> 'a -> 'a
 
 (** [partition_edge e t] Return the leaf partitions determined by the edge [e].
     The boolean return value is used if the sets are disjoint in elements. This
@@ -214,7 +222,6 @@ val num_rooted_trees : Num.num -> Num.num
 val pp_node : Format.formatter -> node -> unit
 
 val pp_tree : Format.formatter -> t -> unit
-
 
 (** {2 Debug Functions}
     These functions should not be used in production code and are for diagnosing
