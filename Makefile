@@ -18,6 +18,9 @@ INST_OTH=_build/lib/*.mli _build/phylocaml.cm[io]
 LATEX=latex
 DVIPS=dvips
 
+# additional tags for compiling with coverage
+COVERAGE_TAGS=package\(bisect\),syntax\(camlp4o\),syntax\(bisect_pp\)
+
 # -----------------------------------
 
 all : phyloc native byte
@@ -34,20 +37,19 @@ top : phyloc
 phyloc :
 	$(BUILD) libphyloc.a
 
-# -----------------------------------
-
-test.byte : phyloc
-	$(BUILD) test.byte
-
-test.d.byte : phyloc
-	$(BUILD) test.d.byte
-
-test.native : phyloc
-	$(BUILD) test.native
-
-COVERAGE_TAGS=package\(bisect\),syntax\(camlp4o\),syntax\(bisect_pp\)
 coverage : phyloc
 	$(BUILD) -tags $(COVERAGE_TAGS) test.byte
+
+# -----------------------------------
+
+%.byte : phyloc
+	$(BUILD) $*.byte
+
+%.native : phyloc
+	$(BUILD) $*.native
+
+%.cmo :
+	$(BUILD) $*.cmo
 
 # -----------------------------------
 
