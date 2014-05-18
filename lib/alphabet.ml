@@ -95,39 +95,6 @@ let dump a =
       a.comb_data.comb_set;
     ()
 
-let pp_alphabet fmt t =
-  Format.(
-    let pp_print_option fmt = function
-      | None -> pp_print_string fmt "None"
-      | Some i -> pp_print_int fmt i
-    and pp_tab_name f n =
-      pp_print_tab fmt ();
-      pp_print_string fmt n;
-      pp_print_tab fmt ();
-    in
-    pp_open_tbox fmt ();
-    pp_set_tab fmt ();
-    (* match width of    orientation *)
-    pp_print_string fmt "Kind       ";
-    pp_print_string fmt begin match t.kind with
-      | BitFlag -> "Bit Flag"
-      | Sequential -> "Sequential"
-      | Continuous -> "Continuous"
-      | CombinationLevels k -> "Level "^(string_of_int k)
-    end;
-    pp_tab_name fmt "Gap";         pp_print_option fmt t.gap;
-    pp_tab_name fmt "Missing";     pp_print_option fmt t.missing;
-    pp_tab_name fmt "All";         pp_print_option fmt t.all;
-    pp_tab_name fmt "Case";        pp_print_bool fmt t.case;
-    pp_tab_name fmt "Orientation"; pp_print_bool fmt t.orientation;
-    pp_tab_name fmt "States : ";
-    pp_open_hbox fmt ();
-      CodeSet.iter (fprintf fmt "%d @,") t.atomic;
-    pp_close_box fmt ();
-    pp_close_tbox fmt ());
-  ()
-
-
 (** {2 Error Module} *)
 
 module Error = struct
@@ -609,4 +576,36 @@ and to_level level t =
     let comb_data = {comb_set = combs; set_comb = lsts;} in
     {t with
       kind = CombinationLevels level; comb_data; }
+
+let pp_alphabet fmt t =
+  Format.(
+    let pp_print_option fmt = function
+      | None -> pp_print_string fmt "None"
+      | Some i -> pp_print_int fmt i
+    and pp_tab_name fmt n =
+      pp_print_tab fmt ();
+      pp_print_string fmt n;
+      pp_print_tab fmt ();
+    in
+    pp_open_tbox fmt ();
+    pp_set_tab fmt ();
+    (* match width of    orientation *)
+    pp_print_string fmt "Kind       ";
+    pp_print_string fmt begin match t.kind with
+      | BitFlag -> "Bit Flag"
+      | Sequential -> "Sequential"
+      | Continuous -> "Continuous"
+      | CombinationLevels k -> "Level "^(string_of_int k)
+    end;
+    pp_tab_name fmt "Gap";         pp_print_option fmt t.gap;
+    pp_tab_name fmt "Missing";     pp_print_option fmt t.missing;
+    pp_tab_name fmt "All";         pp_print_option fmt t.all;
+    pp_tab_name fmt "Case";        pp_print_bool fmt t.case;
+    pp_tab_name fmt "Orientation"; pp_print_bool fmt t.orientation;
+    pp_tab_name fmt "States : ";
+    pp_open_hbox fmt ();
+      CodeSet.iter (fprintf fmt "%d @,") t.atomic;
+    pp_close_box fmt ();
+    pp_close_tbox fmt ());
+  ()
 

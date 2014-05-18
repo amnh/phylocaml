@@ -194,7 +194,6 @@ val to_level : int -> t -> t
 (** Prints basic information of the alphabet. *)
 val dump : t -> unit
 
-(** pretty-printer / debugger formatter *)
 val pp_alphabet : Format.formatter -> t -> unit
 
 

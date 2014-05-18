@@ -66,15 +66,6 @@ let tests =
           let () = assert_equal 1 (Alphabet.CodeSet.cardinal (Alphabet.get_combination  25 a)) in
           ());
 
-      "code(name) = name(code)" >::
-       (fun _ctxt ->
-          List.iter
-            (fun (x,c,_) ->
-              let () = assert_equal (Alphabet.get_code x aminoacids) c in
-              let () = assert_equal (Alphabet.get_name c aminoacids) x in
-              ())
-            (Alphabet.to_list aminoacids));
-
 (*    "Duplicate elements" >::
        (fun _ctxt ->
           let states =
