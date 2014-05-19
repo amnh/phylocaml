@@ -1,5 +1,4 @@
-(** {1 Alignment}
-    This module provides the mechanisms to perform data-alignments of any type
+(** This module provides the mechanisms to perform data-alignments of any type
     based on a minimal module of details. Included are a number of alignment
     algorithms, their properties are constrained by creating the [mem] type of
     each in particular ways. For example, setting minimum and maximum Ukkonen
@@ -62,50 +61,16 @@ module type AssignCost =
     val median : model -> elt -> elt -> cost * elt
 
     (** {2 Pretty Printing / IO} *)
-    
-    val pp_cost : Format.formatter -> cost -> unit
-    
-    val pp_elt : Format.formatter -> elt -> unit
+   
+    val l_cost : cost Ppl.pp_l
+    val l_elt : elt Ppl.pp_l
 
+    val pp_cost : cost Ppf.pp_f
+    val pp_elt : elt Ppf.pp_f
   end
 
 
-(** {2 DataVector}
-    The storage mechanism for storing the data to be aligned. *)
-module type DataVector =
-  sig
-
-    (** {2 Types} *) 
-
-    (** The type of an element of the DataVector *)
-    type elt
-
-    (** The type of storage for the vector *)
-    type t
-
-    (** {2 Functions} *)
-
-    (** [length] returns the length of a DataVector. *)
-    val length : t -> int
-
-    (** [get t i] obtain the value of [t] at [i] *)
-    val get : t -> int -> elt
-
-    (** [set t i e] sets the value at [i] in [t] to [e] *)
-    val set : t -> int -> elt -> t
-
-    val unsafe_get : int -> t -> elt
-    val unsafe_set : int -> elt -> t -> t
-
-    (** [of_list l] convert a list of [elt]s to [t] *)
-    val of_list : elt list -> t
-
-    (** {2 Pretty Printers} *)
-
-    val pp_t : Format.formatter -> t -> unit
-
-  end
-
+(** General alignment module *)
 module type Alignment =
   sig
     (** {2 Types} *)
@@ -139,23 +104,27 @@ module type Alignment =
 
     (** {2 Pretty Printing and IO} *)
 
+    (** Prints the memory, and thus the internal states and alignment directions 
+        in latex consumable format. *)
     val l_mem : mem Ppl.pp_l
+
+    (** Print the memory, and thus the interal states and alignment directions
+        using the pretty-printer formatter module in OCaml. *)
+    val pp_mem : mem Ppf.pp_f
   end
 
+
 (** Uses a full alignment matrix to align two sequences. *)
-module FullAlignment :
-  functor (V : DataVector) ->
-    functor (C : AssignCost with type elt = V.elt) ->
+module FullAlignment : functor (C : AssignCost) ->
   sig
     include Alignment
     val create_mem : m -> t -> t -> mem
   end
+
 (** Uses the Ukkonen algorithm to limit the number of cells to compute. [k] is
    the initial width of the barrier in addition to the length difference of the
    sequences to initiate the memory. *)
-module UkkAlignment :
-  functor (V : DataVector) ->
-    functor (C : AssignCost with type elt = V.elt) ->
+module UkkAlignment : functor (C : AssignCost) ->
   sig
     include Alignment
     val create_mem : k:int -> m -> t -> t -> mem
@@ -163,9 +132,7 @@ module UkkAlignment :
 
 (*
 (** Limit the number of indel events in the alignment to [k]. *)
-module MaxIndelAlignment :
-  functor (V : DataVector) ->
-    functor (C : AssignCost with type elt = V.elt) ->
+module MaxIndelAlignment : functor (C : AssignCost) ->
   sig
     include Alignment
     val create_mem : k:int -> t -> t -> mem
@@ -173,18 +140,14 @@ module MaxIndelAlignment :
 
 (** Limit the maximum length of the number of indels to include in the
    respective sequences. *)
-module MaxIndelLengthAlignment :
-  functor (V : DataVector) ->
-    functor (C : AssignCost with type elt = V.elt) ->
+module MaxIndelLengthAlignment : functor (C : AssignCost) ->
   sig
     include Alignment
     val create_mem : g_indel:int -> f_indel:int -> g:t -> f:t -> mem
   end
 
-(** Limit the maximum number of indel lengths in the alignment. *)
-module MaxIndelStringsAlignment :
-  functor (V : DataVector) ->
-    functor (C : AssignCost with type elt = V.elt) ->
+(** Limit the maximum number of indel run events in the alignment. *)
+module MaxIndelRunsAlignment : functor (C : AssignCost) ->
   sig
     include Alignment
     val create_mem : k:int -> t -> t -> mem

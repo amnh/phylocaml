@@ -21,23 +21,11 @@ module type AssignCost =
     val assign : model -> elt -> elt -> elt
     val median : model -> elt -> elt -> cost * elt
 
-    val pp_cost : Format.formatter -> cost -> unit
-    val pp_elt : Format.formatter -> elt -> unit
-  end
+    val l_cost : cost Ppl.pp_l
+    val l_elt : elt Ppl.pp_l
 
-module type DataVector =
-  sig
-    type elt
-    type t
-
-    val length : t -> int
-    val get : t -> int -> elt
-    val set : t -> int -> elt -> t
-    val unsafe_get : int -> t -> elt
-    val unsafe_set : int -> elt -> t -> t
-    val of_list : elt list -> t
-
-    val pp_t : Format.formatter -> t -> unit
+    val pp_cost : cost Ppf.pp_f
+    val pp_elt : elt Ppf.pp_f
   end
 
 module type Alignment =
@@ -54,9 +42,10 @@ module type Alignment =
     val aligned : m -> t -> t -> c * t
 
     val l_mem : mem Ppl.pp_l
+    val pp_mem : mem Ppf.pp_f
   end
 
-module Common (V:DataVector) (C:AssignCost with type elt = V.elt) =
+module Common (C:AssignCost) =
   struct
 
     let min3 m (x,dx) (y,dy) (z,dz) =
@@ -71,24 +60,24 @@ module Common (V:DataVector) (C:AssignCost with type elt = V.elt) =
 
     let aligned m x y =
       let cst = ref @@ C.zero m and med = ref [] in
-      assert ((V.length x) = (V.length y)); (* todo *)
-      for i = (V.length x)-1 downto 0 do
-        let c,md = C.median m (V.get x i) (V.get y i) in
+      assert ((Array.length x) = (Array.length y)); (* todo *)
+      for i = (Array.length x)-1 downto 0 do
+        let c,md = C.median m x.(i) y.(i) in
         cst := C.add m c !cst;
         med := md :: !med;
       done;
-      !cst, V.of_list !med
+      !cst, Array.of_list !med
 
   end
 
 
-module FullAlignment (V:DataVector) (C:AssignCost with type elt = V.elt) =
+module FullAlignment (C:AssignCost with type elt = elt) =
   struct
 
-    include Common (V) (C)
+    include Common (C)
 
-    type e = V.elt
-    type t = V.t
+    type e = C.elt
+    type t = e array
     type m = C.model
     type c = C.cost
 
@@ -102,12 +91,12 @@ module FullAlignment (V:DataVector) (C:AssignCost with type elt = V.elt) =
     let mem_ref = ref None
     let rec create_mem m x y : mem = match !mem_ref with
       | None ->
-        let mem = Array.make_matrix (V.length x) (V.length y) @@ mem_zero m in
+        let mem = Array.make_matrix (Array.length x) (Array.length y) @@ mem_zero m in
         mem_ref := Some mem;
         mem
       | Some mem ->
-        if (Array.length mem) <= (V.length x) &&
-           (Array.length mem.(0)) <= (V.length y) then
+        if (Array.length mem) <= (Array.length x) &&
+           (Array.length mem.(0)) <= (Array.length y) then
           mem
         else begin
           mem_ref := None;
@@ -139,12 +128,12 @@ module FullAlignment (V:DataVector) (C:AssignCost with type elt = V.elt) =
       let indel = C.indel m in
       let get_direction i j = mem.(i).(j) |> snd |> choose_dir in
       let rec build_alignments one two i j = match get_direction i j with
-        | Align  _ -> build_alignments ((V.get x i)::one) ((V.get y j)::two) (i-1) (j-1)
-        | Insert _ -> build_alignments (indel ::one) ((V.get y j)::two) (i) (j-1)
-        | Delete _ -> build_alignments ((V.get x i)::one) (indel::two) (i-1) (j)
-        | Root     -> V.of_list @@ indel::one, V.of_list @@ indel::two
+        | Align  _ -> build_alignments (x.(i)::one) (y.(j)::two) (i-1) (j-1)
+        | Insert _ -> build_alignments (indel ::one) (y.(j)::two) (i) (j-1)
+        | Delete _ -> build_alignments (x.(i)::one) (indel::two) (i-1) (j)
+        | Root     -> Array.of_list @@ indel::one, Array.of_list @@ indel::two
       in
-      build_alignments [] [] ((V.length x)-1) ((V.length y)-1)
+      build_alignments [] [] ((Array.length x)-1) ((Array.length y)-1)
 
     let backtrace mem _m x y =
       let get_direction i j = mem.(i).(j) |> snd |> choose_dir in
@@ -152,26 +141,26 @@ module FullAlignment (V:DataVector) (C:AssignCost with type elt = V.elt) =
         | Align  s -> build_median (s::acc) (i-1) (j-1)
         | Delete s -> build_median (s::acc) (i-1) j
         | Insert s -> build_median (s::acc) i (j-1)
-        | Root     -> V.of_list ((V.get x 0)::acc)
+        | Root     -> Array.of_list (x.(0)::acc)
       in
-      build_median [] ((V.length x)-1) ((V.length y)-1)
+      build_median [] ((Array.length x)-1) ((Array.length y)-1)
 
     let align mem m x y =
-      let xlen = V.length x and ylen = V.length y in
+      let xlen = Array.length x and ylen = Array.length y in
       let indel = C.indel m in
       let get_cost i j =
         if i = 0 && j = 0 then begin
           (C.zero m,[Root])
         end else if i = 0 then begin
-          let cst,s = C.median m indel (V.get y j) in
+          let cst,s = C.median m indel y.(j) in
           C.add m (fst mem.(i).(j-1)) cst,[Insert s]
         end else if j = 0 then begin
-          let cst,s = C.median m (V.get x i) indel in
+          let cst,s = C.median m x.(i) indel in
           C.add m (fst mem.(i-1).(j)) cst,[Delete s]
         end else begin
-          let dcst,sd = C.median m (V.get x i) indel
-          and icst,si = C.median m indel (V.get y j)
-          and acst,sa = C.median m (V.get x i) (V.get y j) in
+          let dcst,sd = C.median m x.(i) indel
+          and icst,si = C.median m indel y.(j)
+          and acst,sa = C.median m x.(i) y.(j) in
           let dcst = C.add m (fst mem.(i-1).(j)) dcst
           and icst = C.add m (fst mem.(i).(j-1)) icst
           and acst = C.add m (fst mem.(i-1).(j-1)) acst in
@@ -185,29 +174,41 @@ module FullAlignment (V:DataVector) (C:AssignCost with type elt = V.elt) =
       done;
       fst mem.(xlen-1).(ylen-1)
 
-    let l_mem (mat : mem) =
-      let l_cell (x,tds) =
-        (List.fold_left
-          (fun acc -> function
-            | Insert _-> acc ^ " \\leftarrow "
-            | Delete _-> acc ^ " \\uparrow "
-            | Align  _-> acc ^ " \\nwarrow "
-            | Root    -> acc)
-          "{"
-          tds) ^ (pp_to_string C.pp_cost x) ^ "}"
+    let l_mem (mem : mem) =
+      let l_dir = function
+        | Insert _-> "\\leftarrow"
+        | Delete _-> "\\uparrow"
+        | Align  _-> "\\nwarrow"
+        | Root    -> ""
       in
-      failwith "TODO"
-      (* Ppl.l_matrix ... *)
+      let l_cell (x,tds) =
+        List.fold_left (fun acc x -> acc^" "^(l_dir x)) (C.l_cost x) tds
+      in
+      Ppl.l_matrix l_cell mem
+
+    let pp_mem (f:Format.formatter) (mem:mem) =
+       let pp_dir f = function
+        | Insert _-> Format.pp_print_char f '-'
+        | Delete _-> Format.pp_print_char f '|'
+        | Align  _-> Format.pp_print_char f '\\'
+        | Root    -> Format.pp_print_char f ' '
+      in
+      let pp_cell f (x,tds) =
+        C.pp_cost f x;
+        Format.pp_print_char f ' ';
+        List.iter (pp_dir f) tds;
+      in
+      Ppf.pp_matrix pp_cell f mem
 
   end
 
-module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
+module UkkAlignment (C:AssignCost with type elt = elt) =
   struct
 
-    include Common (V) (C)
+    include Common (C)
 
-    type e = V.elt
-    type t = V.t
+    type e = C.elt
+    type t = e array
     type m = C.model
     type c = C.cost
 
@@ -222,17 +223,17 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
     let mem_ref = ref None
     let rec create_mem ~k m x y : mem = match !mem_ref with
       | None ->
-        let mat = Array.make_matrix (V.length x) (V.length y) @@ mem_zero m in
+        let mat = Array.make_matrix (Array.length x) (Array.length y) @@ mem_zero m in
         let mem = {k; mat} in
         mem_ref := Some mem;
         mem
       | Some mem ->
-        if (Array.length mem.mat) <= (V.length x)
-            && (Array.length mem.mat.(0)) <= (V.length y) then
+        if (Array.length mem.mat) <= (Array.length x)
+            && (Array.length mem.mat.(0)) <= (Array.length y) then
           {mem with k = k}
         else begin
           mem_ref := None;
-          create_mem k m x y
+          create_mem ~k m x y
         end
 
     let choose_dir dirs =
@@ -260,12 +261,12 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
       let indel = C.indel m in
       let get_direction i j = mem.mat.(i).(j) |> snd |> snd |> choose_dir in
       let rec build_alignments one two i j = match get_direction i j with
-        | Align  _ -> build_alignments ((V.get x i)::one) ((V.get y j)::two) (i-1) (j-1)
-        | Insert _ -> build_alignments (indel ::one) ((V.get y j)::two) (i) (j-1)
-        | Delete _ -> build_alignments ((V.get x i)::one) (indel::two) (i-1) (j)
-        | Root     -> V.of_list @@ indel::one, V.of_list @@ indel::two
+        | Align  _ -> build_alignments (x.(i)::one) (y.(j)::two) (i-1) (j-1)
+        | Insert _ -> build_alignments (indel ::one) (y.(j)::two) (i) (j-1)
+        | Delete _ -> build_alignments (x.(i)::one) (indel::two) (i-1) (j)
+        | Root     -> of_list @@ indel::one, Array.of_list @@ indel::two
       in
-      build_alignments [] [] ((V.length x)-1) ((V.length y)-1)
+      build_alignments [] [] ((Array.length x)-1) ((Array.length y)-1)
 
     let backtrace mem _m x y =
       let get_direction i j = mem.mat.(i).(j) |> snd |> snd |> choose_dir in
@@ -273,19 +274,19 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
         | Align  s -> build_median (s::acc) (i-1) (j-1)
         | Delete s -> build_median (s::acc) (i-1) j
         | Insert s -> build_median (s::acc) i (j-1)
-        | Root     -> V.of_list ((V.get x 0)::acc)
+        | Root     -> of_list (x.(0)::acc)
       in
-      build_median [] ((V.length x)-1) ((V.length y)-1)
+      build_median [] ((Array.length x)-1) ((Array.length y)-1)
 
     let align mem m x y =
         let indel = C.indel m in
         (* A general function to calculate the barrier of k; this is the length
            of the horizontal and vertical bands that build the diagonal strip. *)
         let barrier =
-          let diff = (V.length y) - (V.length x) in
+          let diff = (Array.length y) - (Array.length x) in
           (fun k -> (k - diff) / 2)
         and get_cost i j x_i y_j =
-          let cst,s = C.median m (V.get x i) indel in
+          let cst,s = C.median m x_i y_j in
           C.add m cst @@ fst mem.mat.(i).(j),
             fst @@ snd mem.mat.(i).(j),
              s
@@ -293,11 +294,11 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
         (* update a cell in the matrix by ALL its neighbors; This should only be
            used to calculate the cost of a cell when all the neighbors exist. *)
         let update_all i j =
-            let aln,at,sa = get_cost (i-1) (j-1) (V.get x i) (V.get y j)
-            and del,dt,sd = get_cost (i-1) (j)   (V.get x i) indel
-            and ins,it,si = get_cost (i)   (j-1) indel       (V.get y j) in
+            let aln,at,sa = get_cost (i-1) (j-1) x.(i) y.(j)
+            and del,dt,sd = get_cost (i-1) (j)   x.(i) indel
+            and ins,it,si = get_cost (i)   (j-1) indel       y.(j) in
             (* modify the indel/edit count *)
-            let at = if (V.get x i) = (V.get y j) then at else 1+at
+            let at = if x.(i) = y.(j) then at else 1+at
             and it = it+1
             and dt = dt+1 in
             (* the minimum cost with minimum indel, adjusted with additional
@@ -318,9 +319,9 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
             mem.mat.(i).(j) <- m
         (* Same as above, but will not look at the node to the right (j-1) *)
         and update_row i j =
-            let aln,at,sa = get_cost (i-1) (j-1) (V.get x i) (V.get y j)
-            and del,dt,sd = get_cost (i-1) (j)   (V.get x i) indel in
-            let at = if (V.get x i) = (V.get y j) then at else 1+at
+            let aln,at,sa = get_cost (i-1) (j-1) x.(i) y.(j)
+            and del,dt,sd = get_cost (i-1) (j)   x.(i) indel in
+            let at = if x.(i) = y.(j) then at else 1+at
             and dt = dt+1 in
             let m =
                 if C.lt m del aln then del,(dt,[Delete sd])
@@ -334,9 +335,9 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
             mem.mat.(i).(j) <- m
         (* Same as above, but will not look at the node above (i-1) *)
         and update_col i j =
-            let aln,at,sa = get_cost (i-1) (j-1) (V.get x i) (V.get y j)
-            and ins,it,si = get_cost (i)   (j-1) indel       (V.get y j) in
-            let at = if (V.get x i) = (V.get y j) then at else 1+at
+            let aln,at,sa = get_cost (i-1) (j-1) x.(i) y.(j)
+            and ins,it,si = get_cost (i)   (j-1) indel       y.(j) in
+            let at = if x.(i) = y.(j) then at else 1+at
             and it = it+1 in
             let m =
                 if C.lt m ins aln then ins,(it,[Insert si])
@@ -353,7 +354,7 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
             (* move across each row and update *)
             let run_row i j_min j_max =
                 let rec run_row i j =
-                    if j >= V.length y then ()
+                    if j >= Array.length y then ()
                     else if j = j_max then update_col i j
                     else begin update_all i j; run_row (i) (j+1) end
                 in
@@ -361,9 +362,9 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
             in
             (* for each row, update strip with run_row *)
             let ob = barrier ok and nb = barrier nk in
-            for i = 1 to (V.length x)-1 do
-                let old_j_max = i+ob+((V.length x)-(V.length y))
-                and new_j_max = i+nb+((V.length x)-(V.length y))
+            for i = 1 to (Array.length x)-1 do
+                let old_j_max = i+ob+((Array.length x)-(Array.length y))
+                and new_j_max = i+nb+((Array.length x)-(Array.length y))
                 and new_j_min = i - nb in
                 let old_j_min = i - ob in
                 if old_j_min <= 1 then
@@ -378,29 +379,29 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
         (* set root and first row and col *)
         and initial_matrix () =
             mem.mat.(0).(0) <- (C.zero m,(0,[Root]));
-            for j = 1 to (V.length y) - 1 do
-                let cost,_,s = get_cost 0 (j-1) indel (V.get y j) in
+            for j = 1 to (Array.length y) - 1 do
+                let cost,_,s = get_cost 0 (j-1) indel y.(j) in
                 mem.mat.(0).(j) <- cost,(j,[Insert s]);
             done;
-            for i = 1 to (V.length x)-1 do
-                let cost,_,s = get_cost (i-1) 0 (V.get x i) indel in
+            for i = 1 to (Array.length x)-1 do
+                let cost,_,s = get_cost (i-1) 0 x.(i) indel in
                 mem.mat.(i).(0) <- cost,(i,[Delete s]);
             done;
-            build_strip (max mem.k (((V.length x)-(V.length y))+1))
+            build_strip (max mem.k (((Array.length x)-(Array.length y))+1))
         (* build a single strip/band in matrix *)
         and build_strip k =
             let b = barrier k in
             let p_max = ref 0 in
-            for i = 1 to (V.length x)-1 do
+            for i = 1 to (Array.length x)-1 do
                 let j_min = max 1 (i - b - 1)
-                and j_max = min ((V.length y)-1) (i+b+((V.length y)-(V.length x))) in
+                and j_max = min ((Array.length y)-1) (i+b+((Array.length y)-(Array.length x))) in
                 if j_min = 1
                     then update_all i 1
                     else update_row i j_min;
                 for j = j_min+1 to j_max-1 do
                     update_all i j
                 done;
-                if !p_max = (V.length y)-1
+                if !p_max = (Array.length y)-1
                     then update_all i j_max
                     else update_col i j_max;
                 p_max := j_max;
@@ -408,7 +409,7 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
             update k
         (* this is to update k and matrix until ending condition *)
         and update k =
-            let mat_k = fst (snd (mem.mat.((V.length x)-1).((V.length y)-1))) in
+            let mat_k = fst (snd (mem.mat.((Array.length x)-1).((Array.length y)-1))) in
             if (k <= mat_k) then begin
                 update_matrix k (k*2);
                 update (k*2)
@@ -417,7 +418,32 @@ module UkkAlignment  (V:DataVector) (C:AssignCost with type elt = V.elt) =
             end
         in
         initial_matrix ();
-        fst (mem.mat.((V.length x)-1).((V.length y)-1))
+        fst (mem.mat.((Array.length x)-1).((Array.length y)-1))
 
-    let l_mem (mat : mem) = failwith "TODO"
+    let l_mem (mem : mem) =
+      let l_dir = function
+        | Insert _-> "\\leftarrow"
+        | Delete _-> "\\uparrow"
+        | Align  _-> "\\nwarrow"
+        | Root    -> ""
+      in
+      let l_cell (x,(_,tds)) =
+        List.fold_left (fun acc x -> acc^" "^(l_dir x)) (C.l_cost x) tds
+      in
+      Ppl.l_matrix l_cell mem.mat
+
+    let pp_mem (f:Format.formatter) (mem:mem) =
+       let pp_dir f = function
+        | Insert _-> Format.pp_print_char f '-'
+        | Delete _-> Format.pp_print_char f '|'
+        | Align  _-> Format.pp_print_char f '\\'
+        | Root    -> Format.pp_print_char f ' '
+      in
+      let pp_cell f (x,(_,tds)) =
+        C.pp_cost f x;
+        Format.pp_print_char f ' ';
+        List.iter (pp_dir f) tds;
+      in
+      Ppf.pp_matrix pp_cell f mem.mat
+
   end
