@@ -71,7 +71,7 @@ module Common (C:AssignCost) =
   end
 
 
-module FullAlignment (C:AssignCost with type elt = elt) =
+module FullAlignment (C:AssignCost) =
   struct
 
     include Common (C)
@@ -202,7 +202,7 @@ module FullAlignment (C:AssignCost with type elt = elt) =
 
   end
 
-module UkkAlignment (C:AssignCost with type elt = elt) =
+module UkkAlignment (C:AssignCost) =
   struct
 
     include Common (C)
@@ -264,7 +264,7 @@ module UkkAlignment (C:AssignCost with type elt = elt) =
         | Align  _ -> build_alignments (x.(i)::one) (y.(j)::two) (i-1) (j-1)
         | Insert _ -> build_alignments (indel ::one) (y.(j)::two) (i) (j-1)
         | Delete _ -> build_alignments (x.(i)::one) (indel::two) (i-1) (j)
-        | Root     -> of_list @@ indel::one, Array.of_list @@ indel::two
+        | Root     -> Array.of_list @@ indel::one, Array.of_list @@ indel::two
       in
       build_alignments [] [] ((Array.length x)-1) ((Array.length y)-1)
 
@@ -274,7 +274,7 @@ module UkkAlignment (C:AssignCost with type elt = elt) =
         | Align  s -> build_median (s::acc) (i-1) (j-1)
         | Delete s -> build_median (s::acc) (i-1) j
         | Insert s -> build_median (s::acc) i (j-1)
-        | Root     -> of_list (x.(0)::acc)
+        | Root     -> Array.of_list (x.(0)::acc)
       in
       build_median [] ((Array.length x)-1) ((Array.length y)-1)
 
