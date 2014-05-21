@@ -6,7 +6,10 @@ lib/Topology
 lib/Ptopology
 lib/Tree
 lib/Network
+
 lib/Alignment
+lib/CmAlignment
+lib/MlAlignment
 
 lib/Alphabet
 lib/Sequence
