@@ -54,7 +54,7 @@ module Common (C:AssignCost) =
         else if C.eq m x y then (y,[dy;dx])
         else (y,[dy])
       in
-      if C.eq m xy z then (xy,dxy)
+      if C.lt m xy z then (xy,dxy)
       else if C.eq m xy z then (xy,dz::dxy)
       else (z,[dz])
 
