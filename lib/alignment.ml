@@ -42,10 +42,10 @@ module type Alignment =
     val aligned : m -> t -> t -> c * t
 
     val l_mem : mem Ppl.pp_l
-    val pp_mem : mem Ppf.pp_f
   end
 
 module Common (C:AssignCost) =
+>>>>>>> 4af41601b5bab60dd73b59af122491182e58f315
   struct
 
     let min3 m (x,dx) (y,dy) (z,dz) =
@@ -173,32 +173,6 @@ module FullAlignment (C:AssignCost) =
         done;
       done;
       fst mem.(xlen-1).(ylen-1)
-
-    let l_mem (mem : mem) =
-      let l_dir = function
-        | Insert _-> "\\leftarrow"
-        | Delete _-> "\\uparrow"
-        | Align  _-> "\\nwarrow"
-        | Root    -> ""
-      in
-      let l_cell (x,tds) =
-        List.fold_left (fun acc x -> acc^" "^(l_dir x)) (C.l_cost x) tds
-      in
-      Ppl.l_matrix l_cell mem
-
-    let pp_mem (f:Format.formatter) (mem:mem) =
-       let pp_dir f = function
-        | Insert _-> Format.pp_print_char f '-'
-        | Delete _-> Format.pp_print_char f '|'
-        | Align  _-> Format.pp_print_char f '\\'
-        | Root    -> Format.pp_print_char f ' '
-      in
-      let pp_cell f (x,tds) =
-        C.pp_cost f x;
-        Format.pp_print_char f ' ';
-        List.iter (pp_dir f) tds;
-      in
-      Ppf.pp_matrix pp_cell f mem
 
   end
 
@@ -445,5 +419,4 @@ module UkkAlignment (C:AssignCost) =
         List.iter (pp_dir f) tds;
       in
       Ppf.pp_matrix pp_cell f mem.mat
-
   end

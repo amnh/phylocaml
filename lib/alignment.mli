@@ -107,10 +107,6 @@ module type Alignment =
     (** Prints the memory, and thus the internal states and alignment directions 
         in latex consumable format. *)
     val l_mem : mem Ppl.pp_l
-
-    (** Print the memory, and thus the interal states and alignment directions
-        using the pretty-printer formatter module in OCaml. *)
-    val pp_mem : mem Ppf.pp_f
   end
 
 
@@ -129,27 +125,3 @@ module UkkAlignment : functor (C : AssignCost) ->
     include Alignment
     val create_mem : k:int -> m -> t -> t -> mem
   end
-
-(*
-(** Limit the number of indel events in the alignment to [k]. *)
-module MaxIndelAlignment : functor (C : AssignCost) ->
-  sig
-    include Alignment
-    val create_mem : k:int -> t -> t -> mem
-  end
-
-(** Limit the maximum length of the number of indels to include in the
-   respective sequences. *)
-module MaxIndelLengthAlignment : functor (C : AssignCost) ->
-  sig
-    include Alignment
-    val create_mem : g_indel:int -> f_indel:int -> g:t -> f:t -> mem
-  end
-
-(** Limit the maximum number of indel run events in the alignment. *)
-module MaxIndelRunsAlignment : functor (C : AssignCost) ->
-  sig
-    include Alignment
-    val create_mem : k:int -> t -> t -> mem
-  end
-*)

@@ -563,8 +563,7 @@ and simplify t = match t.kind with
   | Sequential | BitFlag | Continuous -> t
 
 and to_level level t =
-  let () = if level <= 0 then
-    raise (Error (`Unacceptable_Level_Argument level)) in
+  let () = if level <= 0 then raise (Error (`Unacceptable_Level_Argument level)) in
   match t.kind with
   | _                   when level = 1 -> to_sequential t
   | CombinationLevels l when level = l -> t
