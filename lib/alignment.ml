@@ -45,7 +45,6 @@ module type Alignment =
   end
 
 module Common (C:AssignCost) =
->>>>>>> 4af41601b5bab60dd73b59af122491182e58f315
   struct
 
     let min3 m (x,dx) (y,dy) (z,dz) =
