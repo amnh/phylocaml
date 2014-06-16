@@ -186,9 +186,9 @@ let pre_order_edges ?dist f ((a,b) as e) t acc =
     |> each_edge d a b
     |> each_edge d b a
 
-let post_order_edges f g (a, b) bt accum =
+let post_order_edges f g (a, b) t accum =
   let rec processor prev curr accum =
-    match get_node curr bt with
+    match get_node curr t with
     | Leaf (nd, nbr) ->
       assert(prev = nbr);
       assert(curr = nd);
@@ -203,6 +203,21 @@ let post_order_edges f g (a, b) bt accum =
   let a = processor b a accum
   and b = processor a b accum in
   a, b
+
+let pre_order_node_subtree f p n t acc =
+  let rec processor p n acc = match get_node n t with
+    | Single _ -> assert false
+    | Leaf _ -> f n acc
+    | Interior(_,a,b,c) ->
+      let (a,b) = get_other_two n p a b c in
+      f n acc
+        |> processor n a
+        |> processor n b
+  in
+  processor p n acc
+
+let in_subtree a p c t =
+  pre_order_node_subtree (fun x acc -> acc || x = a) p c t false
 
 let get_edges h t = match get_node h t with
   | Interior (a,b,_,_) | Leaf (a,b) ->
@@ -376,14 +391,18 @@ let break (x,y) t =
     let b,c = get_other_two a w b c d
     and x,y = get_other_two w a x y z in
     let h = handle_of a t in
+    let handles =
+      if (h = a) || (h = w) then
+        t.handles |> HandleSet.remove h |> HandleSet.add x |> HandleSet.add b
+      else if in_subtree h a b t || in_subtree h a c t then
+        HandleSet.add x t.handles
+      else if in_subtree h w x t || in_subtree h w y t then
+        HandleSet.add b t.handles
+      else
+        assert false
+    in
     let t = clean_up_nodes b c w a t in
     let t = clean_up_nodes x y a w t in
-    let handles =
-      t.handles (* TODO; don't move h if possible *)
-        |> HandleSet.remove h
-        |> HandleSet.add b (* or c, choice is arbitrary *)
-        |> HandleSet.add x (* or y, choice is arbitrary *)
-    in
     let avail_codes = 
       IDManager.push a @@ IDManager.push w t.avail_codes
     in
@@ -519,15 +538,10 @@ let random lst =
 
 (** {1 Tree Specific Functions} *)
 
-(** {2 Formatter/Printer Functions} *)
-
 let pp_node ppf = function
-  | Leaf (a,b) -> 
-    Format.fprintf ppf "@[L(%d,%d)@]" a b
-  | Interior (a,b,c,d) ->
-    Format.fprintf ppf "@[N(%d,%d,%d,%d)@]" a b c d
-  | Single a ->
-    Format.fprintf ppf "@[S(%d)@]" a
+  | Leaf (a,b) -> Format.fprintf ppf "@[L(%d,%d)@]" a b
+  | Interior (a,b,c,d) -> Format.fprintf ppf "@[N(%d,%d,%d,%d)@]" a b c d
+  | Single a -> Format.fprintf ppf "@[S(%d)@]" a
 
 and pp_tree ppf t =
   let outputf format = Format.fprintf ppf format in
@@ -544,7 +558,6 @@ and pp_tree ppf t =
     t.nodes;
   outputf "@]@\n";
   ()
-
 
 (** {2 Math Functions} *)
 
@@ -593,7 +606,7 @@ let num_unrooted_trees =
 let num_rooted_trees =
   (fun n ->
     if Num.lt_num n zero
-      then raise Not_found
+      then raise Not_found (* TODO *)
     else if (Num.eq_num n zero) || (Num.eq_num n one) then
       n
     else

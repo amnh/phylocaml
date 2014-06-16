@@ -77,6 +77,18 @@ let tests =
           ())
         (Alphabet.to_list aminoacids));
 
+    "Duplicate elements" >::
+       (fun _ctxt ->
+          let states =
+            List.map (fun k -> (Printf.sprintf "%02d" k,None))
+                    ((0 -- 8) @ (0 -- 8))
+          in
+          try Alphabet.of_list ~states ~equates:[] ~kind:Alphabet.BitFlag
+                      ~orientation:false ~case:false ~gap:None ~all:None ~missing:None
+              |> ignore;
+              false
+          with | Alphabet.Error (`Illegal_Character _) -> true);
+
     "Comparison Functions" >::
     (fun _ctxt ->
       todo "write the comparison functions and tests");

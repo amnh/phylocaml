@@ -85,9 +85,7 @@ let tests = "Tree" >:::
         let () = assert_equal_ids IDSet.empty (IDSet.inter l r) in
         let () = assert_equal_ids l (IDSet.diff l r) in
         let () = assert_equal_ids r (IDSet.diff r l) in
-        let () = assert_equal_int (IDSet.cardinal (Tree.get_leaves tree))
-                                  (IDSet.cardinal (IDSet.union l r))
-        in
+        let () = assert_equal_ids (Tree.get_leaves tree) (IDSet.union l r) in
         ())
       (Tree.get_all_edges tree);
     ());
@@ -115,13 +113,28 @@ let tests = "Tree" >:::
       "Compare fully broken and disjoint tree"
       (0 == (Tree.compare (Tree.disjoint t1) (break_all t1))));
 
+  "In Subtree" >::
+  (fun _ctxt ->
+    let tree = create_random_tree () in
+    let rec each_edge tree ((a,b) as e) =
+      let l,r,_ = Tree.partition_edge e tree in
+      let msg b p n i =
+        let b = if not b then " not" else "" in
+        Printf.sprintf "Subtree of %d->%d does%s contain %d in subtree" p n b i
+      in
+      IDSet.iter (fun n -> assert_bool (msg false b a n) (not (Tree.in_subtree n b a tree))) r;
+      IDSet.iter (fun n -> assert_bool (msg true  b a n) (Tree.in_subtree n b a tree)) l;
+      IDSet.iter (fun n -> assert_bool (msg false a b n) (not (Tree.in_subtree n a b tree))) l;
+      IDSet.iter (fun n -> assert_bool (msg true  a b n) (Tree.in_subtree n a b tree)) r;
+    in
+    EdgeSet.iter (each_edge tree) (Tree.get_all_edges tree));
+
   "Break and Join Function Consistency and Delta" >::
   (fun _ctxt ->
-    let single_jxn () = function
+    let rec single_jxn () = function
       | `Edge (a,b) -> Printf.sprintf "(%d,%d)" a b
       | `Single x   -> Printf.sprintf "(%d)" x
-    in
-    let msg_of_jxn a b =
+    and msg_of_jxn a b =
       Printf.sprintf "Joining/Breaking %a and %a failed" single_jxn a single_jxn b
     in
     let t1 = create_random_tree () in
