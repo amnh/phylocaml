@@ -251,7 +251,7 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
       then raise (Error (`Illegal_Character name))
       else (StringMap.add name code cname,
               CodeMap.add code name ncode,
-                CodeSet.ad add atomic),cincrfn code
+                CodeSet.add code atomic), code_incr_fn code
   in
   let (name_code,code_name,atomic),_ = (* add all states and equates *)
     let initial_code,incr_code = match kind with

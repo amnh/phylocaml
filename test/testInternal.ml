@@ -20,6 +20,10 @@ let assert_equal_list elt_printer elt_compare =
 let assert_equal_int_list =
   assert_equal_list string_of_int (=)
 
+let assert_equal_str =
+  let printer = Internal.id in
+  OUnit2.assert_equal ~printer
+
 let assert_equal_int =
   let printer = string_of_int in
   OUnit2.assert_equal ~printer
