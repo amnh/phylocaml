@@ -89,9 +89,9 @@ let tests =
               false
           with | Alphabet.Error (`Illegal_Character _) -> true); *)
 
-    "Comparison Functions" >::
+(*  "Comparison Functions" >::
     (fun _ctxt ->
-      todo "write the comparison functions and tests");
+      todo "write the comparison functions and tests"); *)
 
     "Duplicate elements" >::
     (fun _ctxt ->
