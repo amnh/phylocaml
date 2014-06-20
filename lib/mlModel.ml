@@ -35,7 +35,7 @@ type gap =
   | Coupled of float
   | Independent
 
-type spec = {
+type s = {
   substitution : subst_model;
   site_variation : site_var;
   base_priors : priors;
@@ -50,8 +50,8 @@ and default_tstv  = 2.0
 type vector = (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t
 type matrix = (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array2.t
 
-type model = {
-  spec  : spec;
+type t = {
+  spec  : s;
   priors: vector;
   pinvar: float option;
   rates : vector;
@@ -163,7 +163,7 @@ let compare a b =
  
 
 module OrderedML = struct
-  type t = spec 
+  type t = s
   let compare a b = Pervasives.compare a b
 end
 module MlModelMap = Map.Make (OrderedML)
@@ -777,7 +777,7 @@ let replace_rates model rates =
 let enum_models ?(site_var=[`DiscreteGamma 4;`DiscreteTheta 4;`Constant])
                 ?(subst_model=[`JC69;`F81;`K2P;`F84;`HKY85;`TN93;`GTR])
                 ?(priors=[`Empirical;`Equal]) ?(gap=`Missing)
-            empirical_priors alphabet : (unit -> spec option) =
+            empirical_priors alphabet : (unit -> s option) =
   let apply_model_delta gap substitution base_priors site_variation =
     let base_priors = match base_priors,empirical_priors with
       | `Empirical, Some x -> Empirical x

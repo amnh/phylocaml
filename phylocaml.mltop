@@ -1,6 +1,5 @@
 lib/Compatibility
 lib/Internal
-lib/Ppf
 lib/Ppl
 
 lib/Topology
@@ -9,8 +8,9 @@ lib/Tree
 lib/Network
 
 lib/Alignment
-lib/MlAlignment
-lib/CmAlignment
+lib/CostMatrix
+lib/MlTcm
+lib/PTcm
 
 lib/Alphabet
 lib/Sequence

@@ -1,6 +1,6 @@
 open Internal
 
-module type AssignCost =
+module type AssignCostMatrix =
   sig
     type cost
     type elt
@@ -10,7 +10,6 @@ module type AssignCost =
     val inf  : model -> cost
 
     val lt : model -> cost -> cost -> bool
-    val gt : model -> cost -> cost -> bool
     val eq : model -> cost -> cost -> bool
     
     val add  : model -> cost -> cost -> cost
@@ -21,11 +20,8 @@ module type AssignCost =
     val assign : model -> elt -> elt -> elt
     val median : model -> elt -> elt -> cost * elt
 
-    val l_cost : cost Ppl.pp_l
-    val l_elt : elt Ppl.pp_l
-
-    val pp_cost : cost Ppf.pp_f
-    val pp_elt : elt Ppf.pp_f
+    val l_cost : model -> cost Ppl.pp_l
+    val l_elt  : model -> elt Ppl.pp_l
   end
 
 module type Alignment =
@@ -41,10 +37,10 @@ module type Alignment =
     val align : mem -> m -> t -> t -> c
     val aligned : m -> t -> t -> c * t
 
-    val l_mem : mem Ppl.pp_l
+    val l_mem : m -> mem Ppl.pp_l
   end
 
-module Common (C:AssignCost) =
+module Common (C:AssignCostMatrix) =
   struct
 
     let min3 m (x,dx) (y,dy) (z,dz) =
@@ -70,7 +66,7 @@ module Common (C:AssignCost) =
   end
 
 
-module FullAlignment (C:AssignCost) =
+module FullAlignment (C:AssignCostMatrix) =
   struct
 
     include Common (C)
@@ -173,9 +169,21 @@ module FullAlignment (C:AssignCost) =
       done;
       fst mem.(xlen-1).(ylen-1)
 
+    let l_mem (model:m) =
+      let l_dir = function
+        | Insert _-> "\\leftarrow"
+        | Delete _-> "\\uparrow"
+        | Align  _-> "\\nwarrow"
+        | Root    -> ""
+      in
+      let l_cost : c Ppl.pp_l = (fun c -> C.l_cost model c) in
+      let l_cell (x,tds) =
+        List.fold_left (fun acc x -> acc^" "^(l_dir x)) (l_cost x) tds
+      in
+      (fun mem -> Ppl.l_matrix l_cell mem)
   end
 
-module UkkAlignment (C:AssignCost) =
+module UkkAlignment (C:AssignCostMatrix) =
   struct
 
     include Common (C)
@@ -393,29 +401,17 @@ module UkkAlignment (C:AssignCost) =
         initial_matrix ();
         fst (mem.mat.((Array.length x)-1).((Array.length y)-1))
 
-    let l_mem (mem : mem) =
+    let l_mem model mem =
       let l_dir = function
         | Insert _-> "\\leftarrow"
         | Delete _-> "\\uparrow"
         | Align  _-> "\\nwarrow"
         | Root    -> ""
       in
+      let l_cost : c Ppl.pp_l = (fun c -> C.l_cost model c) in
       let l_cell (x,(_,tds)) =
-        List.fold_left (fun acc x -> acc^" "^(l_dir x)) (C.l_cost x) tds
+        List.fold_left (fun acc x -> acc^" "^(l_dir x)) (l_cost x) tds
       in
       Ppl.l_matrix l_cell mem.mat
 
-    let pp_mem (f:Format.formatter) (mem:mem) =
-       let pp_dir f = function
-        | Insert _-> Format.pp_print_char f '-'
-        | Delete _-> Format.pp_print_char f '|'
-        | Align  _-> Format.pp_print_char f '\\'
-        | Root    -> Format.pp_print_char f ' '
-      in
-      let pp_cell f (x,(_,tds)) =
-        C.pp_cost f x;
-        Format.pp_print_char f ' ';
-        List.iter (pp_dir f) tds;
-      in
-      Ppf.pp_matrix pp_cell f mem.mat
   end

@@ -37,15 +37,6 @@ let is_nan x = match classify_float x with
 
 (** Additional List functions *)
 
-let traverse_path f acc lst =
-  let rec consume acc x = function
-    | y::ys -> consume (f acc x y) y ys
-    | []    -> acc
-  in
-  match lst with
-  | x::y::xs -> consume (f acc x y) y xs
-  | [_] | [] -> acc
-  
 let random_select n list =
   let rec take i acc = function
     | lst when i = 0 -> rand_select (n+1) (Array.of_list acc) lst
@@ -266,3 +257,4 @@ and ba_to_array2 bray =
     r.(i).(j) <- bray.{i,j};
   done; done;
   r
+

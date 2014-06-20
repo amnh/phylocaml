@@ -3,6 +3,7 @@ open Internal
 (** {2 Definition of an Alphabet} *)
 
 type code = int
+type elt  = int
 
 module CodeMap = Internal.IntMap
 module CodeSet = Internal.IntSet
@@ -54,7 +55,7 @@ let dump a =
       Printf.fprintf chan "%d" x;
       List.iter (Printf.fprintf chan ",%d") xs
   in
-  let print_code_names bits data = 
+  let print_code_names bits data =
     IntMap.iter
       (fun k v ->
         let num_lst =
@@ -73,7 +74,7 @@ let dump a =
         (str_of_ioption a.all) a.orientation;
   in
   match a.kind with
-  | Continuous      ->
+  | Continuous ->
     Printf.printf "Continuous\n%!";
     ()
   | Sequential ->
@@ -165,7 +166,7 @@ let default_missing     = "?"
 
 let default_orientation = "~"
 
-let default_separators  = ["#"; "|"; "@";]
+let default_separators  = ["#"; "|"; "@"; " ";]
 
 let default_containers  = [("{","}"); ("[","]"); ("(",")"); ("<",">");]
 
