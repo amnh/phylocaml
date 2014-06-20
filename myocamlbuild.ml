@@ -100,7 +100,7 @@ let () = dispatch begin function
     List.iter (fun w -> flag ["c";"use_bv"^w] (S (bv_cflags w))) bv_width;
 
     (* declare use_phylocaml and include_phylocaml for the tests, apps, bench *)
-    (* ocaml_lib "phylocaml"; *)
+    ocaml_lib "phylocaml";
 
     (* pre-process compatibility module *)
     let compatibility_options =

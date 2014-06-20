@@ -5,6 +5,8 @@ true : debug, annot, bin_annot
  <lib/bitvector>  : include
  <test>           : include
  <app>            : include
+ <bench>          : include
+ <ext>            : include
 
 # external libraries and c-library linking
  <**/*.{byte,native}> : package(pareto,bigarray,str,num), use_phyloc
@@ -13,6 +15,8 @@ true : debug, annot, bin_annot
 # of testing suite
  <test/**.*>          : package(oUnit), use_phyloc
  <test/testInternal.*>: test
+# of benchmark suite
+<bench/**.*>          : package(Core_bench), use_phyloc
 # of specific files
  "lib/bitvector.ml"   : use_phyloc
  "lib/Sequence_c.ml"  : use_phyloc, package(str)

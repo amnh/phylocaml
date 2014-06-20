@@ -6,7 +6,7 @@ let bls = [ min_float; ~-.1.0;  0.0;  1.0; 100.0; max_float ]
 (* A list if the above bls should compose to a matrix *)
 and bfs = [      true; false; true; true;  true;     false ]
 
-let all_spec : MlModel.spec list =
+let all_spec : MlModel.s list =
   let rec loop_ f acc = match f () with
     | None -> acc
     | Some x -> loop_ f (x::acc)

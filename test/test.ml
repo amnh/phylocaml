@@ -11,7 +11,7 @@ let tests = [
 (** OCaml libraries with C backend *)
 let run_tests_c = false (* Off for now *)
 let tests_c = [
-  MlmodelTest.tests;
+  MlModelTest.tests;
   BitvectorTest.tests;
   SequenceTest.tests;
 ]

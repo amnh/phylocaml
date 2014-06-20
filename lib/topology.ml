@@ -41,6 +41,15 @@ let random_nodemap = random_elt_intmap
 
 let random_handleset = random_elt_intset
 
+let traverse_path f acc lst =
+  let rec consume acc x = function
+    | y::ys -> consume (f x y acc) y ys
+    | []    -> acc
+  in
+  match lst with
+  | x::y::xs -> consume (f x y acc) y xs
+  | [_] | [] -> acc
+  
 module IDManager =
   struct
 

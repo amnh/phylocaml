@@ -83,7 +83,7 @@ type gap =
 
 (** The specification of model; can be modified to re-create a new model and
     provides a one-to-one mapping from model to it's specification. *)
-type spec = {
+type s = {
   substitution : subst_model;
   site_variation : site_var;
   base_priors : priors;
@@ -102,39 +102,39 @@ type vector =
 (** Fully defined model of cost matrices decomposed for easy use and data-types
     presented in a fashion for C exposure. Left abstract, and should only be
     manipulated through the specification. *)
-type model
+type t
 
 
 (** {2 Matrix Diagonalization / Composition Functions} *)
 
 (** [compose] compose a matrix from a model and a branch length. *)
-val compose : model -> float -> matrix
+val compose : t -> float -> matrix
 
 (** [substitution_matrix m t?] return a substitution rate matrix optionally
     multiplied against a branch length [t]. This is the matrix Q in, [P=e^Q*t],
     or [Q*t] if [t] is optionally supplied. *)
-val substitution_matrix : model -> float option -> matrix
+val substitution_matrix : t -> float option -> matrix
 
 (** [integerize_model \sigma m t] Generate a integerized matrix of precision
    [sigma]. This can be used to give speed-ups using alternate methods of
    diagnosis. The diagonal elements under likelihood have cost according to [t]. *)
-val integerized_model : ?sigma:int -> model -> float -> int array array
+val integerized_model : ?sigma:int -> t -> float -> int array array
 
 
 (** {2 Creation and Enumeration functions of Models} *)
 
 (** Create a model from a spec. *)
-val create : spec -> model
+val create : s -> t
 
 (** replace priors in a model with ones given and re-parameterize model if
     necessary (diagonalization, et cetera). *)
-val replace_priors : model -> float array -> model
+val replace_priors : t -> float array -> t
 
 (** replace rate in a model and re-parameterize a model if necesary. *)
-val replace_rates : model -> site_var -> model
+val replace_rates : t -> site_var -> t
 
 (** replace the substitution rate matrix in the model and re-parameterize *)
-val replace_subst : model -> subst_model -> model
+val replace_subst : t -> subst_model -> t
 
 (** Generate a function that enumerates the combinations of substitution models
     and site-rate-variation through lists of variants given and generate a new
@@ -146,7 +146,7 @@ val enum_models :
                  | `Custom of int Internal.IntMap.t * float array] list ->
       ?priors:[`Empirical | `Equal] list ->
         ?gap:[`Missing | `Independent | `Coupled | `Indel] ->
-          float array option -> Alphabet.t -> (unit -> spec option)
+          float array option -> Alphabet.t -> (unit -> s option)
 
 (** [compute_priors (a,g) f (c,gc) ls] compute the priors of data from an array
     of base frequencies [f], but predicated on gap being an additional state we
@@ -159,14 +159,14 @@ val compute_priors :
 (** {2 Query functions of models} *)
 
 (** [get_alphabet] return the alphabet of the specification *)
-val get_alphabet : spec -> Alphabet.t
+val get_alphabet : s -> Alphabet.t
 
 (** [alphabet_size] return the width of the matrices in the model; this includes
    the gap-as-character situation if those options are set. *)
-val alphabet_size : spec -> int
+val alphabet_size : s -> int
 
 (** [num_parameters] return the number of variables used to parameterize the model. *)
-val num_parameters : model -> int
+val num_parameters : t -> int
 
 (** [gamma_rates] return the gamma rate classes generated from alpha, beta and
     number of categories; for testing, but can be used directly. *)
@@ -176,18 +176,18 @@ val gamma_rates : float -> float -> int -> vector
 (** {2 Compare / Higher-Order Data-Types} *)
 
 (** [compare a b] compare model [a] and [b] *)
-val compare : model -> model -> bool
+val compare : t -> t -> bool
 
 (** [MlModelMap] is a map of values implemented from compare function above. *)
-module MlModelMap : Map.S with type key = spec
+module MlModelMap : Map.S with type key = s
 
 (** [MlModelSet] is a set of values implemented from compare function above. *)
-module MlModelSet : Set.S with type elt = spec
+module MlModelSet : Set.S with type elt = s
 
 (** [categorize_by_model] categorize a list of values into lists of differing
     types using the compare function and Map as a container. The function passed
     obtains the model from the passed values for inclusion. *)
-val categorize_by_model : ('a -> model) -> 'a list -> 'a list list
+val categorize_by_model : ('a -> t) -> 'a list -> 'a list list
 
 (** [process_custom_matrix] process data to be used by the Custom model type.
     Create a custom model by a Map and array. The map is of the char code of the
@@ -201,7 +201,7 @@ val process_custom_matrix :
 
 (** [short_name model] gives a short and sweet name of the models initials and
    it's rate information. Like JC69+G (for a jukes-cantor model with gamma). *)
-val short_name : model -> string
+val short_name : t -> string
 
 
 (** {2 Substitution Rate Matrix Estimation} *)
@@ -211,7 +211,7 @@ val short_name : model -> string
 
 (** Create a specification from a classification, and parsed model details. *)
 val process_classification :
-  spec -> float Internal.UnorderedTupleMap.t * float Internal.IntMap.t -> spec
+  s -> float Internal.UnorderedTupleMap.t * float Internal.IntMap.t -> s
 
 
 (* extra functions that do not need to be exposed

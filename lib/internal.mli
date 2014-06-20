@@ -4,6 +4,8 @@
    module is also used to store modules that need a final home or waiting for a
    proper external library replacement during development. *)
 
+(** {6 Module Inclusions} *)
+
 (** The compatibility module allows backwards support to Stdlib changes. *)
 include module type of Compatibility
 
@@ -31,6 +33,7 @@ val flip : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
 
 (** [id z] identity function *)
 val id : 'a -> 'a
+
 
 (** {6 Floating Point Operations} *)
 
@@ -88,7 +91,6 @@ val random_elt_pairset : UnorderedTupleSet.t -> int * int
 
 val array_fold_left2 : ('a -> 'b -> 'c -> 'a) -> 'a -> 'b array -> 'c array -> 'a
 
-val traverse_path : ('a -> 'b -> 'b -> 'a) -> 'a -> 'b list -> 'a
 
 (** {6 BigArray(1,2) Functions on Floats} *)
 
