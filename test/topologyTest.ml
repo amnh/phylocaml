@@ -16,11 +16,11 @@ let tests = "Topology.IDManager" >:::
     assert_equal_int_list [0] hl;
     assert_equal_int 10 h);
 
-  "UnOrdered list of ids with negative value" >::
+(*"UnOrdered list of ids with negative value" >::
   (fun _ctxt ->
     todo "raise proper assertion in library";
     let h,hl = Topology.IDManager.of_list [1;2;0;-1;4;5;6;7;8;9;] in
-    () );
+    () ); *)
 
   "UnOrdered list of ids with a subseq of missing values" >::
   (fun _ctxt ->
