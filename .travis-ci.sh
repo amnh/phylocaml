@@ -2,7 +2,7 @@ OPAM_DEPENDS="ocamlfind ocamlfind ounit pareto"
 APT_DEPENDS="gsl-bin libgsl0-dev liblapack-dev libblas-dev gfortran"
 APT_OCAML="ocaml ocaml-native-compilers camlp4-extra opam aspcud curl"
 
-COVERAGE=1
+COVERAGE=0
 
 case "$OCAML_VERSION,$OPAM_VERSION" in
   4.00.1,1.0.0) ppa=avsm/ocaml40+opam10  ;;
