@@ -2,7 +2,7 @@ OPAM_DEPENDS="ocamlfind ocamlfind ounit pareto"
 APT_DEPENDS="gsl-bin libgsl0-dev liblapack-dev libblas-dev gfortran"
 APT_OCAML="ocaml ocaml-native-compilers camlp4-extra opam aspcud curl"
 
-COVERAGE=0
+COVERAGE=1
 
 case "$OCAML_VERSION,$OPAM_VERSION" in
   4.00.1,1.0.0) ppa=avsm/ocaml40+opam10  ;;
@@ -25,11 +25,11 @@ opam install ${OPAM_DEPENDS} -y
 
 # setup ocverall support via modified bisect
 if [ 1 -eq $COVERAGE ] ; then
-  wget http://sagotch.fr/Bisect.tar.gz
-  tar -xvf Bisect.tar.gz
+  curl -L http://bisect.sagotch.fr | tar -xzf -
   cd Bisect
   chmod +x configure
   ./configure
+  cat Makefile.config
   make all
   sudo make install
   cd ..
@@ -68,7 +68,5 @@ make phylocaml.html
 #      open Phylocaml.Tree;;" > test.ml
 #ocaml test.ml
 
-#make and execute each app in app/ TODO
-#make apps.all
-#make apps.test.native
-#./apps/test.native
+# run benchmarks of phylocaml TODO
+#make and execute each app

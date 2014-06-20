@@ -1,8 +1,8 @@
-PhylOCaml
+Phylocaml
 =========
 A Phylogenetic Library based on a refactoring of [POY](http://code.google.com/p/poy).
 
-The **goal** of *PhylOCaml* is to use the experience from *POY 3/4/5* to develop a
+The **goal** of *Phylocaml* is to use the experience from *POY 3/4/5* to develop a
 library. A major reason for this refactoring is that we need the ability to
 support different types of topologies from our previous implementations.
 Although our utility is to develop a rooted network approach, we believe the
@@ -46,17 +46,17 @@ Optional -
 Installation
 =====================
 
-Currently, there is no configuration step.
+Currently there is no configuration step.
 
 Typing 'make' will initiate native and bytecode compilation of the Phylocaml
-library.  After building, 'make install' will do a findlib installation.  To
-generate the ocamldoc API documentation, use 'make phylocaml.html'.
+library.  After building 'make install' will do a findlib installation.  To
+generate the ocamldoc API documentation use 'make phylocaml.html'.
 
 To remove Phylocaml type 'make uninstall' or it can be done directly via the
-findlib command, 'ocamlfind remove phylocaml'.
+findlib command 'ocamlfind remove phylocaml'.
 
 Installation via OPAM is available by including our opam-repo. This can be added
-via, 'opam repository add AMNH git://github.com/amnh/opam-amnh.git' and then
+via 'opam repository add AMNH git://github.com/amnh/opam-amnh.git' and then
 installing the provided package.
 
 
@@ -66,8 +66,8 @@ Testing Framework
 [![Coverage Status](https://coveralls.io/repos/amnh/phylocaml/badge.png)](https://coveralls.io/r/amnh/phylocaml)
 
 The tests can be built by installing the package and linking, or by compiling it
-directly together. Doing both ensures everything is packaged and installed
-properly. This switch is done with USE\_EXTERNAL\_LINKING pre-processor flag.
+directly. Doing both ensures everything is packaged and installed properly. This
+switch is done with USE\_EXTERNAL\_LINKING pre-processor flag for includes.
 
 The externally linked tests are compiled by,
 
