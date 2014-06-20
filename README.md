@@ -20,11 +20,9 @@ Table of Contents
 + [Dependencies](#dependencies)
 + [Installation](#installation)
 + [Testing Framework](#testing-framework)
-+ [Quick Start](#quick-start)
-  + [Overview of Diagnosis Modules](#overview-of-diagnosis-modules)
-  + [Overview of Search Modules](#overview-of-search-modules)
-  + [Overview of Utility Modules](#overview-of-utility-modules)
-+ [Design Choices and Rationale](#design-choices-and-rationale)
++ [Documentation](#documentation)
++ [Benchmarks](#benchmarks)
++ [Applications](#applications)
 + [Contact Information](#contact-information)
 + [License](#license)
 
@@ -32,13 +30,18 @@ Table of Contents
 Dependencies
 ============
 
+Required -
 + [OCaml](http://ocaml.org) (4.00.1+)
 + [Pareto](http://github.com/superbobry/pareto/)
-+ [GSL](https://bitbucket.org/mmottl/gsl-ocaml)
++ [GSL](https://bitbucket.org/mmottl/gsl-ocaml) (via Pareto)
 + [Findlib](http://projects.camlcity.org/projects/findlib.html)
-+ [OUnit2](http://ounit.forge.ocamlcore.org/) (optional)
-+ [Core\_bench](https://blogs.janestreet.com/ocaml-core/110.01.00/doc/core_bench/) (optional)
-+ [OPAM](http://opam.ocaml.org) (optional)
+
+Optional -
++ [OUnit2](http://ounit.forge.ocamlcore.org/)
++ [Core\_bench](https://blogs.janestreet.com/ocaml-core/110.01.00/doc/core_bench/)
++ [OPAM](http://opam.ocaml.org)
++ [OCamion](http://github.com/amnh/ocamion/)
+
 
 Installation
 =====================
@@ -76,148 +79,42 @@ and the locally linked build is done by,
     make test.native
     ./test.native
 
+
 Documentation
 =================
 
-The documentation (PDF and HTML) is built using ocamlbuild and can be built from,
+The api documentation (PDF and HTML) is built using ocamlbuild and can be built from,
 
     make phylocaml.html
     make phylocaml.tex
     make phylocaml.pdf
 
-
-Quick Start
-===========
-
-Overview of Diagnosis Modules
------------------------------
-
-The diagnosis module contains the abilities to take a topology and node data and
-assign optimal states, model parameters and assign a utility function (cost)
-to the topology.
-
-Currently, in POY 5, we encapsulate this pretty well. There is some leaking with
-modules that do things to very specific data, but they are few and far between.
-This refactoring will be an effort to eliminate this leakage. We believe a
-functor approach of a diagnosis module will be effective. In this way we can
-implement a parallel diagnosis module that can plug into whatever the diagnosis
-module uses (the Search module for example) as well as deal with unforeseen
-issues with networks or more complex topologies in optimizing states.
-
-                                                            +-------+
-       +------------+----------+-------------+----------+---+---+   |
-       | Likelihood | Sequence | NonAdditive | Additive |  Set  |<--+--+
-       +------------+----------+-------------+----------+-------+      |
-                                                                       |
-          +--------------+-----------+         +--------+----------+   |
-          |              | Node      |-------->|        | NodeData |---+
-          |              +-----------+         | Node/  +----------+
-          | Diagnosis    | Topo      |----+    |  Root  | Compare  |
-          |   of Model   +-----------+    |    +--------+----------+
-          |              | Model     |-+  |    +----------+   |
-          +--------------+-----------+ |  +--->| Topology |<--+
-                                       |       +----------+
-                                       |       +----+----+-------+
-                                       +------>| ML | MP | Kolmo |
-                                               +----+----+-------+
-
-           Figure 1. Basic Module dependency diagram of a Diagnosis
+Further developer documentation can be found on the github wiki, and complete examples
+are maintained in the app/ directory.
 
 
-In Figure 1, the diagnosis module (not included in the PhylOCaml package[^3]),
-is dependen on node, topology and model. The topology designates a way to traverse
-the topology, and ptopology attaches data to the nodes and roots. This allows
-separation between structure and gives a common and basic interface to attach
-data to any topology. Topology additionally contains a compare module for
-traversing a topology in a consistent way[^1].
+Benchmarks
+==========
 
-The diagnosis module is dependent on a specific type of Node type because it
-manages the data through the topological manipulations. The Node/Root module is
-a functor itself to apply a previously mentioned compare module and a data
-module that contains all the functions in the optimality criteria (Likelihood,
-Additive, Chromosome, Genome, Sankoff, et cetera) all share a common module
-interface (NodeData). Very close to what we have now with some added components.
+Benchmarks for different implementations of C and OCaml functions, as well as comparisons
+of analogous methods can be found in the bench/ directory. Running,
 
-Nodes can also be abstracted to contain further features --laziness has been
-important, as well as a directional node for un-rooted trees in selecting the
-best downpass assignments to perform an uppass on (each internal node of a
-binary tree has three of these corresponding to each combination of 2 children).
-You can see these implementations in the Node module.
+    make bench
 
-Example code to diagnose a tree with known data taxon data and tree file,
+will produce an entry point for all the benchmarks which can be determined through the
+command,
 
-    module Node = Node.Make3D (Tree.NodeComparator) (SequenceData)
-    module Diag = MPDiagnosis.Make (Node) (Tree)
-    let diagnose_tree taxa_data edges =
-        let nodes = List.map (fun x -> Node.of_data (SequenceData.of_string x)) taxa_data in
-        let tree = PTree.of_parsed edges nodes in
-        let tree = Diag.diagnose tree in
-        Printf.printf "%s:[%d]" (PTree.to_string tree) (Diag.total_cost tree)
+    ./bench --help
+
+The benchmark suite requires Core\_bench.
 
 
-Overview of Search Modules
---------------------------
+Applications
+============
 
-We provide module implementations that support the [OCamion](https://github.com/AMNH/ocamion)
-project, although we do not directly depend on that library --it is thus highly
-recommended to install.
-
-
-Overview of Utility Modules
----------------------------
-
-These are a list of modules that can be composed and used to handle a wide range
-of data for different optimality criterion. These are oft interfaces to C
-data-types and would be scripted to handle floats, doubles, ints, chars, long,
-et cetera to accommodate a changing need. Special casing some would be
-appropriate to add vectorization to the mix, but previous/general
-implementations and pure OCaml implementations would be built for verification
-purposes.
-
-+ CostMatrix - Handles median and cost assignments
-+ Sequence - Handles an ordered continuous set of characters in an alphabet
-+ Align - Algorithms to align sequences 
-+ Alphabet - Handles codes and names association and type of alphabet to
-  generate a cost\_matrix when paired with transformation matrix.
-+ FingerPrinting - Interface to create short tags of data-structures for tabu
-  managers in a search. Not required, else entire topology may be stored and
-  compared, or no tabus implemented. Also can be used for fusing to name
-  potential clades of the topology.
-+ LikelihoodModel - General storage for a likelihood model.
-
-
-Design Choices and Rationale
-============================
-
-+ In nodes containing multiple directions and because of heuristics in
-  diagnosing un-rooted topologies, we need to know which directional node is
-  being queried. This can be done two different ways: by the parent or by the
-  children. This variant type is located in the node module and can be used in
-  any type of node for any topology.
-+ Traversing a topology in a consistent way is important for reproducibility
-  but this particular issue has to do with the ordering in which nodes enter a
-  function to produce the same results. For example, although
-  cost(a,b) = cost(b,a), it does not hold that median(a,b) = median(b,a). This
-  is because the traceback in the alignment matrix when faced with two equally
-  parsimonious alignments, must choose a direction. As these different
-  traversals build up the tree to the root, vastly different assignments and
-  costs can result. The different assignments/costs are correct none-the-less.
-  The final differences are taken care of in the uppass and the assignment
-  functions that optimize the internal states of the topology.
-+ Neighborhoods are defined by a first-class module passed to an enumeration
-  function. This neighborhood module will define how breaks and deltas are
-  generated. Deltas are a series of steps to transform a tree. Break, Join,
-  and re-root currently seem to be the only ones necessary for a full featured
-  neighborhood search, but this can be expanded if other options are needed
-  (for example, optimization of the tree if this doesn't have a place
-  elsewhere in the design of the application). The delta is associated with the
-  diagnosis module so the search can be as abstract as possible.
-+ The NodeComparator is built to generally satisfy the left/right or ordering
-  of children for medians[^1]. The design is abstract and depends on proper
-  functorizing of the node module with the topology. Currently it is not
-  known if this issue will arise with multiple parents in a topology
-  (reticulate nodes of networks), or if there is a better way to allow
-  consistency between functorized modules.
+A number of applications can be found in the app/ directory. These are used as entry
+points for users to experiment initially and to prove the framework we've developed.
+Within that directory is further documentation regarding the individual applications.
 
 
 Contact Information

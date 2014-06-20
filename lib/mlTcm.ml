@@ -1,16 +1,15 @@
+open Internal
 
-module MlCostAssign : Alignment.AssignCost =
+module X : CostMatrix.TCM =
   struct
  
-    type cost  = float
-    type elt   = int
-    type model =
-      { matrix : (float * int) array;
-        indel : elt;
-        model : MlModel.t;
-        (** todo; how to better deal with these branches *)
+    type t =
+      { matrix : MlModel.t;
         branches : float * float;
       }
+ 
+    type cost  = float
+    type elt   = Alphabet.code
 
     let zero _ = 0.0
     and inf  _ = infinity
@@ -21,21 +20,18 @@ module MlCostAssign : Alignment.AssignCost =
 
     and add _ x y = x +. y
 
-    and cost m x y = fst m.matrix.(x).(y)
-    and indel m = m.indel
-    and assign m x y = snd m.matrix.(x).(y)
-    and median m x y = m.matrix.(x).(y)
+    and cost m x y = assert false
+    and assign m x y = assert false
+    and median m x y = assert false
+    and assign_cost m x y = assert false
 
-    let l_cost = string_of_float
-    let l_elt = string_of_int
+    let l_cost _ = string_of_float
+    let l_elt _ = string_of_int
     
-    let pp_cost = Format.pp_print_float
-    let pp_int = Format.pp_print_int
-
-    (** return the minimum cost/median *)
+    (* return the minimum cost/median 
     let get_min_costassign a ti tj i j =
       let cost,asgn =
-        CodeMap.fold
+        Alphabet.CodeMap.fold
           (fun k _ ((ocst,asgn) as acc) ->
             let ncst = ti.(i).(k) +. tj.(j).(k) in
             if ncst =. ocst
@@ -64,6 +60,7 @@ module MlCostAssign : Alignment.AssignCost =
         | Some x -> x
       in
       failwith "not done"
-
+    *)
   end
 
+include X

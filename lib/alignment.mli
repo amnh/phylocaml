@@ -6,9 +6,9 @@
     the Ukkonen module. *)
 
 
-(** {2 AssignCost}
+(** {2 AssignCostMatrix}
     Provides the way that assignments and costs of elements are made *)
-module type AssignCost =
+module type AssignCostMatrix =
   sig
 
     (** {2 Types} *)
@@ -35,9 +35,6 @@ module type AssignCost =
     (** less-than *)
     val lt : model -> cost -> cost -> bool
 
-    (** greater-than *)
-    val gt : model -> cost -> cost -> bool
-
     (** equality *)
     val eq : model -> cost -> cost -> bool
 
@@ -62,11 +59,8 @@ module type AssignCost =
 
     (** {2 Pretty Printing / IO} *)
    
-    val l_cost : cost Ppl.pp_l
-    val l_elt : elt Ppl.pp_l
-
-    val pp_cost : cost Ppf.pp_f
-    val pp_elt : elt Ppf.pp_f
+    val l_cost : model -> cost Ppl.pp_l
+    val l_elt  : model -> elt Ppl.pp_l
   end
 
 
@@ -78,10 +72,10 @@ module type Alignment =
     (** Type of an aligned data-type *)
     type t 
 
-    (** Model for alignment; abstract from AssignCost *)
+    (** Model for alignment; abstract from AssignCostMatrix *)
     type m
 
-    (** Cost of alignment; abstract from AssignCost *)
+    (** Cost of alignment; abstract from AssignCostMatrix *)
     type c
 
     (** Memory storage for alignment; how is alignment stored to obtain
@@ -106,12 +100,12 @@ module type Alignment =
 
     (** Prints the memory, and thus the internal states and alignment directions 
         in latex consumable format. *)
-    val l_mem : mem Ppl.pp_l
+    val l_mem : m -> mem Ppl.pp_l
   end
 
 
 (** Uses a full alignment matrix to align two sequences. *)
-module FullAlignment : functor (C : AssignCost) ->
+module FullAlignment : functor (C : AssignCostMatrix) ->
   sig
     include Alignment
     val create_mem : m -> t -> t -> mem
@@ -120,7 +114,7 @@ module FullAlignment : functor (C : AssignCost) ->
 (** Uses the Ukkonen algorithm to limit the number of cells to compute. [k] is
    the initial width of the barrier in addition to the length difference of the
    sequences to initiate the memory. *)
-module UkkAlignment : functor (C : AssignCost) ->
+module UkkAlignment : functor (C : AssignCostMatrix) ->
   sig
     include Alignment
     val create_mem : k:int -> m -> t -> t -> mem
