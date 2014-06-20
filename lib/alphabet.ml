@@ -20,7 +20,7 @@ type kind =
   | Continuous
   | CombinationLevels of int
 
-  (*
+(*
 type symbols = {
   gap : string;
   missing : string;

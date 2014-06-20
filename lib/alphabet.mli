@@ -16,8 +16,8 @@ type combinations =
     set_comb : code CodeSetMap.t;
  }
 
-(** Record of default characters for parsing.
-type symbols = {
+(** Record of default characters for parsing. *)
+(* type symbols = {
   gap : string;
   missing : string;
   orientation : string;
