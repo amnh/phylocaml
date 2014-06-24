@@ -97,9 +97,10 @@ let get_singles t : IDSet.t =
 let get_handles t = t.handles
 
 let get_edge a b t =
-  if EdgeSet.mem (a,b) t.edges
-    then (a,b)
-    else raise Not_found (* TODO *)
+  let normalized = min a b, max a b in
+  if EdgeSet.mem (a,b) t.edges || EdgeSet.mem (b,a) t.edges
+    then normalized
+    else raise Not_found (* todo *)
 
 let get_node a t =
   IDMap.find a t.nodes

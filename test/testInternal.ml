@@ -45,3 +45,7 @@ let assert_equal_tree =
   and cmp a b = 0 = (Tree.compare a b) in
   OUnit2.assert_equal ~printer ~cmp
 
+let assert_equal_tuple ?(container=("[","]")) ?(sep=",") to_string =
+  let printer (a,b) = (fst container) ^ (to_string a) ^ sep ^ (to_string b) ^ (snd container)
+  and cmp (a,b) (x,y) = a=x && b=y in
+  OUnit2.assert_equal ~printer ~cmp

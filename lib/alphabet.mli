@@ -205,8 +205,6 @@ val to_level : int -> t -> t
 (** {2 Debugging} *)
 
 (** Prints basic information of the alphabet. *)
-val dump : t -> unit
-
 val pp_alphabet : Format.formatter -> t -> unit
 
 

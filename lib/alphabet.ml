@@ -43,58 +43,6 @@ type t =
     orientation : bool;
   }
 
-let dump a =
-  let str_of_ioption = function
-    | None   -> "none"
-    | Some x -> string_of_int x
-  and pp_ilst chan = function
-    | [] -> ()
-    | [x] ->
-      Printf.fprintf chan "%d" x
-    | x::xs ->
-      Printf.fprintf chan "%d" x;
-      List.iter (Printf.fprintf chan ",%d") xs
-  in
-  let print_code_names bits data =
-    IntMap.iter
-      (fun k v ->
-        let num_lst =
-          if bits then BitSet.to_list (`Packed k) else [k]
-        and cmp_lst =
-          try let cmp = IntMap.find k a.compliment in
-              if bits then BitSet.to_list (`Packed cmp) else [cmp]
-          with _ -> []
-        in
-        Printf.printf "\t%s -- {%a} -- comp:{%a}\n"
-                      v pp_ilst num_lst pp_ilst cmp_lst)
-      data;
-  and print_header () = 
-    Printf.printf "Size: %d, Gap:%s, Missing:%s, All:%s, Orientation:%B\n%!"
-        (CodeSet.cardinal a.atomic) (str_of_ioption a.gap) (str_of_ioption a.missing)
-        (str_of_ioption a.all) a.orientation;
-  in
-  match a.kind with
-  | Continuous ->
-    Printf.printf "Continuous\n%!";
-    ()
-  | Sequential ->
-    Printf.printf "Sequential :\n%!";
-    print_header ();
-    print_code_names false a.code_name;
-    ()
-  | BitFlag ->
-    Printf.printf "BitFlag:\n%!";
-    print_header ();
-    print_code_names true a.code_name;
-    ()
-  | CombinationLevels l ->
-    Printf.printf "Combination Level %d:\n%!" l;
-    print_header ();
-    IntMap.iter
-      (fun k vset ->
-        Printf.printf "\t%d -- {%a} -- comp:{}\n" k pp_ilst (IntSet.elements vset))
-      a.comb_data.comb_set;
-    ()
 
 (** {2 Error Module} *)
 
