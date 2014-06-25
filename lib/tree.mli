@@ -222,10 +222,3 @@ val num_rooted_trees : Num.num -> Num.num
 val pp_node : Format.formatter -> node -> unit
 
 val pp_tree : Format.formatter -> t -> unit
-
-(** {2 Debug Functions}
-    These functions should not be used in production code and are for diagnosing
-    issue with this module, and modules that use these functions. *)
-
-val dump : (string -> unit) -> t -> unit
-

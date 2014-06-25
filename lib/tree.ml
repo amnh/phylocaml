@@ -37,22 +37,6 @@ let empty =
     avail_codes = IDManager.empty;
   }
 
-let dump output t =
-  let outputf format = Printf.ksprintf (output) format in
-  outputf "Handles : ";
-  HandleSet.iter (fun a -> outputf "H(%d) " a) t.handles;
-  outputf "\nEdges : ";
-  EdgeSet.iter (fun (a,b) -> outputf "(%d,%d) " a b) t.edges;
-  outputf "\nNodes : ";
-  IDMap.iter
-    (fun _ -> function
-      | Leaf (a,b) -> outputf "L(%d,%d) " a b
-      | Interior (a,b,c,d) -> outputf "N(%d,%d,%d,%d) " a b c d
-      | Single a -> outputf "S(%d) " a)
-    t.nodes;
-  outputf "\n";
-  ()
-
 let is_edge x y t = EdgeSet.mem (x,y) t.edges
 
 let is_node x t = IDMap.mem x t.nodes
@@ -97,10 +81,7 @@ let get_singles t : IDSet.t =
 let get_handles t = t.handles
 
 let get_edge a b t =
-  let normalized = min a b, max a b in
-  if EdgeSet.mem (a,b) t.edges || EdgeSet.mem (b,a) t.edges
-    then normalized
-    else raise Not_found (* todo *)
+  if is_edge a b t then (a,b) else raise Not_found
 
 let get_node a t =
   IDMap.find a t.nodes

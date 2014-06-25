@@ -40,7 +40,7 @@ let assert_equal_num =
 let assert_equal_tree =
   let printer x =
     let b = Buffer.create 100 in
-    let () = Tree.dump (Buffer.add_string b) x in
+    let () = Tree.pp_tree (Format.formatter_of_buffer b) x in
     Buffer.contents b
   and cmp a b = 0 = (Tree.compare a b) in
   OUnit2.assert_equal ~printer ~cmp

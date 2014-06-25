@@ -49,12 +49,6 @@ let tests = "Tree" >:::
     assert_equal_int 17 (EdgeSet.cardinal (Tree.get_all_edges tree));
     ());
 
-  "Get Tree Edge" >::
-  (fun _ctxt ->
-    let tree = Tree.random (0 -- 9) in
-    let (x,y) = Tree.random_edge tree in
-    assert_equal_tuple string_of_int (Tree.get_edge x y tree) (Tree.get_edge y x tree));
-
   "Disjoint Tree property cardinalites" >::
   (fun _ctxt ->
     let tree = Tree.random (0 -- 9) |> Tree.disjoint in
