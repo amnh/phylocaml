@@ -3,7 +3,7 @@ module type TCM =
   sig
     type t
     type cost
-    type elt = Alphabet.code
+    type elt
 
     val zero : t -> cost
     val inf : t -> cost
@@ -45,12 +45,12 @@ module Error =
 
 exception Error of Error.t
 
-module Make (M:TCM) : CM =
+module Make (M:TCM with type elt = Alphabet.code) : CM =
   struct
 
     type spec = M.t
     type cost = M.cost
-    type elt  = Alphabet.code
+    type elt  = M.elt
 
     type model =
       { cost_matrix   : cost array array;
@@ -64,7 +64,7 @@ module Make (M:TCM) : CM =
       let () =
         for i = 0 to size - 1 do for j = 0 to size-1 do
           let cost,assign = M.assign_cost t.specification i j in
-          t.cost_matrix.(i).(j) <- cost;
+          t.cost_matrix.(i).(j)   <- cost;
           t.assign_matrix.(i).(j) <- Alphabet.choose_polymorphism assign t.alphabet;
         done done
       in
@@ -106,12 +106,12 @@ module Make (M:TCM) : CM =
   end
 
 
-module MakeLazy (M:TCM) : CM =
+module MakeLazy (M:TCM with type elt = Alphabet.code) : CM =
   struct
 
     type spec = M.t
     type cost = M.cost
-    type elt  = Alphabet.code
+    type elt  = M.elt
 
     type model =
       { cost_matrix   : (elt * elt, cost) Hashtbl.t;

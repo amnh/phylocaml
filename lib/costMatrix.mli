@@ -8,14 +8,14 @@
 module type TCM =
   sig
 
-    (** t defines a storage model *)
+    (** t defines transformation cost matrix *)
     type t
 
     (** type for cost; float, int, vector, .. *)
     type cost
 
-    (** the type for assignments; currently an alphabet code *)
-    type elt = Alphabet.code
+    (** the type for assignments *)
+    type elt
 
     (** The zero value for cost; this is parameterized by the model, but will
         more often than not be unnecessary. *)
@@ -66,11 +66,11 @@ exception Error of Error.t
 
 (** [Make] produces cost matrices that are fully realized as they are created.
     This can be time consuming, but quicker if they are used often enough. *)
-module Make : functor (M : TCM) -> CM
+module Make : functor (M : TCM with type elt = Alphabet.code) -> CM
 
 (** [MakeLazy] produces a memoized cost-matrix, as elements costs or assignments
     are queried they are added to the table. We also use Hashtbls to limit the
     overall space. This can be used when only a few transformations may be
     needed in the usage of the cost-matrix. *)
-module MakeLazy : functor (M : TCM) -> CM
+module MakeLazy : functor (M : TCM with type elt = Alphabet.code) -> CM
 

@@ -64,14 +64,14 @@ test :
 
 # -----------------------------------
 
-clean :
-	rm -f *.native *.byte *.top
-	$(BUILD) -clean
-
-distclean : clean
+distclean :
 	cd bench && $(MAKE) clean
 	cd test && $(MAKE) clean
 	cd app && $(MAKE) clean
+
+clean : distclean
+	rm -f *.native *.byte *.top
+	$(BUILD) -clean
 
 # -----------------------------------
 
