@@ -1,3 +1,5 @@
+open Internal
+
 module X : CostMatrix.TCM =
   struct
  
