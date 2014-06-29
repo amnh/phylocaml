@@ -6,6 +6,7 @@ let tests = [
   AlphabetTest.tests;
   TreeTest.tests;
   TopologyTest.tests;
+  CostMatrixTest.tests;
 ]
 
 (** OCaml libraries with C backend *)

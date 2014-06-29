@@ -34,6 +34,9 @@ val flip : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
 (** [id z] identity function *)
 val id : 'a -> 'a
 
+(** [take n l] take at most [n] elements from a list [l] *)
+val take : int -> 'a list -> 'a list
+
 
 (** {6 Floating Point Operations} *)
 
@@ -126,10 +129,8 @@ module BitSet :
   sig
     type t = [`List of int list | `Packed of int | `Set of IntSet.t]
     val empty : t
-    val add : t -> int -> t
-    val rem : t -> int -> t
-    val of_list : int list -> t
-    val of_int : int -> t
+    val add : int -> t -> t
+    val rem : int -> t -> t
     val to_packed : t -> int
     val to_list :  t -> IntSet.elt list
     val to_set : t -> IntSet.t

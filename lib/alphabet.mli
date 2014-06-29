@@ -39,7 +39,7 @@ type kind =
 (** An alphabet stores the character codes, states, their compliments, the type
     of alphabet and some other basic information. comb_set/set_comb are used in
     sequential alphabets only, to be used to associate a sequential state to
-    a set of sequential states that cannot be transformed easily (unlike bitsets). *)
+    a set of sequential states that cannot be transformed easily (unlike bitflag). *)
 type t =
   { kind      : kind;         (** Type of the alphabet *)
     atomic    : CodeSet.t;    (** Return a set of the atomic elements *)
@@ -100,7 +100,7 @@ val get_name : code -> t -> string
 val is_statebased : t -> bool
 
 (** Return if the alphabet is bit identified. *)
-val is_bitset : t -> bool
+val is_bitflag : t -> bool
 
 (** Get the compliment of the character code *)
 val complement : code -> t -> code option
@@ -124,14 +124,15 @@ val get_combination : code -> t -> CodeSet.t
 val get_state_combination : CodeSet.t -> t -> code option
 
 (** Take a set of states and return a single state that represents their
-    combination if they exist within the alphabet. *)
-val compress_polymorphisms : code list -> t -> code option
+    combination if they exist within the alphabet. If the combination extends
+    beyond the number of combinations allowed within the polymorphism, we take
+    the largest (in number of states represented) minimal (based on ordering
+    of the states) set. *)
+val compress_polymorphisms : code list -> t -> code
 
-(** Take a set of states and return a single state that represents their
-    combination, if the combination extends beyond the number of combinations
-    allowed within the polymorphism, we take the largest (in number of
-    states represented) minimal (based on ordering of the states) set. *)
-val choose_polymorphism : code list -> t -> code
+(** Take a set of states and return a list of states that represents their
+    combination. *)
+val explode_polymorphisms : code list -> t -> code list
 
 
 (** {2 Creating alphabets} *)
@@ -189,7 +190,7 @@ val to_bitflag : t -> t
 val simplify : t -> t
 
 (** Convert the alphabet to one with levels; this generates polymorphisms and
-    codes under non-bitset situations. *)
+    codes under non-bitflag situations. *)
 val to_level : int -> t -> t
 
 
@@ -245,7 +246,7 @@ module Error : sig
       (** Character code not found in alphabet *)
     | `Alphabet_Size_Too_Large_For_BitFlag of int
       (** If the alphabet size is too large to convert to bitflags. *)
-    | `Insufficient_Level_To_Represent_States of int * Internal.IntSet.t
+    | `Insufficient_Level_To_Represent_States of int * CodeSet.t
       (** If the state is out of range of the level *)
   ]
 

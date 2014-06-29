@@ -21,6 +21,10 @@ let ( -- ) a b =
   if a <= b then iter [] a b
   else List.rev @@ iter [] b a
 
+let rec take n lst = match n, lst with
+  | 0, _     -> []
+  | _, []    -> []
+  | n, x::xs -> x :: take (n-1) xs
 
 (** Additional Option type functions *)
 
@@ -161,20 +165,39 @@ module BitSet =
   struct
     type t = [ `List of int list | `Packed of int | `Set of IntSet.t ]
 
-    let add _ _ = failwith "TODO"
+    let mem t i = match t with
+      | `List x   -> List.mem i x
+      | `Packed x -> 1 = (x land (1 lsl i))
+      | `Set x    -> IntSet.mem i x
 
-    and rem _ _ = failwith "TODO"
+    let add i t =
+      if mem t i
+        then t
+        else match t with
+          | `Packed x -> `Packed (x lor (1 lsl i))
+          | `List   x -> `List   (i :: x)
+          | `Set    x -> `Set    (IntSet.add i x)
+
+    and rem i t =
+      if mem t i 
+        then match t with
+          | `List x -> `List (i::x)
+          | `Set x  -> `Set (IntSet.remove i x)
+          | `Packed x -> `Packed (x lxor (1 lsl i))
+        else 
+          t
 
     and empty = `Packed 0
 
-    and of_list _ = failwith "TODO"
-
-    and of_int _ = failwith "TODO"
-
-    let to_packed t : int = match t with
-      | `List _   -> failwith "TODO"
-      | `Packed i -> i
-      | `Set _    -> failwith "TODO"
+    let to_packed t : int =
+      let r = match t with
+        | `List x   -> List.fold_right add x empty
+        | `Packed i -> t
+        | `Set x    -> IntSet.fold add x empty
+      in
+      match r with
+      | `Packed x -> x
+      | _         -> assert false
 
     and to_list t = match t with
       | `List t   -> t
@@ -193,14 +216,13 @@ module BitSet =
 
     and to_set t = match t with
       | `Set s    -> s
-      | `List t   ->
-        List.fold_left (fun acc x -> IntSet.add x acc) IntSet.empty t
+      | `List t   -> List.fold_left (fun acc x -> IntSet.add x acc) IntSet.empty t
       | `Packed i ->
         let rec set_of_int acc j i =
           if i = 0 then
             acc
           else if (i land (1 lsl j)) > 0 then
-            set_of_int (IntSet.add j acc) (j+1) i
+            set_of_int (IntSet.add j acc) (j+1) (i lxor (1 lsl j))
           else
             set_of_int acc (j+1) i
         in

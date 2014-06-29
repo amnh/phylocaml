@@ -8,8 +8,8 @@
 module type TCM =
   sig
 
-    (** t defines transformation cost matrix *)
-    type t
+    (** t defines transformation cost matrix; contains alphabet *)
+    type spec
 
     (** type for cost; float, int, vector, .. *)
     type cost
@@ -17,31 +17,35 @@ module type TCM =
     (** the type for assignments *)
     type elt
 
+    (** A way to obtain an alphabet from the specification *)
+    val get_alphabet : spec -> Alphabet.t
+
     (** The zero value for cost; this is parameterized by the model, but will
         more often than not be unnecessary. *)
-    val zero : t -> cost
+    val zero : spec -> cost
 
     (** The infinity or large value; this is parameterized by the model, but
         will more often than not be unnecessary. *)
-    val inf : t -> cost
+    val inf : spec -> cost
 
     (** {2 Ordering Functions} **)
 
-    val lt : t -> cost -> cost -> bool
-    val eq : t -> cost -> cost -> bool
+    val lt : spec -> cost -> cost -> bool
+    val eq : spec -> cost -> cost -> bool
 
 
-    (** {2 Functions of Minimization} *)
+    (** {2 Functions of Minimization / Assignment} *)
 
-    val add : t -> cost -> cost -> cost
-    val assign : t -> elt -> elt -> elt list
-    val cost : t -> elt -> elt -> cost
-    val assign_cost : t -> elt -> elt -> cost * elt list
+    val add : spec -> cost -> cost -> cost
+    val assign : spec -> elt -> elt -> elt list
+    val cost : spec -> elt -> elt -> cost
+    val assign_cost : spec -> elt -> elt -> cost * elt list
+    val compress : spec -> elt list -> elt
 
     (** {2 I/O} *)
 
-    val l_cost : t -> cost Ppl.pp_l
-    val l_elt : t -> elt Ppl.pp_l
+    val l_cost : spec -> cost Ppl.pp_l
+    val l_elt : spec -> elt Ppl.pp_l
   end
 
 module type CM =
@@ -50,7 +54,7 @@ module type CM =
 
     type spec
 
-    val create : spec -> Alphabet.t -> model
+    val create : spec -> model
   end
 
 module Error :
@@ -66,11 +70,13 @@ exception Error of Error.t
 
 (** [Make] produces cost matrices that are fully realized as they are created.
     This can be time consuming, but quicker if they are used often enough. *)
-module Make : functor (M : TCM with type elt = Alphabet.code) -> CM
+module Make (M : TCM with type elt = Alphabet.code)
+          : CM with type spec = M.spec and type cost = M.cost and type elt  = M.elt
 
 (** [MakeLazy] produces a memoized cost-matrix, as elements costs or assignments
     are queried they are added to the table. We also use Hashtbls to limit the
     overall space. This can be used when only a few transformations may be
     needed in the usage of the cost-matrix. *)
-module MakeLazy : functor (M : TCM with type elt = Alphabet.code) -> CM
+module MakeLazy (M : TCM with type elt = Alphabet.code)
+          : CM with type spec = M.spec and type cost = M.cost and type elt  = M.elt
 

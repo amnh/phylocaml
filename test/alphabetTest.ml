@@ -78,6 +78,27 @@ let tests =
       let () = assert_equal 1 (Alphabet.CodeSet.cardinal (Alphabet.get_combination  25 a)) in
       ());
 
+    "Compare two alphabet elements" >::
+    (fun _ctxt ->
+      let a = Alphabet.generate_seq_alphabet 15 |> Alphabet.to_bitflag in
+      let b = Alphabet.generate_seq_alphabet 15 in
+      assert_bool "Sequential and bitflag alphabets are the same"
+                  @@ Alphabet.compare_elts a b);
+
+    "Compare two of the same generated alphabets" >::
+    (fun _ctxt ->
+      let a = Alphabet.generate_seq_alphabet 15 in
+      let b = Alphabet.generate_seq_alphabet 15 in
+      assert_bool "Two generated Sequential alphabets are the same"
+                  @@ Alphabet.compare_elts a b);
+
+    "Two different kinded alphabets are not the same" >::
+    (fun _ctxt ->
+      let a = Alphabet.generate_seq_alphabet 15 in
+      let b = Alphabet.generate_seq_alphabet 15 |> Alphabet.to_bitflag in
+      assert_bool "Two generated Sequential alphabets are the same"
+                  @@ not (Alphabet.compare a b));
+
 (*  "Duplicate elements" >::
        (fun _ctxt ->
           let states =
@@ -102,5 +123,5 @@ let tests =
         Alphabet.bitflag_alphabet ~states ~equates:[] ~orientation:false
                   ~case:false ~gap:None ~all:None ~missing:None |> ignore
       in
-      assert_raises (Alphabet.Error (`Illegal_Character "00")) fnc)
+      assert_raises (Alphabet.Error (`Illegal_Character "00")) fnc);
   ]

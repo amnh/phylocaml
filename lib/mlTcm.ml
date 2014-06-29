@@ -3,13 +3,16 @@ open Internal
 module X : CostMatrix.TCM =
   struct
  
-    type t =
+    type spec =
       { matrix : MlModel.t;
         branches : float * float;
+        alphabet : Alphabet.t;
       }
  
     type cost  = float
     type elt   = Alphabet.code
+    
+    let get_alphabet spec = spec.alphabet
 
     let zero _ = 0.0
     and inf  _ = infinity
@@ -24,6 +27,8 @@ module X : CostMatrix.TCM =
     and assign m x y = assert false
     and median m x y = assert false
     and assign_cost m x y = assert false
+
+    and compress m e = Alphabet.compress_polymorphisms e @@ get_alphabet m
 
     let l_cost _ = string_of_float
     let l_elt _ = string_of_int

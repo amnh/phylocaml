@@ -413,7 +413,7 @@ let cmp_num_not_gap seq alph =
 *)
 
 let gap_saturation seq alph =
-  assert( Alphabet.is_bitset alph );
+  assert( Alphabet.is_bitflag alph );
   match alph.Alphabet.gap with
   | None -> 0.0
   | Some gap ->
@@ -426,7 +426,7 @@ let gap_saturation seq alph =
 let poly_saturation sequence alph n =
   let len = length sequence
   and poly =
-    if Alphabet.is_bitset alph then
+    if Alphabet.is_bitflag alph then
       fold_left
         (fun acc base ->
           if n = BitSet.size (`Packed base) then acc + 1 else acc) 0 sequence

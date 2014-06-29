@@ -1,22 +1,25 @@
 
 module type TCM =
   sig
-    type t
+    type spec
     type cost
     type elt
 
-    val zero : t -> cost
-    val inf : t -> cost
-    val lt : t -> cost -> cost -> bool
-    val eq : t -> cost -> cost -> bool
-    val add  : t -> cost -> cost -> cost
+    val get_alphabet : spec -> Alphabet.t
 
-    val assign : t -> elt -> elt -> elt list
-    val cost : t -> elt -> elt -> cost
-    val assign_cost :  t -> elt -> elt -> cost * elt list
+    val zero : spec -> cost
+    val inf : spec -> cost
+    val lt : spec -> cost -> cost -> bool
+    val eq : spec -> cost -> cost -> bool
+    val add : spec -> cost -> cost -> cost
 
-    val l_cost : t -> cost Ppl.pp_l
-    val l_elt  : t -> elt Ppl.pp_l
+    val assign : spec -> elt -> elt -> elt list
+    val cost : spec -> elt -> elt -> cost
+    val assign_cost : spec -> elt -> elt -> cost * elt list
+    val compress : spec -> elt list -> elt
+
+    val l_cost : spec -> cost Ppl.pp_l
+    val l_elt  : spec -> elt Ppl.pp_l
   end
 
 module type CM =
@@ -25,7 +28,7 @@ module type CM =
 
     type spec
 
-    val create : spec -> Alphabet.t -> model
+    val create : spec -> model
   end
 
 
@@ -45,10 +48,10 @@ module Error =
 
 exception Error of Error.t
 
-module Make (M:TCM with type elt = Alphabet.code) : CM =
+module Make (M:TCM with type elt = Alphabet.code) =
   struct
 
-    type spec = M.t
+    type spec = M.spec
     type cost = M.cost
     type elt  = M.elt
 
@@ -56,7 +59,6 @@ module Make (M:TCM with type elt = Alphabet.code) : CM =
       { cost_matrix   : cost array array;
         assign_matrix : elt array array;
         specification : spec;
-        alphabet      : Alphabet.t;
         indel         : elt;
       }
 
@@ -65,12 +67,13 @@ module Make (M:TCM with type elt = Alphabet.code) : CM =
         for i = 0 to size - 1 do for j = 0 to size-1 do
           let cost,assign = M.assign_cost t.specification i j in
           t.cost_matrix.(i).(j)   <- cost;
-          t.assign_matrix.(i).(j) <- Alphabet.choose_polymorphism assign t.alphabet;
+          t.assign_matrix.(i).(j) <- M.compress t.specification assign;
         done done
       in
       ()
 
-    let create model alphabet =
+    let create model =
+      let alphabet = M.get_alphabet model in
       let size = match alphabet.Alphabet.kind with
         | Alphabet.BitFlag             -> 1 lsl (Alphabet.size alphabet)
         | Alphabet.Sequential          -> Alphabet.size alphabet
@@ -83,7 +86,7 @@ module Make (M:TCM with type elt = Alphabet.code) : CM =
         | None   -> raise (Error (`Alphabet_Does_Not_Contain_Gap alphabet))
         | Some x -> x
       in
-      let t = {cost_matrix; assign_matrix; specification = model; alphabet; indel;} in
+      let t = {cost_matrix; assign_matrix; specification = model; indel;} in
       let () = fill_cm size t in
       t
 
@@ -106,10 +109,10 @@ module Make (M:TCM with type elt = Alphabet.code) : CM =
   end
 
 
-module MakeLazy (M:TCM with type elt = Alphabet.code) : CM =
+module MakeLazy (M:TCM with type elt = Alphabet.code) =
   struct
 
-    type spec = M.t
+    type spec = M.spec
     type cost = M.cost
     type elt  = M.elt
 
@@ -117,11 +120,11 @@ module MakeLazy (M:TCM with type elt = Alphabet.code) : CM =
       { cost_matrix   : (elt * elt, cost) Hashtbl.t;
         assign_matrix : (elt * elt, elt) Hashtbl.t;
         specification : spec;
-        alphabet      : Alphabet.t;
         indel         : elt;
       }
 
-    let create model alphabet =
+    let create model =
+      let alphabet = M.get_alphabet model in
       let size = match alphabet.Alphabet.kind with
         | Alphabet.BitFlag             -> 1 lsl (Alphabet.size alphabet)
         | Alphabet.Sequential          -> Alphabet.size alphabet
@@ -133,7 +136,7 @@ module MakeLazy (M:TCM with type elt = Alphabet.code) : CM =
         | None   -> raise (Error (`Alphabet_Does_Not_Contain_Gap alphabet))
         | Some x -> x
       in
-      {cost_matrix; assign_matrix; specification = model; alphabet; indel;}
+      {cost_matrix; assign_matrix; specification = model; indel;}
 
     (** extend to match [Alignment.AssignCostMatrix] *)
     let zero t = M.zero t.specification
@@ -150,7 +153,7 @@ module MakeLazy (M:TCM with type elt = Alphabet.code) : CM =
         then Hashtbl.find t.assign_matrix (i,j)
         else begin
           let cost,assign = M.assign_cost t.specification i j in
-          let assign = Alphabet.choose_polymorphism assign t.alphabet in
+          let assign =  M.compress t.specification assign in
           Hashtbl.add t.cost_matrix (i,j) cost;
           Hashtbl.add t.assign_matrix (i,j) assign;
           assign
@@ -161,7 +164,7 @@ module MakeLazy (M:TCM with type elt = Alphabet.code) : CM =
         then Hashtbl.find t.cost_matrix (i,j)
         else begin
           let cost,assign = M.assign_cost t.specification i j in
-          let assign = Alphabet.choose_polymorphism assign t.alphabet in
+          let assign =  M.compress t.specification assign in
           Hashtbl.add t.cost_matrix (i,j) cost;
           Hashtbl.add t.assign_matrix (i,j) assign;
           cost

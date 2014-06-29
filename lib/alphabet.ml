@@ -63,7 +63,7 @@ module Error = struct
     | `Illegal_Character of string
     | `Illegal_Code of int
     | `Alphabet_Size_Too_Large_For_BitFlag of int
-    | `Insufficient_Level_To_Represent_States of int * IntSet.t
+    | `Insufficient_Level_To_Represent_States of int * CodeSet.t
   ]
 
   let to_string = function
@@ -98,7 +98,7 @@ module Error = struct
     | `Alphabet_Size_Too_Large_For_BitFlag x ->
       Printf.sprintf "The alphabet of %d elements is too large to convert to bit-flags" x
     | `Insufficient_Level_To_Represent_States (level, set) -> 
-      Printf.sprintf "The state combination of %d is too large represent a state in level %d" (IntSet.cardinal set) level
+      Printf.sprintf "The state combination of %d is too large represent a state in level %d" (CodeSet.cardinal set) level
 end
 
 exception Error of Error.t
@@ -128,44 +128,44 @@ let default_symbols =
 *)
 
 let empty_comb_data =
-  { comb_set = IntMap.empty; set_comb = IntSetMap.empty; }
+  { comb_set = CodeMap.empty; set_comb = CodeSetMap.empty; }
 
 (** {2 Combination Functions} *)
 
 let generate_combinational_elements ~level codes =
   let incr r = incr r; !r in
   let cross_product map1 map2 k =
-    IntMap.fold
+    CodeMap.fold
       (fun _ v1 ->
-        IntMap.fold
-          (fun _ v2 -> IntMap.add (incr k) (IntSet.union v1 v2))
+        CodeMap.fold
+          (fun _ v2 -> CodeMap.add (incr k) (CodeSet.union v1 v2))
           map2)
       map1
-      IntMap.empty
+      CodeMap.empty
   and inverse map =
-    IntMap.fold (fun k v -> IntSetMap.add v k) map IntSetMap.empty
+    CodeMap.fold (fun k v -> CodeSetMap.add v k) map CodeSetMap.empty
   and merge_maps =
-    IntMap.merge
+    CodeMap.merge
       (fun _ v1 v2 -> match v1,v2 with
         | None, None | Some _, Some _ -> assert false
         | None, ((Some _) as x)
         | ((Some _) as x), None -> x)
   in
-  let l = Array.make level IntMap.empty in
-  l.(0) <- IntMap.fold (fun i _ a -> IntMap.add i (IntSet.singleton i) a)
-                       codes IntMap.empty;
-  let code = ref (fst @@ IntMap.max_binding l.(0)) in
+  let l = Array.make level CodeMap.empty in
+  l.(0) <- CodeMap.fold (fun i _ a -> CodeMap.add i (CodeSet.singleton i) a)
+                       codes CodeMap.empty;
+  let code = ref (fst @@ CodeMap.max_binding l.(0)) in
   for i = 1 to level-1 do
     l.(i) <- cross_product l.(0) l.(i-1) code
   done;
-  let comb_set = Array.fold_left merge_maps IntMap.empty l in
+  let comb_set = Array.fold_left merge_maps CodeMap.empty l in
   comb_set, inverse comb_set
 
 (** Tests any number of things to verify the integrity of an alphabet *)
 let verify_alphabet a : unit =
   let () = match a.gap with
     | None -> ()
-    | Some x when IntMap.mem x a.code_name -> ()
+    | Some x when CodeMap.mem x a.code_name -> ()
     | Some x -> raise (Error (`Missing_Gap_Element x))
   in
   match a.kind with
@@ -225,9 +225,9 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
         let v = combine_equates comb_data name_code vs in
         let name_code = StringMap.add k v name_code
         and code_name =
-          if IntMap.mem v code_name
+          if CodeMap.mem v code_name
             then code_name 
-            else IntMap.add v k code_name
+            else CodeMap.add v k code_name
         in
         name_code,code_name)
       (name_code,code_name)
@@ -242,8 +242,8 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
           let x = try StringMap.find x name_code
                   with Not_found -> raise (Error (`Illegal_Character x))
           in
-          IntMap.add k x (IntMap.add x k acc))
-      IntMap.empty
+          CodeMap.add k x (CodeMap.add x k acc))
+      CodeMap.empty
       states
   in
   let gap = match gap with
@@ -380,60 +380,27 @@ let is_statebased t = match t.kind with
   | Continuous -> true
   | BitFlag -> false
 
-let is_bitset t = match t.kind with
+let is_bitflag t = match t.kind with
   | CombinationLevels _
   | Sequential
   | Continuous -> false
   | BitFlag -> true
 
 let complement i t =
-  if IntMap.mem i t.compliment
-    then Some (IntMap.find i t.compliment)
+  if CodeMap.mem i t.compliment
+    then Some (CodeMap.find i t.compliment)
     else None
 
 let is_complement a b t =
   let is_complement a b t =
-    if IntMap.mem a t.compliment
-      then ((IntMap.find a t.compliment) = b)
+    if CodeMap.mem a t.compliment
+      then ((CodeMap.find a t.compliment) = b)
       else false
   in
   let result = is_complement a b t in
   if result = is_complement b a t
     then result
     else raise (Error (`Complement_Not_Bijective (a,b)))
-
-let get_combination i t : IntSet.t = match t.kind with
-  | CombinationLevels _
-  | Sequential -> IntMap.find i t.comb_data.comb_set
-  | Continuous -> IntSet.singleton i
-  | BitFlag    -> BitSet.to_set (`Packed i)
-
-let get_state_combination_exn s t : code = match t.kind with
-  | CombinationLevels l when l <= IntSet.cardinal s -> IntSetMap.find s t.comb_data.set_comb
-  | Sequential -> IntSetMap.find s t.comb_data.set_comb
-  | Continuous when 1 = IntSet.cardinal s -> IntSet.choose s
-  | BitFlag    -> BitSet.to_packed (`Set s)
-  | Continuous -> raise (Error `Polymorphisms_In_Continuous_Alphabet)
-  | CombinationLevels l -> raise (Error (`Insufficient_Level_To_Represent_States (l,s)))
-
-let get_state_combination s t =
-  try get_state_combination_exn s t |> some with
-  | Error (`Polymorphisms_In_Continuous_Alphabet)
-  | Error (`Insufficient_Level_To_Represent_States _) -> None
-
-
-let compress_polymorphisms l t =
-  l |> List.fold_left (fun a x -> IntSet.union a (get_combination x t)) IntSet.empty
-    |> flip get_state_combination t
-
-let choose_polymorphism l t = failwith "TODO"
-
-let is_atomic i t = match t.kind with
-  | Sequential when IntMap.mem i t.code_name -> true
-  | Continuous -> true
-  | CombinationLevels _
-  | BitFlag -> 1 = IntSet.cardinal @@ get_combination i t
-  | Sequential -> raise (Error (`Illegal_Code i))
 
 let get_code n t = match t.kind with
     | Continuous -> int_of_string n
@@ -445,22 +412,93 @@ let get_code n t = match t.kind with
 let get_name c t = match t.kind with
     | Continuous -> string_of_int c
     | BitFlag | CombinationLevels _ | Sequential ->
-      try IntMap.find c t.code_name
+      try CodeMap.find c t.code_name
       with Not_found -> raise (Error (`Illegal_Code c))
 
 let to_list t =
   let find_opt = function
     | None   -> None
-    | Some x -> Some (IntMap.find x t.code_name)
+    | Some x -> Some (CodeMap.find x t.code_name)
   in
   StringMap.fold (fun k v lst -> (k,v,find_opt @@ complement v t)::lst) t.name_code []
 
 
+(** {2 Polymorphism Management Functions} *)
+
+(** return the number defining the maximum number of states contained in a
+    polymorphism of the alphabet. *)
+let max_polymorphism t = match t.kind with
+  | CombinationLevels l -> l
+  | Sequential          -> 1
+  | Continuous          -> 1
+  | BitFlag             -> size t
+
+(** Return the states of a single alphabetic character. *)
+let get_combination i t : CodeSet.t = match t.kind with
+  | CombinationLevels _ -> CodeMap.find i t.comb_data.comb_set
+  | Sequential when CodeSet.mem i t.atomic -> CodeSet.singleton i
+  | Sequential -> raise (Error (`Illegal_Code i))
+  | Continuous -> CodeSet.singleton i
+  | BitFlag    -> BitSet.to_set (`Packed i)
+
+(** Return the polymorphism from a set of states; with exception *)
+let get_state_combination_exn s t : code = match t.kind with
+  | CombinationLevels l when l >= CodeSet.cardinal s -> CodeSetMap.find s t.comb_data.set_comb
+  | Sequential ->
+      if 1 = CodeSet.cardinal s then
+        let i = CodeSet.choose s in
+        if CodeSet.mem i t.atomic then i else raise (Error (`Illegal_Code i))
+      else
+        raise (Error (`Insufficient_Level_To_Represent_States (1,s)))
+  | Continuous when 1 = CodeSet.cardinal s -> CodeSet.choose s
+  | BitFlag    -> BitSet.to_packed (`Set s)
+  | Continuous -> raise (Error `Polymorphisms_In_Continuous_Alphabet)
+  | CombinationLevels l -> 
+      Printf.printf "LEVEL %d ;;;; SIZE : %d\n%!" l (CodeSet.cardinal s);
+      raise (Error (`Insufficient_Level_To_Represent_States (l,s)))
+
+(** return a polymorphism from a set of states, only if they can be represented *)
+let get_state_combination s t =
+  try get_state_combination_exn s t |> some with
+  | Error (`Polymorphisms_In_Continuous_Alphabet)
+  | Error (`Insufficient_Level_To_Represent_States _) -> None
+
+(** Return a list of atomic elements from a list of elements. Each are exploded
+    to their constituates and combined thus [ab] + [bc] -> [a;b;c] *)
+let explode_polymorphisms l t =
+  List.fold_left (fun a x -> CodeSet.union a (get_combination x t)) CodeSet.empty l |> CodeSet.elements
+
+(** compress a list of states to a polymorphism; these are truncated by the
+    maximum polymorphism available to the system. *)
+let compress_polymorphisms l t =
+  explode_polymorphisms l t |> take (max_polymorphism t) |>
+    List.fold_left (flip CodeSet.add) CodeSet.empty |> flip get_state_combination_exn t
+
+(** returns true if the element of the alphabet is atmoic / not a polymorphism *)
+let is_atomic i t = match t.kind with
+  | Sequential when CodeSet.mem i t.atomic -> true
+  | Continuous -> true
+  | CombinationLevels _
+  | BitFlag -> 1 = CodeSet.cardinal @@ get_combination i t
+  | Sequential -> raise (Error (`Illegal_Code i))
+
+
 (** {2 Special Comparison Functions} *)
 
-let compare_elts a b = failwith "TODO"
+(** Can one alphabet simulate the states of another completely? *)
+let compare_elts a b =
+  StringMap.fold
+    (fun k _ acc -> acc && (StringMap.mem k b.name_code))
+    a.name_code
+    true
 
-let compare a b = failwith "TODO"
+(** compare kind, element encoding, and gap/missing/all/case/orientation status *)
+let compare a b =
+  let prop_compare =
+    a.gap = b.gap && a.missing = b.missing && a.all = b.all && a.case = b.case
+      && a.orientation = b.orientation && a.kind = b.kind
+  in
+  prop_compare && compare_elts a b
 
 
 (** {2 Converting between types of alphabets} *)
@@ -468,14 +506,14 @@ let compare a b = failwith "TODO"
 let rec to_sequential t =
   let opt_find = function
     | None -> None
-    | Some x -> Some (IntMap.find x t.code_name)
+    | Some x -> Some (CodeMap.find x t.code_name)
   in
   match t.kind with
   | Sequential
   | Continuous -> t
   | BitFlag ->
     let states =
-      IntMap.fold
+      CodeMap.fold
         (fun code name lst ->
           let cmp = opt_find @@ complement code t in
           (name,cmp) :: lst)
@@ -488,9 +526,9 @@ let rec to_sequential t =
             ~orientation:t.orientation ~case:t.case
   | CombinationLevels _ ->
     let states =
-      IntMap.fold
+      CodeMap.fold
         (fun code name lst ->
-          if 1 = (IntSet.cardinal @@ IntMap.find code t.comb_data.comb_set)
+          if 1 = (CodeSet.cardinal @@ CodeMap.find code t.comb_data.comb_set)
             then (name,opt_find @@ complement code t)::lst
             else lst)
         t.code_name
@@ -507,14 +545,14 @@ and to_bitflag t = match t.kind with
   | Sequential ->
     let opt_find = function
       | None -> None
-      | Some x -> Some (IntMap.find x t.code_name)
+      | Some x -> Some (CodeMap.find x t.code_name)
     in
     let states =
-      IntMap.fold
+      CodeMap.fold
         (fun code name lst ->
           let cmp  = match complement code t with
             | None -> None
-            | Some x -> Some (IntMap.find x t.code_name)
+            | Some x -> Some (CodeMap.find x t.code_name)
           in
           (name,cmp)::lst)
         t.code_name
@@ -529,6 +567,7 @@ and simplify t = match t.kind with
   | CombinationLevels _ -> to_sequential t
   | Sequential | BitFlag | Continuous -> t
 
+(** Converts the alphabet to a level specified, where level 1 = sequential. *)
 and to_level level t =
   let () = if level <= 0 then raise (Error (`Unacceptable_Level_Argument level)) in
   match t.kind with
