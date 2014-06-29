@@ -1,11 +1,7 @@
-.PHONY : clean all
-
-.DEFAULT : all
+.PHONY : clean
 
 BUILD=ocamlbuild
 BUILDARGS=-use-ocamlfind -tags "package(phylocaml,core_bench,core),thread,debug,annot"
-
-all : align.native
 
 %.native :
 	$(BUILD) $(BUILDARGS) $*.native
