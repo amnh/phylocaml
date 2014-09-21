@@ -158,12 +158,12 @@ val compute_priors :
 
 (** {2 Query functions of models} *)
 
-(** [get_alphabet] return the alphabet of the specification *)
-val get_alphabet : s -> Alphabet.t
+(** [get_alphabet] return the alphabet of the model *)
+val get_alphabet : t -> Alphabet.t
 
 (** [alphabet_size] return the width of the matrices in the model; this includes
    the gap-as-character situation if those options are set. *)
-val alphabet_size : s -> int
+val alphabet_size : t -> int
 
 (** [num_parameters] return the number of variables used to parameterize the model. *)
 val num_parameters : t -> int
@@ -172,6 +172,8 @@ val num_parameters : t -> int
     number of categories; for testing, but can be used directly. *)
 val gamma_rates : float -> float -> int -> vector
 
+(** [get_spec] returns the specification of a model *)
+val get_spec : t -> s
 
 (** {2 Compare / Higher-Order Data-Types} *)
 

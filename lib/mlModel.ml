@@ -100,20 +100,23 @@ let gamma_rates a b len =
     |> ba_of_array1
 
 (** Return the alphabet for the characters *)
-let get_alphabet s = s.alphabet
+let get_alphabet t = t.spec.alphabet
+
+(** Return the specificaiton of the model *)
+let get_spec t = t.spec
 
 (** Return the size of the alphabet under analysis  *)
-let alphabet_size spec =
-  let g = match spec.gap with
+let alphabet_size t =
+  let g = match t.spec.gap with
     | Missing -> 0
     | Coupled _  | Independent -> 1
   in
-  g + (Alphabet.size spec.alphabet)
+  g + (Alphabet.size t.spec.alphabet)
 
 (** Compare two models specification and the states of parameters *)
 let compare a b =
-  let a_asize = alphabet_size a.spec
-  and b_asize = alphabet_size b.spec in
+  let a_asize = alphabet_size a
+  and b_asize = alphabet_size b in
   let compare_array x y =
     if Array.length x != Array.length y then
       false
@@ -617,7 +620,7 @@ let substitution_matrix model topt =
       end
     | Independent -> None
     | Missing     -> None
-  and a_size = alphabet_size model.spec
+  and a_size = alphabet_size model
   and priors = model.priors in
   let m = match model.spec.substitution with
     | JC69         -> m_jc69 a_size _gapr
@@ -660,7 +663,7 @@ let compose_matrix sub_mat t =
     matrix and then scale by a factor of accuracy and convert to integers. *)
 let integerized_model ?(sigma=4) model t =
   let sigma = 10.0 ** (float_of_int sigma)
-  and size = alphabet_size model.spec in
+  and size = alphabet_size model in
   let create = match model.spec.substitution with
     | JC69 | K2P _ ->
       (fun s m i j -> ~-(int_of_float (s *.(log m.(i).(j)))))
@@ -683,11 +686,17 @@ let integerized_model ?(sigma=4) model t =
 
 
 (** create a model based on a specification and an alphabet *)
-let create lk_spec = 
-  let a_size = alphabet_size lk_spec in
+let create spec = 
+  let a_size = 
+    let g = match spec.gap with
+      | Missing -> 0
+      | Coupled _  | Independent -> 1
+    in
+    g + (Alphabet.size spec.alphabet)
+  in
   (* set up all the probability and rates *)
   let rates,probs,pinvar =
-    match lk_spec.site_variation with
+    match spec.site_variation with
     | Constant -> ba_of_array1 [| 1.0 |], ba_of_array1 [| 1.0 |], None
     | DiscreteGamma (x,y) -> (* SITES,ALPHA *)
       let p = create_ba1 x in
@@ -711,7 +720,7 @@ let create lk_spec =
   in
   (* extract the prior probability *)
   let priors =
-    let p = match lk_spec.base_priors with 
+    let p = match spec.base_priors with 
       | Equal -> Array.make a_size (1.0 /. (float_of_int a_size))
       | Empirical p ->
         let p = Array.map (fun i -> max minimum i) p in
@@ -726,9 +735,9 @@ let create lk_spec =
     else
       ba_of_array1 p
   in
-  let _gapr = match lk_spec.gap with
+  let _gapr = match spec.gap with
     | Coupled x   ->
-      begin match lk_spec.alphabet.Alphabet.gap with
+      begin match spec.alphabet.Alphabet.gap with
         | None    -> raise (errorf "No gap character found")
         | Some g  -> Some (g, x)
       end
@@ -736,27 +745,27 @@ let create lk_spec =
     | Missing     -> None
   in
   (*  get the substitution rate matrix and set sym variable and to_formatter vars *)
-  let sym, q, substitution = match lk_spec.substitution with
+  let sym, q, substitution = match spec.substitution with
     | JC69  -> true,  m_jc69 a_size _gapr, JC69
     | F81   -> false, m_f81 priors a_size _gapr, F81
-    | K2P t -> true,  m_k2p t a_size _gapr, lk_spec.substitution
-    | F84 t -> false, m_f84 priors t a_size _gapr, lk_spec.substitution
-    | HKY85 t -> false, m_hky85 priors t a_size _gapr, lk_spec.substitution
-    | TN93 (ts,tv) -> false, m_tn93 priors ts tv a_size _gapr, lk_spec.substitution
+    | K2P t -> true,  m_k2p t a_size _gapr, spec.substitution
+    | F84 t -> false, m_f84 priors t a_size _gapr, spec.substitution
+    | HKY85 t -> false, m_hky85 priors t a_size _gapr, spec.substitution
+    | TN93 (ts,tv) -> false, m_tn93 priors ts tv a_size _gapr, spec.substitution
     | GTR c ->
-      let c = match lk_spec.gap, (Array.length c) with
+      let c = match spec.gap, (Array.length c) with
         | Coupled _, 0 -> Array.make ((a_size*(a_size-3))/2) 1.0
         | (Independent | Missing), 0 -> Array.make (((a_size-2)*(a_size+1))/2) 1.0
         | (Coupled _ | Independent | Missing), _ -> c
       in
       false, m_gtr priors c a_size _gapr, (GTR c)
     | Const m ->
-      false, m_file priors m a_size, lk_spec.substitution
+      false, m_file priors m a_size, spec.substitution
     | Custom (assoc,xs) ->
-      false, m_custom priors assoc xs a_size, lk_spec.substitution
+      false, m_custom priors assoc xs a_size, spec.substitution
   in
   let (u,d,ui) = diagonalize sym q in
-  let spec =  {lk_spec with substitution; } in
+  let spec = {spec with substitution;} in
   {
     spec; rates; probs; pinvar; priors; q; u; d; ui;
     opt = generate_opt_vector spec;

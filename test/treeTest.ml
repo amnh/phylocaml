@@ -2,6 +2,14 @@ open OUnit2
 open TestInternal
 open Topology
 
+let assert_equal_tree =
+  let printer x =
+    let b = Buffer.create 100 in
+    let () = Tree.pp_tree (Format.formatter_of_buffer b) x in
+    Buffer.contents b
+  and cmp a b = 0 = (Tree.compare a b) in
+  OUnit2.assert_equal ~printer ~cmp
+
 let verify_delta delta t =
   let assert_edge should_exist x y =
     assert_bool
@@ -25,6 +33,7 @@ let maximum_leaf_nodes =
   Conf.make_int "max_leaf_nodes" 50 "Maximum leaf nodes for tree tests"
 
 let create_random_tree ctxt =
+  let () = set_random_seed ctxt in
   let min_leaf = minimum_leaf_nodes ctxt
   and max_leaf = maximum_leaf_nodes ctxt in
   let leaves = min_leaf + (Random.int (max_leaf - min_leaf)) in
