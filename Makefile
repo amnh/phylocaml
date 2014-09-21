@@ -70,7 +70,7 @@ distclean :
 	cd app && $(MAKE) clean
 
 clean : distclean
-	rm -f *.native *.byte *.top
+	rm -f *.native *.byte *.top $(DOCDIR)
 	$(BUILD) -clean
 
 # -----------------------------------

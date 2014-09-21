@@ -3,6 +3,8 @@ APT_DEPENDS="gsl-bin libgsl0-dev liblapack-dev libblas-dev gfortran"
 APT_OCAML="ocaml ocaml-native-compilers camlp4-extra opam aspcud curl"
 
 COVERAGE=1
+BISECT_TARBALL="http://bisect.sagotch.fr"
+#BISECT_TARBALL="http://sagotch.fr/download/bisect-coveralls.tar.gz"
 
 case "$OCAML_VERSION,$OPAM_VERSION" in
   4.00.1,1.0.0) ppa=avsm/ocaml40+opam10  ;;
@@ -25,7 +27,7 @@ opam install ${OPAM_DEPENDS} -y
 
 # setup ocverall support via modified bisect
 if [ 1 -eq $COVERAGE ] ; then
-  curl -L http://bisect.sagotch.fr | tar -xzf -
+  curl -L ${BISECT_TARBALL} | tar -xzf -
   cd Bisect
   chmod +x configure
   ./configure
@@ -69,4 +71,7 @@ make phylocaml.html
 #ocaml test.ml
 
 # run benchmarks of phylocaml TODO
+#make and execute each app
+
+# build all sub-projects TODO
 #make and execute each app

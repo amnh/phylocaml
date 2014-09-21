@@ -17,13 +17,14 @@ type combinations =
  }
 
 (** Record of default characters for parsing. *)
-(* type symbols = {
-  gap : string;
-  missing : string;
-  orientation : string;
+type symbols = {
+  gap_sym : string;
+  all_sym : string;
+  missing_sym : string;
+  orientation_sym : string;
   separators : string list;
   containers : (string * string) list;
-} *)
+}
 
 (** Defines the type of alphabet.*)
 type kind =
@@ -52,6 +53,7 @@ type t =
     all       : int option;   (** Code for the all-character; if present *)
     case      : bool;         (** Does case matter in parsing/analysis? *)
     orientation : bool;       (** If ~ symbol should be used to parse *)
+    symbols   : symbols;      (** symbols for parsing streams of data *)
   }
 
 
@@ -108,8 +110,15 @@ val complement : code -> t -> code option
 (** Determines if two elements in the alphabet are complements *)
 val is_complement : code -> code -> t -> bool
 
+(** Is the code a gap **)
+val is_gap : code -> t -> bool
+
 (** Return the size of the alphabet as defined by the number of atomic states *)
 val size : t -> int
+
+(** return a random element of the alphabet *)
+val random : ?indel:bool -> t -> code
+
 
 (** {2 Functions on Polymorphisms} *)
 
@@ -122,6 +131,7 @@ val get_combination : code -> t -> CodeSet.t
 
 (** Return a code that represents a set of codes *)
 val get_state_combination : CodeSet.t -> t -> code option
+val get_state_combination_exn : CodeSet.t -> t -> code
 
 (** Take a set of states and return a single state that represents their
     combination if they exist within the alphabet. If the combination extends
@@ -198,7 +208,7 @@ val to_level : int -> t -> t
 
 (** default gap, missing, all, container and higher-level separator characters
     for parsing data. *)
-(* val default_symbols : symbols *)
+val default_symbols : symbols
 
 (* val parse_data_stream : t -> ('a -> int -> code -> 'a) -> in_channel -> 'a -> 'a *)
 

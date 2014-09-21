@@ -14,7 +14,6 @@ true : debug, annot, bin_annot
  <**/*.top>           : package(pareto,bigarray,str,num), use_phyloc
 # of testing suite
  <test/**.*>          : package(oUnit), use_phyloc
- <test/testInternal.*>: test
 # of benchmark suite
 <bench/**.*>          : package(Core_bench), use_phyloc
 # of specific files
@@ -23,9 +22,9 @@ true : debug, annot, bin_annot
  "lib/mlModel.ml"     : use_phyloc, package(pareto)
  "lib/internal.ml"    : package(bigarray)
  "lib/tree.ml"        : package(num)
-
 # for identifying pre-processing
- <lib/compatibility.*> : use_compatibility
+ <lib/compatibility.*>: compatibility
+ <test/testInternal.*>: test
 
 # for basic c file pre-processing
  "lib/bitvector/bv8.c"  : use_bv8

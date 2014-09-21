@@ -127,12 +127,10 @@ val ba_to_array2 : ('a, 'b, 'c) Bigarray.Array2.t -> 'a array array
     speed and flexibility? *)
 module BitSet :
   sig
-    type t = [`List of int list | `Packed of int | `Set of IntSet.t]
-    val empty : t
+    type t = [`Packed of int | `IndexSet of IntSet.t]
     val add : int -> t -> t
     val rem : int -> t -> t
     val to_packed : t -> int
-    val to_list :  t -> IntSet.elt list
     val to_set : t -> IntSet.t
     val size : t -> int
   end

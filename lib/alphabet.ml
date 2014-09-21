@@ -20,14 +20,14 @@ type kind =
   | Continuous
   | CombinationLevels of int
 
-(*
 type symbols = {
-  gap : string;
-  missing : string;
-  orientation : string;
+  gap_sym : string;
+  all_sym : string;
+  missing_sym : string;
+  orientation_sym : string;
   separators : string list;
   containers : (string * string) list;
-} *)
+}
 
 type t =
   { kind      : kind;
@@ -41,6 +41,7 @@ type t =
     all       : int option;
     case      : bool;
     orientation : bool;
+    symbols   : symbols;
   }
 
 
@@ -118,14 +119,14 @@ let default_separators  = ["#"; "|"; "@"; " ";]
 
 let default_containers  = [("{","}"); ("[","]"); ("(",")"); ("<",">");]
 
-(*
 let default_symbols =
-  { gap = default_gap;
-    missing = default_missing;
-    orientation = default_orientation;
+  { gap_sym = default_gap;
+    all_sym = default_all;
+    missing_sym = default_missing;
+    orientation_sym = default_orientation;
     separators = default_separators;
-    containers = default_containers; }
-*)
+    containers = default_containers;
+  }
 
 let empty_comb_data =
   { comb_set = CodeMap.empty; set_comb = CodeSetMap.empty; }
@@ -270,6 +271,7 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
     code_name; name_code;
     compliment; comb_data;
     all; gap; missing; atomic;
+    symbols = default_symbols; (** TODO: add mechanism to change this *)
   } in
   let () = verify_alphabet a in
   a
@@ -302,6 +304,7 @@ let continuous =
     orientation = false;
     case      = false;
     comb_data = empty_comb_data;
+    symbols   = default_symbols;
   }
 
 let present_absent =
@@ -402,6 +405,10 @@ let is_complement a b t =
     then result
     else raise (Error (`Complement_Not_Bijective (a,b)))
 
+let is_gap n t = match t.gap with
+  | Some x when x = n -> true
+  | None | Some _ -> false
+
 let get_code n t = match t.kind with
     | Continuous -> int_of_string n
     | BitFlag | CombinationLevels _ | Sequential ->
@@ -415,12 +422,9 @@ let get_name c t = match t.kind with
       try CodeMap.find c t.code_name
       with Not_found -> raise (Error (`Illegal_Code c))
 
-let to_list t =
-  let find_opt = function
-    | None   -> None
-    | Some x -> Some (CodeMap.find x t.code_name)
-  in
-  StringMap.fold (fun k v lst -> (k,v,find_opt @@ complement v t)::lst) t.name_code []
+let rec random ?(indel=false) t =
+  let k,_ = random_elt_intmap t.code_name in
+  if indel || not @@ is_gap k t then k else random ~indel t
 
 
 (** {2 Polymorphism Management Functions} *)
@@ -439,7 +443,9 @@ let get_combination i t : CodeSet.t = match t.kind with
   | Sequential when CodeSet.mem i t.atomic -> CodeSet.singleton i
   | Sequential -> raise (Error (`Illegal_Code i))
   | Continuous -> CodeSet.singleton i
-  | BitFlag    -> BitSet.to_set (`Packed i)
+  | BitFlag    ->
+    BitSet.to_set (`Packed i)
+      |> flip (CodeSet.fold (fun x -> CodeSet.add @@ (1 lsl (x-1)))) CodeSet.empty
 
 (** Return the polymorphism from a set of states; with exception *)
 let get_state_combination_exn s t : code = match t.kind with
@@ -451,10 +457,9 @@ let get_state_combination_exn s t : code = match t.kind with
       else
         raise (Error (`Insufficient_Level_To_Represent_States (1,s)))
   | Continuous when 1 = CodeSet.cardinal s -> CodeSet.choose s
-  | BitFlag    -> BitSet.to_packed (`Set s)
+  | BitFlag    -> CodeSet.fold (+) s 0
   | Continuous -> raise (Error `Polymorphisms_In_Continuous_Alphabet)
   | CombinationLevels l -> 
-      Printf.printf "LEVEL %d ;;;; SIZE : %d\n%!" l (CodeSet.cardinal s);
       raise (Error (`Insufficient_Level_To_Represent_States (l,s)))
 
 (** return a polymorphism from a set of states, only if they can be represented *)
@@ -464,7 +469,7 @@ let get_state_combination s t =
   | Error (`Insufficient_Level_To_Represent_States _) -> None
 
 (** Return a list of atomic elements from a list of elements. Each are exploded
-    to their constituates and combined thus [ab] + [bc] -> [a;b;c] *)
+    to their constituents and combined thus [ab] + [bc] -> [a;b;c] *)
 let explode_polymorphisms l t =
   List.fold_left (fun a x -> CodeSet.union a (get_combination x t)) CodeSet.empty l |> CodeSet.elements
 

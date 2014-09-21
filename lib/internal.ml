@@ -163,74 +163,55 @@ let random_elt_pairset (s: UnorderedTupleSet.t) =
 (** int / bitset functions : TODO move to own module // find a nice bitset *)
 module BitSet =
   struct
-    type t = [ `List of int list | `Packed of int | `Set of IntSet.t ]
+    type t = [ `Packed of int | `IndexSet of IntSet.t ]
 
-    let mem t i = match t with
-      | `List x   -> List.mem i x
-      | `Packed x -> 1 = (x land (1 lsl i))
-      | `Set x    -> IntSet.mem i x
+    let mem t idx = match t with
+      | `Packed x -> 1 = (x land (1 lsl idx))
+      | `IndexSet x    -> IntSet.mem idx x
 
-    let add i t =
-      if mem t i
+    let add idx t =
+      if mem t idx
         then t
         else match t with
-          | `Packed x -> `Packed (x lor (1 lsl i))
-          | `List   x -> `List   (i :: x)
-          | `Set    x -> `Set    (IntSet.add i x)
+          | `Packed x -> `Packed (x lor (1 lsl (idx-1)))
+          | `IndexSet x -> `IndexSet (IntSet.add idx x)
 
-    and rem i t =
-      if mem t i 
+    and rem idx t =
+      if mem t idx
         then match t with
-          | `List x -> `List (i::x)
-          | `Set x  -> `Set (IntSet.remove i x)
-          | `Packed x -> `Packed (x lxor (1 lsl i))
-        else 
+          | `IndexSet x -> `IndexSet (IntSet.remove idx x)
+          | `Packed x -> `Packed (x lxor (1 lsl idx))
+        else
           t
-
-    and empty = `Packed 0
 
     let to_packed t : int =
       let r = match t with
-        | `List x   -> List.fold_right add x empty
-        | `Packed i -> t
-        | `Set x    -> IntSet.fold add x empty
+        | `Packed _ -> t
+        | `IndexSet x -> IntSet.fold add x (`Packed 0)
       in
       match r with
       | `Packed x -> x
       | _         -> assert false
 
-    and to_list t = match t with
-      | `List t   -> t
-      | `Packed i ->
-        let rec set_of_int acc j i =
-          if i = 0 then
-            acc
-          else
-            let s = 1 lsl j in
-            if (i land s) > 0
-              then set_of_int (j::acc) (j+1) (i lxor s)
-              else set_of_int acc (j+1) i
-        in
-        set_of_int [] 0 i
-      | `Set s    -> IntSet.elements s
-
     and to_set t = match t with
-      | `Set s    -> s
-      | `List t   -> List.fold_left (fun acc x -> IntSet.add x acc) IntSet.empty t
+      | `IndexSet s -> s
       | `Packed i ->
         let rec set_of_int acc j i =
           if i = 0 then
             acc
-          else if (i land (1 lsl j)) > 0 then
-            set_of_int (IntSet.add j acc) (j+1) (i lxor (1 lsl j))
-          else
-            set_of_int acc (j+1) i
+          else begin
+            let j_bit = 1 lsl j in
+            let j_succ = j + 1 in
+            if (i land j_bit) > 0 then
+              set_of_int (IntSet.add j_succ acc) j_succ (i lxor j_bit)
+            else
+              set_of_int acc j_succ i
+          end
         in
         set_of_int IntSet.empty 0 i
 
     and size t =  match t with
-      | `List t   -> List.length t
-      | `Set s    -> IntSet.cardinal s
+      | `IndexSet s    -> IntSet.cardinal s
       | `Packed i ->
         let rec count_bits acc x =
           if x = 0

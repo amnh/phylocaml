@@ -37,15 +37,23 @@ module type TCM =
     (** {2 Functions of Minimization / Assignment} *)
 
     val add : spec -> cost -> cost -> cost
-    val assign : spec -> elt -> elt -> elt list
     val cost : spec -> elt -> elt -> cost
-    val assign_cost : spec -> elt -> elt -> cost * elt list
     val compress : spec -> elt list -> elt
 
     (** {2 I/O} *)
 
+    val to_string_cost : spec -> cost -> string
+    val to_string_elt : spec -> elt -> string
+
     val l_cost : spec -> cost Ppl.pp_l
     val l_elt : spec -> elt Ppl.pp_l
+
+    (** {2 Define properties of the matrix for optimization} *)
+
+    val is_symmetric : spec -> bool
+    val is_equal : spec -> bool
+    val is_metric : spec -> bool
+
   end
 
 module type CM =
@@ -71,12 +79,12 @@ exception Error of Error.t
 (** [Make] produces cost matrices that are fully realized as they are created.
     This can be time consuming, but quicker if they are used often enough. *)
 module Make (M : TCM with type elt = Alphabet.code)
-          : CM with type spec = M.spec and type cost = M.cost and type elt  = M.elt
+          : CM with type spec = M.spec and type cost = M.cost and type elt  = M.elt and type spec = M.spec
 
 (** [MakeLazy] produces a memoized cost-matrix, as elements costs or assignments
     are queried they are added to the table. We also use Hashtbls to limit the
     overall space. This can be used when only a few transformations may be
     needed in the usage of the cost-matrix. *)
 module MakeLazy (M : TCM with type elt = Alphabet.code)
-          : CM with type spec = M.spec and type cost = M.cost and type elt  = M.elt
+          : CM with type spec = M.spec and type cost = M.cost and type elt = M.elt and type spec = M.spec
 

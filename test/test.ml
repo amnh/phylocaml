@@ -1,12 +1,14 @@
 open OUnit2
-open TestInternal
 
 (** Pure OCaml libraries *)
+let run_tests_ml = true
 let tests = [
   AlphabetTest.tests;
   TreeTest.tests;
   TopologyTest.tests;
   CostMatrixTest.tests;
+  (*AlignmentTest.tests;*)
+  InternalTest.tests;
 ]
 
 (** OCaml libraries with C backend *)
@@ -18,11 +20,7 @@ let tests_c = [
 ]
 
 let () =
-  let seed = truncate (Unix.time ()) in
-  Printf.printf "Setting random seed : %d\n%!" seed;
-  let () = Random.init seed in
-  ignore (run_test_tt_main ("OCaml" >::: tests));
-  if run_tests_c then
-    ignore (run_test_tt_main ("C" >::: tests_c));
+  if run_tests_ml then ignore (run_test_tt_main ("OCaml" >::: tests));
+  if run_tests_c  then ignore (run_test_tt_main ("C" >::: tests_c));
   ()
 

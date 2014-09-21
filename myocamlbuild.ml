@@ -108,10 +108,10 @@ let () = dispatch begin function
         then [A"-pp";A"camlp4of -DCOMPATIBILITY"]
         else [A"-pp";A"camlp4of -UCOMPATIBILITY"]
     in
-    flag ["ocaml";"use_compatibility";"doc"]      (S compatibility_options);
-    flag ["ocaml";"use_compatibility";"ocamldep"] (S compatibility_options);
-    flag ["ocaml";"use_compatibility";"compile"]  (S compatibility_options);
-    flag ["ocaml";"use_compatibility";"mktop"]    (S compatibility_options);
+    flag ["ocaml";"compatibility";"doc"]      (S compatibility_options);
+    flag ["ocaml";"compatibility";"ocamldep"] (S compatibility_options);
+    flag ["ocaml";"compatibility";"compile"]  (S compatibility_options);
+    flag ["ocaml";"compatibility";"mktop"]    (S compatibility_options);
 
     (* testing pre-process flags *)
     let testing_options = [A"-pp";A"camlp4of -UUSE_EXTERNAL_LINKING"] in

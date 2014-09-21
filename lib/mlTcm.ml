@@ -18,21 +18,24 @@ module X : CostMatrix.TCM =
     and inf  _ = infinity
 
     and lt _ x y = x <  y
-    and gt _ x y = x >  y
     and eq _ x y = x =. y
 
     and add _ x y = x +. y
 
     and cost m x y = assert false
-    and assign m x y = assert false
-    and median m x y = assert false
-    and assign_cost m x y = assert false
 
     and compress m e = Alphabet.compress_polymorphisms e @@ get_alphabet m
 
     let l_cost _ = string_of_float
-    let l_elt _ = string_of_int
-    
+    let l_elt _  = string_of_int
+
+    let to_string_cost _ = string_of_float
+    let to_string_elt _  = string_of_int
+ 
+    let is_symmetric _ = false
+    let is_metric _ = false
+    let is_equal _ = false
+
     (* return the minimum cost/median 
     let get_min_costassign a ti tj i j =
       let cost,asgn =
