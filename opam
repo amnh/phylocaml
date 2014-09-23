@@ -1,0 +1,21 @@
+opam-version: "1.2"
+name : "phylocaml"
+homepage : "http://github.com/amnh/phylocaml"
+authors : [ "Nicholas Lucaroni" "Ward Wheeler" ]
+maintainer: "nlucaroni@amnh.org"
+license: "MPL v2.0"
+
+tags: ["phylogeny" "statistics" "bioinformatics" "biology" "systematics"]
+
+build : [
+    ["make"]
+    ["make" "install"]
+]
+
+remove : ["ocamlfind" "remove" "phylocaml"]
+
+build-doc : ["make" "docs"]
+
+depends: [ "ocamlfind" "pareto" ]
+
+ocaml-version : [>= "4.00.0"]
