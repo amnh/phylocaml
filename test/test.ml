@@ -8,7 +8,7 @@ let tests = [
   TopologyTest.tests;
   CostMatrixTest.tests;
   (*AlignmentTest.tests;*)
-  InternalTest.tests;
+  (* InternalTest.tests; *)
 ]
 
 (** OCaml libraries with C backend *)
