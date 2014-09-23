@@ -22,8 +22,6 @@ module MockTCM =
 
     let compress a e = Alphabet.compress_polymorphisms e a
 
-    let l_cost _ = string_of_int
-    let l_elt _ = string_of_int
     let to_string_cost _ = string_of_int
     let to_string_elt _ = string_of_int
 

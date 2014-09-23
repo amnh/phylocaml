@@ -65,7 +65,6 @@ true : debug, annot, bin_annot
  "lib/model.cmx"      : for-pack(Phylocaml)
  "lib/pModel.cmx"     : for-pack(Phylocaml)
  "lib/alignment.cmx"  : for-pack(Phylocaml)
- "lib/ppl.cmx"        : for-pack(Phylocaml)
  "lib/costMatrix.cmx" : for-pack(Phylocaml)
  "lib/pTcm.cmx"       : for-pack(Phylocaml)
  "lib/mlTcm.cmx"      : for-pack(Phylocaml)

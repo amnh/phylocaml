@@ -45,9 +45,6 @@ module type TCM =
     val to_string_cost : spec -> cost -> string
     val to_string_elt : spec -> elt -> string
 
-    val l_cost : spec -> cost Ppl.pp_l
-    val l_elt : spec -> elt Ppl.pp_l
-
     (** {2 Define properties of the matrix for optimization} *)
 
     val is_symmetric : spec -> bool
