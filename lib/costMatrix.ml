@@ -1,3 +1,4 @@
+open Internal
 
 module type TCM =
   sig

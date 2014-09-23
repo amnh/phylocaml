@@ -26,9 +26,6 @@ module X : CostMatrix.TCM =
 
     and compress m e = Alphabet.compress_polymorphisms e @@ get_alphabet m
 
-    let l_cost _ = string_of_float
-    let l_elt _  = string_of_int
-
     let to_string_cost _ = string_of_float
     let to_string_elt _  = string_of_int
  
