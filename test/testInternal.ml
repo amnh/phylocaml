@@ -35,7 +35,7 @@ let assert_equal_array sep elt_printer elt_compare =
               xs;
     Buffer.contents b
   and cmp x y =
-    let msg = "List length not equal" and printer = string_of_int in
+    let msg = "Array length not equal" and printer = string_of_int in
     OUnit2.assert_equal ~msg ~printer (Array.length x) (Array.length y);
     array_fold_left2 (fun acc a b -> acc && elt_compare a b) true x y
   in

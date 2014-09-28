@@ -162,19 +162,6 @@ let generate_combinational_elements ~level codes =
   let comb_set = Array.fold_left merge_maps CodeMap.empty l in
   comb_set, inverse comb_set
 
-(** Tests any number of things to verify the integrity of an alphabet *)
-let verify_alphabet a : unit =
-  let () = match a.gap with
-    | None -> ()
-    | Some x when CodeMap.mem x a.code_name -> ()
-    | Some x -> raise (Error (`Missing_Gap_Element x))
-  in
-  match a.kind with
-  | Sequential          -> ()
-  | CombinationLevels _ -> ()
-  | BitFlag             -> ()
-  | Continuous          -> ()
-
 let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
   let combine_equates comb_data name_code = match kind with
     | Sequential ->
@@ -273,7 +260,6 @@ let of_list ~states ~equates ~gap ~all ~missing ~orientation ~case ~kind : t =
     all; gap; missing; atomic;
     symbols = default_symbols; (** TODO: add mechanism to change this *)
   } in
-  let () = verify_alphabet a in
   a
 
 

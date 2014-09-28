@@ -7,7 +7,7 @@ let tests = [
   TreeTest.tests;
   TopologyTest.tests;
   CostMatrixTest.tests;
-  (*AlignmentTest.tests;*)
+  AlignmentTest.tests;
   (* InternalTest.tests; *)
 ]
 

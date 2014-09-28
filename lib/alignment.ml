@@ -135,26 +135,26 @@ module FullAlignment (C:AssignCostMatrix) =
       in
       build_alignments [] [] ((Array.length x)-1) ((Array.length y)-1)
 
-    let median mem _m x y =
+    let median mem m x y =
       let get_direction i j = mem.(i).(j) |> snd |> choose_dir in
       let rec build_median med i j = match get_direction i j with
         | Align  s -> build_median (s::med) (i-1) (j-1)
         | Delete s -> build_median (s::med) (i-1) (j)
         | Insert s -> build_median (s::med) (i)   (j-1)
-        | Root     -> Array.of_list (x.(0)::med)
+        | Root     -> Array.of_list ((C.indel m)::med)
       in
       build_median [] ((Array.length x)-1) ((Array.length y)-1)
 
     let alignments mem m x y =
       let indel = C.indel m in
       let get_direction i j = mem.(i).(j) |> snd |> choose_dir in
-      let rec build_alignments one two med i j = match get_direction i j with
-        | Align  s -> build_alignments (x.(i)::one) (y.(j)::two) (s::med) (i-1) (j-1)
-        | Insert s -> build_alignments (indel::one) (y.(j)::two) (s::med) (i)   (j-1)
-        | Delete s -> build_alignments (x.(i)::one) (indel::two) (s::med) (i-1) (j)
+      let rec build_alignments x' y' med i j = match get_direction i j with
+        | Align  s -> build_alignments (x.(i)::x') (y.(j)::y') (s::med) (i-1) (j-1)
+        | Insert s -> build_alignments (indel::x') (y.(j)::y') (s::med) (i)   (j-1)
+        | Delete s -> build_alignments (x.(i)::x') (indel::y') (s::med) (i-1) (j)
         | Root     ->
-          Array.of_list @@ indel::one,
-            Array.of_list @@ indel::two,
+          Array.of_list @@ indel::x',
+            Array.of_list @@ indel::y',
               Array.of_list @@ indel::med
       in
       build_alignments [] [] [] ((Array.length x)-1) ((Array.length y)-1)
@@ -194,7 +194,7 @@ module FullAlignment (C:AssignCostMatrix) =
     let align m x y =
       let mem = init_mem m x y in
       let () = fill mem m x y in
-      let x',y',m = alignments mem m x y in
+      let x',y', m = alignments mem m x y in
       cost mem m x y, x', y', m
   end
 
@@ -228,8 +228,8 @@ module UkkAlignment (C:AssignCostMatrix) =
         mem_ref := Some mem;
         mem
       | Some mem ->
-        if (Array.length mem.mat) <= (Array.length x)
-            && (Array.length mem.mat.(0)) <= (Array.length y) then
+        if (Array.length mem.mat) >= (Array.length x)
+            && (Array.length mem.mat.(0)) >= (Array.length y) then
           {mem with k = k}
         else begin
           mem_ref := None;
@@ -281,13 +281,13 @@ module UkkAlignment (C:AssignCostMatrix) =
       in
       build_alignments [] [] ((Array.length x)-1) ((Array.length y)-1)
 
-    let median mem _m x y =
+    let median mem m x y =
       let get_direction i j = mem.mat.(i).(j) |> snd |> snd |> choose_dir in
       let rec build_median acc i j = match get_direction i j with
         | Align  s -> build_median (s::acc) (i-1) (j-1)
         | Delete s -> build_median (s::acc) (i-1) j
         | Insert s -> build_median (s::acc) i (j-1)
-        | Root     -> Array.of_list (x.(0)::acc)
+        | Root     -> Array.of_list ((C.indel m)::acc)
       in
       build_median [] ((Array.length x)-1) ((Array.length y)-1)
 
