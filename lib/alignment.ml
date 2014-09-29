@@ -95,8 +95,8 @@ module FullAlignment (C:AssignCostMatrix) =
         mem_ref := Some mem;
         mem
       | Some mem ->
-        if (Array.length mem) <= (Array.length x) &&
-           (Array.length mem.(0)) <= (Array.length y) then
+        if (Array.length mem) >= (Array.length x) &&
+           (Array.length mem.(0)) >= (Array.length y) then
           mem
         else begin
           mem_ref := None;
