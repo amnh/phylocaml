@@ -137,8 +137,7 @@ module Make (M:TCM with type elt = Alphabet.code) =
         indel         : elt;
       }
 
-    module Common = Common (M)
-    include Common
+    include Common(M)
 
     (* fill a cost matrix *)
     let fill_cm bits size model =
@@ -216,8 +215,7 @@ module MakeLazy (M:TCM with type elt = Alphabet.code) =
         median_fn     : spec -> elt -> elt -> cost * elt;
       }
 
-    module Common = Common (M)
-    include Common
+    include Common(M)
 
     let get_median model i j =
       if Hashtbl.mem model.cost_matrix (i,j)
