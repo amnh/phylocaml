@@ -1,11 +1,12 @@
 platform:
-- x86
+  - x86
 
 environment:
   global:
     CYG_ROOT: C:/cygwin
     CYG_MIRROR: http://cygwin.uib.no
     CYG_CACHE: C:/cygwin/var/cache/setup
+    OPAM_VERS: 1.2.0-rc3
   matrix:
     - CYG_ARCH: x86
 
@@ -14,14 +15,19 @@ init:
 
 install:
   - 'appveyor DownloadFile http://cygwin.com/setup-%CYG_ARCH%.exe -FileName setup.exe'
-  - 'setup.exe -qnNdO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_CACHE%" -P make -P git -P gcc-core -P ocaml -P ocaml-camlp4 -P ocaml-compiler-libs -P curl -P unzip -P gsl >NUL'
-  - 'setup.exe -qnNdO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_CACHE%" -P libmpfr-devel -P patch -P flexdll >NUL'
+  - 'setup.exe -qnNdO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_CACHE%" -P make -P git -P gcc-core -P ocaml -P ocaml-camlp4 -P ocaml-compiler-libs >NUL'
+  - 'setup.exe -qnNdO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_CACHE%" -P libmpfr-devel -P patch -P flexdll -P curl -P m4 -P unzip >NUL'
   - '%CYG_ROOT%/bin/bash -lc "cygcheck -dc cygwin"'
+  - '%CYG_ROOT%/bin/bash -lc "curl -L http://github.com/ocaml/opam/archive/%OPAM_VERS%.zip > opam.zip"'
+  - '%CYG_ROOT%/bin/bash -lc "unzip opam.zip"'
+  - '%CYG_ROOT%/bin/bash -lc "cd \"%OPAM_VERS%\" && ./configure && make lib-ext && make && make install"'
+  - '%CYG_ROOT%/bin/bash -lc "opam init -y -a"'
+  - 'echo Finished Installing Base Setup'
 
 build_script:
-  - '%CYG_ROOT%/bin/bash -lc "cd \"$OLDPWD\" && env DJDIR="workaround" ./configure && make lib-ext && make && make install"'
-  - '%CYG_ROOT%/bin/bash -lc "opam init -y -a"'
+  - 'setup.exe -qnNdO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_CACHE%" -P gsl >NUL'
   - '%CYG_ROOT%/bin/bash -lc "opam install -y -v pareto"'
+  - 'echo Finished Installing Library Dependencies'
   - '%CYG_ROOT%/bin/bash -lc "make test.byte"'
   - '%CYG_ROOT%/bin/bash -lc "./test.byte"'
 
