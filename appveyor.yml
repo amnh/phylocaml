@@ -20,14 +20,13 @@ install:
   - '%CYG_ROOT%/bin/bash -lc "cygcheck -dc cygwin"'
   - '%CYG_ROOT%/bin/bash -lc "curl -L http://github.com/ocaml/opam/archive/%OPAM_VERS%.zip > opam.zip"'
   - '%CYG_ROOT%/bin/bash -lc "unzip opam.zip"'
-  - '%CYG_ROOT%/bin/bash -lc "cd \"opam-%OPAM_VERS%\" && ./configure && make lib-ext && make && make install"'
+  - '%CYG_ROOT%/bin/bash -lc "cd opam-%OPAM_VERS% && ./configure && make lib-ext && make && make install"'
   - '%CYG_ROOT%/bin/bash -lc "opam init -y -a"'
   - 'echo Finished Installing Base Setup'
 
 build_script:
-  - 'setup.exe -qnNdO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_CACHE%" -P gsl >NUL'
+  - 'setup.exe -qnNdO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_CACHE%" -P gsl -P gsl-devel >NUL'
   - '%CYG_ROOT%/bin/bash -lc "opam install -y -v pareto"'
   - 'echo Finished Installing Library Dependencies'
-  - '%CYG_ROOT%/bin/bash -lc "make test.byte"'
-  - '%CYG_ROOT%/bin/bash -lc "./test.byte"'
+  - '%CYG_ROOT%/bin/bash -lc "cd \"$OLDPWD\" && make test.byte && ./test.byte"'
 
