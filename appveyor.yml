@@ -26,7 +26,7 @@ install:
 
 build_script:
   - 'setup.exe -qnNdO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_CACHE%" -P gsl -P gsl-devel >NUL'
-  - '%CYG_ROOT%/bin/bash -lc "opam install -y -v pareto"'
+  - '%CYG_ROOT%/bin/bash -lc "opam install -y -v pareto ounit"'
   - 'echo Finished Installing Library Dependencies'
   - '%CYG_ROOT%/bin/bash -lc "cd \"$OLDPWD\" && make test.byte && ./test.byte"'
 
