@@ -20,7 +20,7 @@ install:
   - '%CYG_ROOT%/bin/bash -lc "cygcheck -dc cygwin"'
   - '%CYG_ROOT%/bin/bash -lc "curl -L http://github.com/ocaml/opam/archive/%OPAM_VERS%.zip > opam.zip"'
   - '%CYG_ROOT%/bin/bash -lc "unzip opam.zip"'
-  - '%CYG_ROOT%/bin/bash -lc "cd opam-%OPAM_VERS% && ./configure && make lib-ext && make && make install"'
+  - '%CYG_ROOT%/bin/bash -lc "cd opam-%OPAM_VERS% && env DJDIR=\"workaround\" ./configure && make lib-ext && make && make install"'
   - '%CYG_ROOT%/bin/bash -lc "opam init -y -a"'
   - 'echo Finished Installing Base Setup'
 
