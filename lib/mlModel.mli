@@ -45,7 +45,7 @@ type subst_model =
   | F81
   (** F81 has equal rate of site states with unequal priors. [3] *)
   | K2P of float
-  (** Special case of TN93 wit additionally assumed equal priors. [2] *)
+  (** Special case of TN93 with additionally assumed equal priors. [2] *)
   | F84 of float
   (** Special case of TN93, implemented in DNAML. [4] *)
   | HKY85 of float
@@ -64,7 +64,7 @@ type subst_model =
 type priors =
   | Empirical of float array
   (** Priors are given by the user, by frequency of observation, or optimized
-      (mle) as additional nuaces parameter through an optimization routine.*)
+      (mle) as additional nuisance parameter through an optimization routine.*)
   | Equal
   (** Priors are equal to 1/[a], where [a] is the size of the alphabet. *)
 
@@ -79,7 +79,6 @@ type gap =
   | Independent
   (** The gap is an addtional character with additional parameters given in the
       definition of the substitution model. *)
-
 
 (** The specification of model; can be modified to re-create a new model and
     provides a one-to-one mapping from model to it's specification. *)
@@ -100,25 +99,8 @@ type vector =
   (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t
 
 (** Fully defined model of cost matrices decomposed for easy use and data-types
-    presented in a fashion for C exposure. Left abstract, and should only be
-    manipulated through the specification. *)
+    presented in a fashion for C exposure. *)
 type t
-
-
-(** {2 Matrix Diagonalization / Composition Functions} *)
-
-(** [compose] compose a matrix from a model and a branch length. *)
-val compose : t -> float -> matrix
-
-(** [substitution_matrix m t?] return a substitution rate matrix optionally
-    multiplied against a branch length [t]. This is the matrix Q in, [P=e^Q*t],
-    or [Q*t] if [t] is optionally supplied. *)
-val substitution_matrix : t -> float option -> matrix
-
-(** [integerize_model \sigma m t] Generate a integerized matrix of precision
-   [sigma]. This can be used to give speed-ups using alternate methods of
-   diagnosis. The diagonal elements under likelihood have cost according to [t]. *)
-val integerized_model : ?sigma:int -> t -> float -> int array array
 
 
 (** {2 Creation and Enumeration functions of Models} *)
@@ -126,19 +108,11 @@ val integerized_model : ?sigma:int -> t -> float -> int array array
 (** Create a model from a spec. *)
 val create : s -> t
 
-(** replace priors in a model with ones given and re-parameterize model if
-    necessary (diagonalization, et cetera). *)
-val replace_priors : t -> float array -> t
-
-(** replace rate in a model and re-parameterize a model if necesary. *)
-val replace_rates : t -> site_var -> t
-
-(** replace the substitution rate matrix in the model and re-parameterize *)
-val replace_subst : t -> subst_model -> t
+(** update a model with a new specification; minimizes changes in model *)
+val update : t -> s -> t
 
 (** Generate a function that enumerates the combinations of substitution models
-    and site-rate-variation through lists of variants given and generate a new
-    model from a previous model. *)
+    and site-rate-variation through lists of variants given. *)
 val enum_models :
   ?site_var:[`DiscreteGamma of int | `DiscreteTheta of int | `Constant
             | `DiscreteCustom of (float * float) array ]list ->
@@ -147,13 +121,6 @@ val enum_models :
       ?priors:[`Empirical | `Equal] list ->
         ?gap:[`Missing | `Independent | `Coupled | `Indel] ->
           float array option -> Alphabet.t -> (unit -> s option)
-
-(** [compute_priors (a,g) f (c,gc) ls] compute the priors of data from an array
-    of base frequencies [f], but predicated on gap being an additional state we
-    also include the indel prior from the number of indels [gc] and the minimum
-    number of indels required to align all data from [ls]. *)
-val compute_priors :
-  Alphabet.t * bool -> float array -> int * int -> int list -> float array
 
 
 (** {2 Query functions of models} *)
@@ -199,39 +166,25 @@ val process_custom_matrix :
   int -> char array array -> int Internal.IntMap.t * float array
 
 
+(** {2 Matrix Diagonalization / Composition Functions} *)
+
+(** [compose] compose a matrix from a model and a branch length. *)
+val compose : t -> float -> matrix
+
+(** [substitution_matrix m t?] return a substitution rate matrix optionally
+    multiplied against a branch length [t]. This is the matrix Q in, [P=e^Q*t],
+    or [Q*t] if [t] is optionally supplied. *)
+val substitution_matrix : t -> float option -> matrix
+
+(** [integerize_model \sigma m t] Generate a integerized matrix of precision
+   [sigma]. This can be used to give speed-ups using alternate methods of
+   diagnosis. The diagonal elements under likelihood have cost according to [t]. *)
+val integerized_model : ?sigma:int -> t -> float -> int array array
+
+
 (** {2 I/O Functions} *)
 
 (** [short_name model] gives a short and sweet name of the models initials and
    it's rate information. Like JC69+G (for a jukes-cantor model with gamma). *)
 val short_name : t -> string
 
-
-(** {2 Substitution Rate Matrix Estimation} *)
-
-(** We provide functions for counting and creating matrices from a
-    classification of transformations in a data-set. *)
-
-(** Create a specification from a classification, and parsed model details. *)
-val process_classification :
-  s -> float Internal.UnorderedTupleMap.t * float Internal.IntMap.t -> s
-
-
-(* extra functions that do not need to be exposed
-val diagonalize_gtr : matrix -> matrix -> matrix -> unit
-val diagonalize_sym : matrix -> matrix -> unit
-val compose_gtr : matrix -> matrix -> matrix -> float -> matrix
-val compose_sym : matrix -> matrix -> float -> matrix
-val diagonalize : bool -> matrix -> matrix * matrix * matrix option
-val compose_matrix : matrix -> float -> matrix
-
-type gap_repr = (int * float) option
-
-val m_jc69 : int -> gap_repr -> matrix
-val m_k2p : float -> int -> gap_repr -> matrix
-val m_tn93 : vector -> float -> float -> int -> gap_repr -> matrix
-val m_f81 : vector -> int -> gap_repr -> matrix
-val m_hky85 : vector -> float -> int -> gap_repr -> matrix
-val m_f84 : vector -> float -> int -> gap_repr -> matrix
-val m_gtr : vector -> float array -> int -> gap_repr -> matrix
-val m_file : vector -> float array array -> int -> matrix
-val m_custom : vector -> int Internal.IntMap.t -> float array -> int -> matrix *)

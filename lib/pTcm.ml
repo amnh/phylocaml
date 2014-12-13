@@ -41,9 +41,9 @@ module X : CostMatrix.TCM =
             for k = 0 to w - 1 do
               is_triangle := !is_triangle && (l.(i).(j) <= l.(i).(k) + l.(k).(j))
             done;
-            is_positive := !is_positive && (l.(i).(j) >= 0);
+            is_positive  := !is_positive && (l.(i).(j) >= 0);
             is_symmetric := !is_symmetric && (l.(i).(j) = l.(j).(i));
-            is_equal := !is_equal && l.(i).(j) = l.(0).(1);
+            is_equal     := !is_equal && l.(i).(j) = l.(0).(1);
           done;
         done;
         !is_equal, !is_symmetric, !is_positive && !is_triangle

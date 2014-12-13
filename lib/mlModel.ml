@@ -60,7 +60,6 @@ type t = {
   u     : matrix;
   d     : matrix;
   ui    : matrix option;
-  opt   : vector;
 }
 
 (** [diagonalize_gtr U D Ui] diagonalize [U] into [U] [D] and [Ui], [U] is
@@ -191,8 +190,10 @@ let categorize_by_model get_fn codes =
 
 
 (** Count the number of parameters in the model; used for xIC functions **)
-let num_parameters model : int =
-  Bigarray.Array1.dim model.opt
+let num_parameters model : int = failwith "TODO"
+
+(** Update a model from a specifiction with minimal work **)
+let update model spec = failwith "TODO"
 
 (** A type to represent how gaps should be treated when creating substitution
     rate matrices. *)
@@ -246,7 +247,7 @@ let m_jc69 a_size (gap_r : gap_repr) =
 let m_k2p beta a_size (gap_r : gap_repr) =
   let alpha = 1.0 in
   if not ((a_size = 4) || (a_size = 5)) then
-    raise (raise (errorf "Alphabet does not support this model"));
+    raise (errorf "Alphabet does not support this model");
   let srm = create_ba2 a_size a_size in
   let beta = max beta minimum in
   Bigarray.Array2.fill srm beta;
@@ -548,32 +549,6 @@ let process_custom_matrix alph_size (f_aa: char array array) =
   in
   (map, Array.create length 1.0)
 
-let generate_opt_vector _ = failwith "TODO" (*
-  let p_sub,n_sub = match s.substitution with
-    | JC69
-    | Const _
-    | F81   -> [||],0
-    | K2P   x
-    | F84   x
-    | HKY85 x -> [| x |], 1
-    | TN93  x -> [| fst x; snd x|],2
-    | GTR   x -> x, Array.length x
-    | Custom _ -> failwith "TODO"
-  and p_var,n_var = match s.site_variation with
-    | Constant -> [||],0
-    | DiscreteGamma i,x -> [| x |], 1
-    | DiscreteTheta i,x,y -> [| x;y |], 2
-  and p_gap,n_gap = match s.gap with
-    | Missing -> [||],0
-    | ...
-  in
-  let opt = Array.make (n_sub+n_gap+n_var) -~.1.0 in
-  Array.blit p_sub 0 opt 0 n_sub;
-  Array.blit p_gap 0 opt n_sub n_gap;
-  Array.blit p_var 0 opt (n_sub+n_gap) n_var;
-  opt *)
-
-
 (** [diagonalize sym Q] diagonalize matrix [Q]; [sym] decides if the function
     should use symmetric or general routines for diagonalization. *)
 let diagonalize (sym : bool) mat =
@@ -695,7 +670,7 @@ let create spec =
     g + (Alphabet.size spec.alphabet)
   in
   (* set up all the probability and rates *)
-  let rates,probs,pinvar =
+  let rates, probs, pinvar =
     match spec.site_variation with
     | Constant -> ba_of_array1 [| 1.0 |], ba_of_array1 [| 1.0 |], None
     | DiscreteGamma (x,y) -> (* SITES,ALPHA *)
@@ -768,19 +743,7 @@ let create spec =
   let spec = {spec with substitution;} in
   {
     spec; rates; probs; pinvar; priors; q; u; d; ui;
-    opt = generate_opt_vector spec;
   }
-
-
-let replace_priors model array = 
-  create {model.spec with base_priors = Empirical array;}
-
-let replace_subst model matrix =
-  create {model.spec with substitution = matrix;}
-
-let replace_rates model rates =
-  create {model.spec with site_variation = rates;}
-  
 
 (** Enumerate models based on some set of criteria. for Multimodel Inference  *)
 let enum_models ?(site_var=[`DiscreteGamma 4;`DiscreteTheta 4;`Constant])
@@ -837,250 +800,6 @@ let enum_models ?(site_var=[`DiscreteGamma 4;`DiscreteTheta 4;`Constant])
         Some (apply_model_delta gap subst prior vari)
     | [] -> None)
 
-
-(** Compute the priors of a dataset by frequency and gap-counts *)
-let compute_priors (alph,use_gap) freq_ (count,gcount) lengths : float array =
-  let size = if use_gap then Alphabet.size alph else (Alphabet.size alph) - 1 in
-  let gap_contribution = (float_of_int gcount) /. (float_of_int size) in
-  let gap_char = match alph.Alphabet.gap with
-    | None when not use_gap -> -1
-    | Some x -> x
-    | None   -> raise (errorf "No gap to compute prior")
-  in
-  let final_priors =
-    if use_gap then begin
-      let total_added_gaps =
-        let longest = List.fold_left (fun a x-> max a x) 0 lengths in
-        let add_gap = List.fold_left (fun acc x -> (longest - x) + acc) 0 lengths in
-        float_of_int add_gap
-      in
-      freq_.(gap_char) <- freq_.(gap_char) +. total_added_gaps;
-      let count = (float_of_int (count - gcount)) +. total_added_gaps;
-      and weight  = (float_of_int gcount) /. (float_of_int size) in
-      Array.map (fun x -> (x -. weight) /. count) freq_
-    end else begin
-      Array.map (fun x -> (x -. gap_contribution) /. (float_of_int count)) freq_
-    end
-  in
-  final_priors
-
-
-(* Develop a model from a classification of alignment pairs on edges. *)
-let process_classification spec (comp_map,pis) =
-  let use_gap = match spec.gap with
-    | Missing      -> false
-    | Independent  -> true
-    | Coupled _    -> true
-  and alph = spec.alphabet in
-  let f_priors,a_size = match spec.base_priors with
-    | Equal when use_gap -> Equal,1 + Alphabet.size alph
-    | Equal           -> Equal,    Alphabet.size alph
-    | Empirical _     ->
-      let sum = IntMap.fold (fun _ v x -> v +. x) pis 0.0 in
-      let gap,sum = match alph.Alphabet.gap with
-          | None when use_gap -> raise (errorf "No gap in alphabet")
-          | None -> -1, sum
-          | Some x when use_gap -> x,sum
-          | Some x -> x,sum -. IntMap.find x pis
-      in
-      let l =
-        Alphabet.CodeSet.fold
-          (fun b acc -> match b with
-            | b when (not use_gap) && (b = gap) -> acc
-            | b ->
-              let c =
-                try (IntMap.find b pis) /. sum
-                with Not_found -> 0.0 in
-              (b,c) :: acc)
-          alph.Alphabet.atomic
-          []
-      in
-      let ray =
-        l |> List.sort (fun (x,_) (y,_) -> Pervasives.compare x y)
-          |> List.map snd |> Array.of_list
-      in
-      Empirical ray, Array.length ray
-  and is_comp a b =
-    (* these models assume nucleotides only; T<->C=1, A<->G=2, this is
-       because this is used in DNA/nucleotide models only (k2p,hky85...) *)
-    if (Alphabet.get_code "T" alph) = a then
-      if (Alphabet.get_code "C" alph) = b then 1 else 0
-    else if (Alphabet.get_code "C" alph) = a then
-      if (Alphabet.get_code "T" alph) = b then 1 else 0
-    else if (Alphabet.get_code "A" alph) = a then
-      if (Alphabet.get_code "G" alph) = b then 2 else 0
-    else if (Alphabet.get_code "G" alph) = a then
-      if (Alphabet.get_code "A" alph) = b then 2 else 0
-    else
-      0
-  in
-  let get_prior (string:string):float = match f_priors with
-    | Empirical x -> x.(Alphabet.get_code string alph)
-    | Equal       -> 1.0 /. (float_of_int a_size)
-  in
-  let get_sva comp_map =
-    let s1,s2,v,a =
-      UnorderedTupleMap.fold
-        (fun k v (sc1,sc2,vc,all) -> match k with
-          | k1,k2 when 1 == is_comp k1 k2 -> (sc1+.v,sc2,vc,all+.v)
-          | k1,k2 when 2 == is_comp k1 k2 -> (sc1,sc2+.v,vc,all+.v)
-          | k1,k2 when k1 != k2           -> (sc1,sc2,vc+.v,all+.v)
-          | _                             -> (sc1,sc2,vc,all+.v) )
-        comp_map
-        (0.0,0.0,0.0,0.0)
-    in
-    s1 /. a, s2 /. a, v /. a, a
-  in
-  (* build the model *)
-  let gap = spec.gap in
-  let m,gap = match spec.substitution with
-    | JC69 -> JC69,gap
-    | F81  -> F81,gap
-    | K2P _ ->
-      (* YANG: 1.12                                       *)
-      (*  alpha*t = -0.5 * log(1-2S-V) + 0.25 * log(1-2V) *)
-      (* 2*beta*t = -0.5 * log(1-2V)                      *)   
-      (*        k = alpha / beta                          *)  
-      (* k = [log(1-2S-V)-0.5*log(1-2V)] / log(1-2V)      *)
-      let s1,s2,v,_ = get_sva comp_map in
-      let s = s1 +. s2 in
-      let numer = 2.0 *. (log (1.0-.(2.0*.s)-.v))
-      and denom = log (1.0-.(2.0*.v)) in
-      K2P ((numer /. denom)-.1.0),gap
-    | GTR _ ->
-      let tuple_sum a1 a2 map =
-          let one = try UnorderedTupleMap.find (a1,a2) map 
-                    with | Not_found -> 0.0
-          and two = try UnorderedTupleMap.find (a2,a1) map
-                    with | Not_found -> 0.0
-          in
-          one +. two
-      in
-      (* create list of transitions for GTR model creation *)
-      (* 1 -> 2, 1 -> 3, 1 -> 4 ... 2 -> 3 ... *)
-      begin match gap with
-        | Independent | Missing ->
-          let cgap = match alph.Alphabet.gap with
-            | Some x -> x
-            | None   -> -1
-          in
-          let lst =
-            Alphabet.CodeSet.fold
-              (fun state1 acc1 ->
-                if (not use_gap) && (cgap = state1) then
-                  acc1
-                else
-                  Alphabet.CodeSet.fold
-                    (fun state2 acc2 ->
-                      if state2 <= state1 then acc2
-                      else if (not use_gap) && (cgap = state2) then
-                        acc2
-                      else
-                        let sum = tuple_sum state1 state2 comp_map in
-                        sum :: acc2)
-                    alph.Alphabet.atomic acc1)
-              alph.Alphabet.atomic []
-          in
-          let sum = List.fold_left (fun a x -> x +. a) 0.0 lst in
-          let lst = List.map (fun x -> x /. sum) lst in
-          let arr,gap = normalize gap (Array.of_list lst) in
-          let arr = Array.init ((List.length lst)-1) (fun i -> arr.(i)) in
-          GTR arr,gap
-        | Coupled _ ->
-          let cgap = match alph.Alphabet.gap with
-            | Some x -> x
-            | None   -> raise (errorf "no gap character in coupled model")
-          in
-          let lst,gap_trans =
-            Alphabet.CodeSet.fold
-              (fun state1 acc1 ->
-                if cgap = state1 then acc1
-                else
-                  Alphabet.CodeSet.fold
-                    (fun state2 ((chrt,gapt) as acc2) ->
-                      if state2 <= state1 then acc2
-                      else if cgap = state2 then
-                        let sum = tuple_sum state1 state2 comp_map in
-                        (chrt, sum +. gapt)
-                      else begin
-                        let sum = tuple_sum state1 state2 comp_map in
-                        (sum :: chrt,gapt)
-                      end)
-                    alph.Alphabet.atomic acc1)
-              alph.Alphabet.atomic ([],0.0)
-          in
-          let sum = List.fold_left (fun a x -> x +. a) gap_trans lst in
-          let lst = List.map (fun x -> x /. sum) lst in
-          let gap = Coupled (gap_trans /. (sum *. (float_of_int a_size))) in
-          let arr,gap = normalize gap (Array.of_list lst) in
-          let arr = Array.init ((List.length lst)-1) (fun i -> arr.(i)) in
-          GTR arr,gap
-      end
-    | F84 _ ->
-      let pi_a = get_prior "A" and pi_c = get_prior "C"
-      and pi_g = get_prior "G" and pi_t = get_prior "T" in
-      let pi_y = pi_c +. pi_t and pi_r = pi_a +. pi_g in
-      let s1,s2,v,_ = get_sva comp_map in let s = s1 +. s2 in
-      let a = ~-. (log (1.0 -. (s /. (2.0 *. (pi_t*.pi_c/.pi_y +. pi_a*.pi_g/.pi_r)))
-                           -. (v *.(pi_t*.pi_c *.pi_r/.pi_y +.
-                                   (pi_a*.pi_g*.pi_y/.pi_r))) /.
-                              (2.0 *. (pi_t*.pi_c *. pi_r +. pi_a *. pi_g *. pi_y))))
-      and b = ~-. (log (1.0 -. (v/.(2.0 *. pi_y*.pi_r)))) in
-      F84 (a/.b -. 1.0),gap
-    | HKY85 _ ->
-      let pi_a = get_prior "A" and pi_c = get_prior "C"
-      and pi_g = get_prior "G" and pi_t = get_prior "T" in
-      let pi_y = pi_c +. pi_t and pi_r = pi_a +. pi_g in
-      let s1,s2,v,_ = get_sva comp_map in
-      let s = s1 +. s2 in
-      let a =
-          ~-. (log (1.0 -. (s /. (2.0 *. (pi_t*.pi_c/.pi_y +. pi_a*.pi_g/.pi_r)))
-                        -. (v *.(pi_t*.pi_c *.pi_r/.pi_y +.
-                           (pi_a*.pi_g*.pi_y/.pi_r))) /.
-                           (2.0 *. (pi_t*.pi_c *. pi_r +. pi_a *. pi_g *. pi_y))))
-      and b = ~-. (log (1.0 -. (v/.(2.0 *. pi_y*.pi_r)))) in
-      HKY85 (a/.b -. 1.0),gap
-    | TN93 _ ->
-      let pi_a = get_prior "A" and pi_c = get_prior "C"
-      and pi_g = get_prior "G" and pi_t = get_prior "T" in
-      let pi_y = pi_c +. pi_t and pi_r = pi_a +. pi_g
-      and s1,s2,v,_ = get_sva comp_map in
-      let a1 = ~-. (log (1.0 -. (pi_y*.s1/.(2.0*.pi_t*.pi_c)) -.  (v/.(2.0*.pi_y))))
-      and a2 = ~-. (log (1.0 -. (pi_r*.s2/.(2.0*.pi_a*.pi_g)) -.  (v/.(2.0*.pi_r))))
-      and b  = ~-. (log (1.0 -. (v /. (2.0 *. pi_y *. pi_r)))) in
-      (* finally compute the ratios *)
-      let k1 = (a1 -. (pi_r *. b)) /. (pi_y *. b)
-      and k2 = (a2 -. (pi_y *. b)) /. (pi_r *. b) in 
-      TN93 (k1,k2),gap
-    | Custom _
-    | Const _ -> failwith "I cannot estimate this type of model"
-  and calc_invar all comp_map =
-    let same = 
-      Alphabet.CodeSet.fold
-        (fun ac acc ->
-          acc +. (try (UnorderedTupleMap.find (ac,ac) comp_map)
-                  with Not_found -> 0.0))
-        alph.Alphabet.atomic 0.0
-    in
-    same /. all
-  in
-  let v = match spec.site_variation with
-    | Constant
-    | DiscreteCustom _
-    | DiscreteGamma _ -> spec.site_variation
-    | DiscreteTheta (i,_,_) ->
-      let stuple = UnorderedTupleMap.fold (fun _ v a -> a +. v) comp_map 0.0 in
-      DiscreteTheta (i,default_alpha,calc_invar stuple comp_map)
-  in
-  {
-    substitution = m;
-    site_variation = v;
-    base_priors = f_priors;
-    alphabet = alph;
-    gap;
-  }
-
-
 (** produce a short readable name for the model: like JC69+G+I. We ignore data
     dependent and optimality paramters (gap as missing/independent) and mpl/mal *)
 let short_name model =
@@ -1098,3 +817,14 @@ let short_name model =
     | Constant -> ""
   in
   model_name ^ variation_name
+
+(** generate optimization functions and get current values for the model *)
+let gen_subst_opt_func m : vector * (vector -> t) =
+  failwith "todo"
+
+let gen_rates_opt_func m : vector * (vector -> t) =
+  failwith "todo"
+
+let gen_prior_opt_func m : vector * (vector -> t) =
+  failwith "todo"
+
