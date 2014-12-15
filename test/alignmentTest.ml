@@ -31,6 +31,8 @@ let print_sequence a x =
 let assert_equal_align a x y =
   assert_equal_array "" (flip Alphabet.get_name a) (=) x y
 
+let make_spec alphabet s e m = { CostMatrixTest.MockTCM.alphabet = alphabet; properties=(s,e,m); }
+
 let tests =
   "Alignment" >:::
     [
@@ -39,7 +41,8 @@ let tests =
           let () = set_random_seed cxt in 
           let a = generate_alphabet () in
           let x = generate_sequence a in
-          let model = MockCostMatrix.create a in
+          let spec = make_spec a true true true in
+          let model = MockCostMatrix.create spec in
           let mem = MockFullAlignment.create_mem model x x in
           let ()  = MockFullAlignment.fill mem model x x in
           let cst = MockFullAlignment.cost mem model x x in
@@ -53,7 +56,8 @@ let tests =
         (fun cxt ->
           let x = sequence_of_string Alphabet.nucleotides "-ACCCCCCCTTG" in
           let y = sequence_of_string Alphabet.nucleotides "-ACCCCCCCCTTG" in
-          let model = MockCostMatrix.create Alphabet.nucleotides in
+          let spec = make_spec Alphabet.nucleotides true true true in
+          let model = MockCostMatrix.create spec in
           let mem = MockFullAlignment.create_mem model x y in
           let ()  = MockFullAlignment.fill mem model x y in
           let cst = MockFullAlignment.cost mem model x y in
@@ -68,7 +72,8 @@ let tests =
           let x = sequence_of_string Alphabet.nucleotides "-ACCCCCCCTTG" in
           let y = sequence_of_string Alphabet.nucleotides "-ACCCCCCCCTG" in
           let m = sequence_of_string Alphabet.nucleotides "-ACCCCCCCYTG" in
-          let model = MockCostMatrix.create Alphabet.nucleotides in
+          let spec = make_spec Alphabet.nucleotides true true true in
+          let model = MockCostMatrix.create spec in
           let mem = MockUkkAlignment.create_mem ~k:4 model x y in
           let ()  = MockUkkAlignment.fill mem model x y in
           let cst = MockUkkAlignment.cost mem model x y in
@@ -81,7 +86,8 @@ let tests =
         (fun cxt ->
           let x = sequence_of_string Alphabet.nucleotides "-ACCCCCCCTTG" in
           let y = sequence_of_string Alphabet.nucleotides "-ACCCCCCCCTTG" in
-          let model = MockCostMatrix.create Alphabet.nucleotides in
+          let spec = make_spec Alphabet.nucleotides true true true in
+          let model = MockCostMatrix.create spec in
           let mem = MockUkkAlignment.create_mem ~k:4 model x y in
           let ()  = MockUkkAlignment.fill mem model x y in
           let cst = MockUkkAlignment.cost mem model x y in
@@ -97,7 +103,8 @@ let tests =
           let y = sequence_of_string Alphabet.nucleotides "-ACCCCTTG" in
           let ya= sequence_of_string Alphabet.nucleotides "-ACCC----C-TTG" in
           let m = sequence_of_string Alphabet.nucleotides "-ACCC1111C4TTG" in
-          let model = MockCostMatrix.create Alphabet.nucleotides in
+          let spec = make_spec Alphabet.nucleotides true true true in
+          let model = MockCostMatrix.create spec in
           let mem = MockUkkAlignment.create_mem ~k:4 model x y in
           let ()  = MockUkkAlignment.fill mem model x y in
           let cst = MockUkkAlignment.cost mem model x y in
@@ -111,7 +118,8 @@ let tests =
           let () = set_random_seed cxt in 
           let a = generate_alphabet () in
           let x = generate_sequence a in
-          let model = MockCostMatrix.create a in
+          let spec = make_spec a true true true in
+          let model = MockCostMatrix.create spec in
           let mem = MockUkkAlignment.create_mem ~k:1 model x x in
           let ()  = MockUkkAlignment.fill mem model x x in
           let cst = MockUkkAlignment.cost mem model x x in

@@ -76,12 +76,12 @@ exception Error of Error.t
 (** [Make] produces cost matrices that are fully realized as they are created.
     This can be time consuming, but quicker if they are used often enough. *)
 module Make (M : TCM with type elt = Alphabet.code)
-          : CM with type spec = M.spec and type cost = M.cost and type elt  = M.elt and type spec = M.spec
+          : CM with type spec = M.spec and type cost = M.cost and type elt  = M.elt
 
 (** [MakeLazy] produces a memoized cost-matrix, as elements costs or assignments
     are queried they are added to the table. We also use Hashtbls to limit the
     overall space. This can be used when only a few transformations may be
     needed in the usage of the cost-matrix. *)
 module MakeLazy (M : TCM with type elt = Alphabet.code)
-          : CM with type spec = M.spec and type cost = M.cost and type elt = M.elt and type spec = M.spec
+          : CM with type spec = M.spec and type cost = M.cost and type elt = M.elt
 
