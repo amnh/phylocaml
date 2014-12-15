@@ -39,7 +39,7 @@ Required -
 Optional -
 + [OUnit2](http://ounit.forge.ocamlcore.org/)
 + [Core\_bench](https://blogs.janestreet.com/ocaml-core/110.01.00/doc/core_bench/)
-+ [OPAM](http://opam.ocaml.org)
++ [OPAM](http://opam.ocaml.org) (> 1.0.0)
 + [OCamion](http://github.com/amnh/ocamion/)
 
 

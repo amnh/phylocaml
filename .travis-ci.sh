@@ -6,18 +6,18 @@ COVERAGE=1
 BISECT_TARBALL="http://bisect.sagotch.fr"
 #BISECT_TARBALL="http://sagotch.fr/download/bisect-coveralls.tar.gz"
 
-# complete list, although may not be tested (no 3.12.1 support, for example)
+# complete list, although may not be tested
 case "$OCAML_VERSION,$OPAM_VERSION" in
-  3.12.1,1.0.0) ppa=avsm/ocaml312+opam10 ;;
-  3.12.1,1.1.0) ppa=avsm/ocaml312+opam11 ;;
-  3.12.1,1.2.0) ppa=avsm/ocaml312+opam12 ;;
-  4.00.1,1.0.0) ppa=avsm/ocaml40+opam10  ;;
+  3.12.1,1.0.0) ppa=avsm/ocaml312+opam10 ;; #unsupported ocaml.3.12.1 / opam 1.0.0
+  3.12.1,1.1.0) ppa=avsm/ocaml312+opam11 ;; #unsupported ocaml.3.12.1
+  3.12.1,1.2.0) ppa=avsm/ocaml312+opam12 ;; #unsupported ocaml.3.12.1
+  4.00.1,1.0.0) ppa=avsm/ocaml40+opam10  ;; #unsupported opam.1.0.0 (via gsl)
   4.00.1,1.1.0) ppa=avsm/ocaml40+opam11  ;;
   4.00.1,1.2.0) ppa=avsm/ocaml40+opam12  ;;
-  4.01.0,1.0.0) ppa=avsm/ocaml41+opam10  ;;
+  4.01.0,1.0.0) ppa=avsm/ocaml41+opam10  ;; #unsupported opam.1.0.0 (via gsl)
   4.01.0,1.1.0) ppa=avsm/ocaml41+opam11  ;;
   4.01.0,1.2.0) ppa=avsm/ocaml41+opam12  ;;
-  4.02.0,1.0.0) ppa=avsm/ocaml42+opam10  ;;
+  4.02.0,1.0.0) ppa=avsm/ocaml42+opam10  ;; #unsupported opam.1.0.0 (via gsl)
   4.02.0,1.1.0) ppa=avsm/ocaml42+opam11  ;;
   4.02.0,1.2.0) ppa=avsm/ocaml42+opam12  ;;
 *) echo Unknown $OCAML_VERSION,$OPAM_VERSION; exit 1 ;;
