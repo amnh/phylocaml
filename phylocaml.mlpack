@@ -8,7 +8,6 @@ lib/Network
 lib/Alignment
 lib/CostMatrix
 lib/PTcm
-lib/MlTcm
 
 lib/Alphabet
 lib/Sequence

@@ -16,6 +16,7 @@ remove : ["ocamlfind" "remove" "phylocaml"]
 
 build-doc : ["make" "docs"]
 
-depends: [ "ocamlfind" "pareto" ]
+depends: [ "ocamlfind" {build}
+           "pareto" ]
 
 ocaml-version : [>= "4.00.0"]

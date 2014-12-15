@@ -66,19 +66,20 @@ module Common (M:TCM with type elt = Alphabet.code) =
 
     (* exhaustively look through each median assignment and collect optimal states *)
     let find_median_general spec i j =
+      let alphabet = M.get_alphabet spec in
       let cost,assign =
         Alphabet.CodeSet.fold (fun istate ->
           Alphabet.CodeSet.fold
             (fun jstate ((cost,assign) as acc) ->
               let ncost, nassign =
-                find_median_pair spec istate jstate (M.get_alphabet spec).Alphabet.atomic in
+                find_median_pair spec istate jstate alphabet.Alphabet.atomic in
               if M.eq spec ncost cost
                 then (cost, nassign@assign)
               else if M.lt spec ncost cost
                 then (ncost, nassign)
                 else acc)
-            (Alphabet.get_combination j (M.get_alphabet spec)))
-          (Alphabet.get_combination i (M.get_alphabet spec))
+            (Alphabet.get_combination j alphabet))
+          (Alphabet.get_combination i alphabet)
           (M.inf spec, [])
       in
       cost, M.compress spec assign
@@ -137,8 +138,7 @@ module Make (M:TCM with type elt = Alphabet.code) =
         indel         : elt;
       }
 
-    module Common = Common (M)
-    include Common
+    include Common(M)
 
     (* fill a cost matrix *)
     let fill_cm bits size model =
@@ -216,8 +216,7 @@ module MakeLazy (M:TCM with type elt = Alphabet.code) =
         median_fn     : spec -> elt -> elt -> cost * elt;
       }
 
-    module Common = Common (M)
-    include Common
+    include Common(M)
 
     let get_median model i j =
       if Hashtbl.mem model.cost_matrix (i,j)
@@ -233,7 +232,7 @@ module MakeLazy (M:TCM with type elt = Alphabet.code) =
       let alphabet = M.get_alphabet spec in
        let () = match alphabet.Alphabet.kind with
         | Alphabet.Continuous -> raise (Error (`Alphabet_Does_Not_Support_Cost_Matrix alphabet))
-        | _ -> ()
+        | Alphabet.Sequential | Alphabet.BitFlag | Alphabet.CombinationLevels _ -> ()
       in
       let cost_matrix = Hashtbl.create 1789 and assign_matrix = Hashtbl.create 1789 in
       let indel = match alphabet.Alphabet.gap with
@@ -259,7 +258,7 @@ module MakeLazy (M:TCM with type elt = Alphabet.code) =
     let lt t   = M.lt t.spec
 
     let assign t i j = snd @@ get_median t i j
-    let cost t i j   = fst @@ get_median t i j
+    let cost   t i j = fst @@ get_median t i j
     let median t i j =        get_median t i j
 
     let indel t = t.indel

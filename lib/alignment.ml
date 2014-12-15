@@ -45,6 +45,11 @@ module type A =
 module Common (C:AssignCostMatrix) =
   struct
 
+    type e = C.elt
+    type t = e array
+    type m = C.model
+    type c = C.cost
+
     let min3 m (x,dx) (y,dy) (z,dz) =
       let xy,dxy =
         if C.lt m x y then (x,[dx])
@@ -71,11 +76,6 @@ module FullAlignment (C:AssignCostMatrix) =
   struct
 
     include Common (C)
-
-    type e = C.elt
-    type t = e array
-    type m = C.model
-    type c = C.cost
 
     type dir =
       Root | Align  of e | Delete of e | Insert of e
@@ -202,11 +202,6 @@ module UkkAlignment (C:AssignCostMatrix) =
   struct
 
     include Common (C)
-
-    type e = C.elt
-    type t = e array
-    type m = C.model
-    type c = C.cost
 
     type dir =
       Root | Align  of e | Delete of e | Insert of e
@@ -442,3 +437,4 @@ module UkkAlignment (C:AssignCostMatrix) =
       let x',y',m = alignments mem m x y in
       cost mem m x y, x', y', m
   end
+

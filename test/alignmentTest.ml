@@ -91,6 +91,21 @@ let tests =
           assert_equal_int (Array.length x') (Array.length y');
           assert_equal_align Alphabet.nucleotides y y');
 
+      "Ukkonen Alignment test of two sequences with multiple consequtive indels" >:: 
+        (fun cxt ->
+          let x = sequence_of_string Alphabet.nucleotides "-ACCCTTTTCCTTG" in
+          let y = sequence_of_string Alphabet.nucleotides "-ACCCCTTG" in
+          let ya= sequence_of_string Alphabet.nucleotides "-ACCC----C-TTG" in
+          let m = sequence_of_string Alphabet.nucleotides "-ACCC1111C4TTG" in
+          let model = MockCostMatrix.create Alphabet.nucleotides in
+          let mem = MockUkkAlignment.create_mem ~k:4 model x y in
+          let ()  = MockUkkAlignment.fill mem model x y in
+          let cst = MockUkkAlignment.cost mem model x y in
+          let x', y', m' = MockUkkAlignment.alignments mem model x y in
+          assert_equal_align Alphabet.nucleotides x x';
+          assert_equal_align Alphabet.nucleotides m m';
+          assert_equal_align Alphabet.nucleotides ya y');
+
       "Ukkonen Alignment test of equal sequences of data k = 1" >:: 
         (fun cxt ->
           let () = set_random_seed cxt in 
