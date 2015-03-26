@@ -131,7 +131,3 @@ Mozilla Public License, version 2.0
 
 
 -------------------------------------------------------------------------------
-
-
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/amnh/phylocaml/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
-
